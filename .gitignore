@@ -1,0 +1,50 @@
+# Dependencies - never commit these, regenerated with npm install
+node_modules/
+.pnp
+.pnp.js
+
+# Environment variables - NEVER commit these, contain your secret API keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs - generated files, not source code
+dist/
+build/
+.next/
+out/
+
+# Logs - generated automatically, not needed in repo
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS generated files - your operating system creates these, not your code
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files - your editor settings, not project code
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing coverage reports
+coverage/
+
+# Temporary files
+*.tmp
+*.temp

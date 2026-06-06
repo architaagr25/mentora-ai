@@ -1,0 +1,45 @@
+# This workflow runs every time you push to the develop or main branch
+# It checks that your frontend code has no lint errors and builds successfully
+
+name: Frontend CI
+
+# When does this run?
+on:
+  push:
+    branches: [main, develop]    # runs on push to these branches
+  pull_request:
+    branches: [main, develop]    # runs on PRs targeting these branches
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest       # GitHub provides a free Linux machine to run this
+
+    steps:
+      # Step 1: Download your code onto the GitHub machine
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Install Node.js on the GitHub machine
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Step 3: Install your frontend dependencies
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci    # ci is stricter than install - uses exact versions from package-lock.json
+
+      # Step 4: Run ESLint to check for code errors
+      - name: Run linter
+        working-directory: frontend
+        run: npm run lint
+
+      # Step 5: Try to build the project - catches any compilation errors
+      - name: Build project
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_URL: http://localhost:5000

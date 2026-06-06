@@ -1,0 +1,74 @@
+/* These three lines load all of Tailwind's styles */
+/* Without them, Tailwind classes do nothing */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global base styles */
+@layer base {
+  /* Makes all elements use border-box sizing */
+  /* This means padding doesn't add to element width - much easier to reason about */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Default body styles */
+  body {
+    @apply bg-navy-900 text-white font-sans;
+    /* Smooth scrolling for anchor links */
+    scroll-behavior: smooth;
+    /* Prevents horizontal scroll on mobile */
+    overflow-x: hidden;
+  }
+
+  /* Remove default link styles */
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  /* Scrollbar styling - makes it match the dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-navy-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-navy-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-purple-600;
+  }
+}
+
+/* Reusable component classes */
+@layer components {
+  /* Primary button used across the whole app */
+  .btn-primary {
+    @apply bg-purple-600 hover:bg-purple-500 text-white font-semibold 
+           px-6 py-3 rounded-lg transition-all duration-200 
+           hover:shadow-lg hover:shadow-purple-600/25 
+           active:scale-95 cursor-pointer;
+  }
+
+  /* Secondary/outlined button */
+  .btn-secondary {
+    @apply border border-navy-600 hover:border-purple-600 text-slate-300 
+           hover:text-white font-semibold px-6 py-3 rounded-lg 
+           transition-all duration-200 cursor-pointer;
+  }
+
+  /* Card component */
+  .card {
+    @apply bg-navy-700 border border-navy-600 rounded-xl p-6;
+  }
+
+  /* Gradient text effect - used for headings */
+  .gradient-text {
+    @apply bg-gradient-to-r from-purple-400 to-cyan-400 
+           bg-clip-text text-transparent;
+  }
+}
