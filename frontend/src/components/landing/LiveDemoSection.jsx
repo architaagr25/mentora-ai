@@ -9,9 +9,9 @@ const scores = [
 ]
 
 const gaps = [
-  'Misuse of "confirm" vs "establish"',
-  'Missing: ISN randomization rationale',
-  'Incomplete: TIME_WAIT state purpose',
+  'Did not explain why sequence numbers are needed',
+  'Skipped what happens if the final ACK is lost',
+  'Vague on why the handshake needs three steps not two',
 ]
 
 const demoMessages = [
@@ -33,7 +33,7 @@ const LiveDemoSection = () => {
             animate={isInView ? { opacity: 1 } : {}}
             className="text-cyan-400 text-xs font-semibold tracking-widest uppercase mb-4"
           >
-            LIVE DEMO
+            PREVIEW
           </motion.p>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -41,20 +41,20 @@ const LiveDemoSection = () => {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-bold text-white mb-4"
           >
-            An AI student that pushes back
+            What a session actually looks like
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.2 }}
-            className="text-slate-400 text-lg"
+            className="text-slate-400 text-lg max-w-xl mx-auto"
           >
-            Watch a real session in action. The AI doesn't just listen — it interrogates.
+            A sample session on TCP handshake. The AI student keeps asking until your explanation has no holes left in it.
           </motion.p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Chat - 3/5 */}
+          {/* Chat — 3/5 */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
@@ -62,8 +62,10 @@ const LiveDemoSection = () => {
             className="lg:col-span-3 bg-[#0D1426] border border-slate-800 rounded-2xl overflow-hidden"
           >
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-              <span className="text-slate-400 text-sm">Topic · <span className="text-white font-medium">TCP Handshake</span></span>
-              <span className="text-slate-500 text-sm">Session #482</span>
+              <span className="text-slate-400 text-sm">
+                Topic · <span className="text-white font-medium">TCP Handshake</span>
+              </span>
+              <span className="text-slate-500 text-sm">Sample session</span>
             </div>
             <div className="p-6 space-y-4">
               {demoMessages.map((msg, i) => (
@@ -96,17 +98,17 @@ const LiveDemoSection = () => {
             </div>
           </motion.div>
 
-          {/* Scores - 2/5 */}
+          {/* Scores — 2/5 */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.4 }}
             className="lg:col-span-2 flex flex-col gap-4"
           >
-            {/* Live scoring */}
+            {/* Session scores */}
             <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-6">
-              <p className="text-white font-bold mb-1">Live scoring</p>
-              <p className="text-slate-500 text-xs mb-5">Updated after each exchange</p>
+              <p className="text-white font-bold mb-1">Session scores</p>
+              <p className="text-slate-500 text-xs mb-5">Calculated at session end</p>
               <div className="space-y-4">
                 {scores.map((s, i) => (
                   <div key={i}>
@@ -129,7 +131,7 @@ const LiveDemoSection = () => {
 
             {/* Detected gaps */}
             <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-6">
-              <p className="text-white font-bold mb-4">Detected gaps</p>
+              <p className="text-white font-bold mb-4">Gaps found</p>
               <div className="space-y-3">
                 {gaps.map((gap, i) => (
                   <div key={i} className="flex items-start gap-2">

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, Play, Sparkles, GraduationCap } from 'lucide-react'
+import { ArrowRight, Sparkles, GraduationCap } from 'lucide-react'
 
 const floatingTopics = [
-  'Binary Search Trees', 'Quantum Entanglement', 'Eigenvectors',
-  'DNA Replication', 'TCP Handshake', 'Bayes Theorem',
-  'CAP Theorem', 'Photosynthesis',
+  'Binary Search Trees', 'The TCP Handshake', 'Bayes Theorem',
+  'How DNS works', 'React useEffect', 'System Design basics',
+  'CAP Theorem', 'Big O Notation',
 ]
 
 const chatMessages = [
@@ -20,27 +20,30 @@ const HeroSection = () => {
   const [visibleMessages, setVisibleMessages] = useState(0)
   const [topicIndex, setTopicIndex] = useState(0)
 
-  // Animate chat messages appearing one by one
+  // CHAT ANIMATION: Runs exactly once and stops at the end
   useEffect(() => {
-    if (visibleMessages >= chatMessages.length) {
-      setTimeout(() => setVisibleMessages(0), 3000)
-      return
-    }
+    if (visibleMessages >= chatMessages.length) return; // Stop the loop here
+
     const timer = setTimeout(() => {
       setVisibleMessages(v => v + 1)
     }, visibleMessages === 0 ? 1000 : 2500)
+    
     return () => clearTimeout(timer)
   }, [visibleMessages])
 
-  // Cycle floating topic badges
+  // Floating topics interval
   useEffect(() => {
     const timer = setInterval(() => setTopicIndex(i => (i + 1) % floatingTopics.length), 2000)
     return () => clearInterval(timer)
   }, [])
 
+  const scrollToHowItWorks = () => {
+    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center pt-24 pb-0 overflow-hidden">
-      {/* Background gradients — matches the purple/teal glow from screenshots */}
+      {/* Background gradients */}
       <div className="absolute inset-0 bg-[#080D1A]" />
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
       <div className="absolute top-1/4 right-1/4 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl" />
@@ -55,7 +58,7 @@ const HeroSection = () => {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700/60 bg-slate-800/40 backdrop-blur-sm text-slate-400 text-sm mb-8"
         >
           <Sparkles size={14} className="text-cyan-400" />
-          Built on the Feynman Technique · New: Voice Teaching Mode
+          Based on the Feynman Technique — explain it or you don't know it
         </motion.div>
 
         {/* Floating topic pills */}
@@ -112,8 +115,9 @@ const HeroSection = () => {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
         >
-          Teach concepts to an AI student that challenges your explanations,
-          uncovers misconceptions, and helps you master any subject.
+          Most students re-read notes and feel ready.
+          Mentora makes you explain, in your own words,
+          to an AI that asks exactly the questions you can't answer.
         </motion.p>
 
         {/* CTA Buttons */}
@@ -127,12 +131,14 @@ const HeroSection = () => {
             to="/register"
             className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all duration-200 hover:shadow-xl hover:shadow-violet-500/30 hover:scale-105"
           >
-            Start Teaching
+            Try a Session
             <ArrowRight size={18} />
           </Link>
-          <button className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-all duration-200">
-            <Play size={16} className="fill-current" />
-            Watch Demo
+          <button
+            onClick={scrollToHowItWorks}
+            className="flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-all duration-200"
+          >
+            See how it works
           </button>
         </motion.div>
 
@@ -151,10 +157,10 @@ const HeroSection = () => {
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
                 <div className="w-3 h-3 rounded-full bg-green-500/80" />
                 <span className="ml-3 text-slate-400 text-sm">
-                  Teaching session · Binary Search Trees
+                  Session in progress · Binary Search Trees
                 </span>
               </div>
-              <span className="text-cyan-400 text-sm font-medium">Clarity 84%</span>
+              <span className="text-cyan-400 text-sm font-medium">Clarity score · 84%</span>
             </div>
 
             {/* Chat messages */}
@@ -196,7 +202,7 @@ const HeroSection = () => {
                   className="flex items-center gap-2 text-cyan-400 text-sm"
                 >
                   <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                  AI student is asking a follow-up...
+                  AI student is thinking...
                 </motion.div>
               )}
             </div>

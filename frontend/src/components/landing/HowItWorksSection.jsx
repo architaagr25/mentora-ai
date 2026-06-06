@@ -7,19 +7,19 @@ const steps = [
     icon: BookOpen,
     step: 'STEP 01',
     title: 'Choose a topic',
-    desc: 'Pick anything — from CAP theorem to mitochondrial respiration. We support 60+ subject areas.',
+    desc: 'Pick any concept you think you understand. Works best with things you\'ve studied but never had to explain out loud.',
   },
   {
     icon: MessageSquare,
     step: 'STEP 02',
     title: 'Teach the AI student',
-    desc: 'Explain in your own words. The AI asks clarifying questions, plants misconceptions, and probes the edges.',
+    desc: 'Explain it like you\'re teaching someone who just can\'t quite get it. The AI asks the questions a confused person would actually ask, the ones that expose where your explanation has holes.',
   },
   {
     icon: ClipboardList,
     step: 'STEP 03',
-    title: 'Receive a mastery report',
-    desc: 'See knowledge gaps, misconceptions, clarity scores, and what to study next.',
+    title: 'Get your mastery report',
+    desc: 'Get a scored breakdown of your explanation - what you got right, where you were vague, and what to revisit before your next session.',
   },
 ]
 
@@ -45,8 +45,10 @@ const HowItWorksSection = () => {
             transition={{ delay: 0.1 }}
             className="text-4xl md:text-5xl font-bold text-white mb-4"
           >
-            From explanation to mastery
-            <br />in three steps
+            Three steps.{' '}
+            <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">
+              One uncomfortable truth.
+            </span>
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -54,7 +56,7 @@ const HowItWorksSection = () => {
             transition={{ delay: 0.2 }}
             className="text-slate-400 text-lg max-w-xl mx-auto"
           >
-            A teaching loop that reveals what you actually understand — and what you don't.
+            The loop is simple. What it reveals about your understanding isn't always comfortable.
           </motion.p>
         </div>
 

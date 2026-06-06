@@ -16,7 +16,7 @@ const Footer = () => {
               </span>
             </div>
             <p style={{color:'#64748b',fontSize:'14px',lineHeight:'1.6',marginBottom:'1.5rem'}}>
-              Learn by teaching. AI finds what you do not truly understand.
+              Learn by teaching, not by re-reading.
             </p>
             <div style={{display:'flex',gap:'12px'}}>
               {['T','G','L'].map((letter) => (

@@ -3,11 +3,20 @@ import { motion, useInView } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 
+// Only features that are actually planned in the project roadmap
 const items = [
-  'Unlimited teaching sessions', 'Adaptive AI student', 'Core mastery reports',
-  'Full concept graph', 'Voice teaching mode', 'Full analytics + heatmaps',
-  'Session replay & insights', 'Cohort analytics', 'Shared topic libraries',
-  'Community support', 'SSO + admin controls', 'Priority support',
+  'Unlimited teaching sessions',
+  'Adaptive AI student persona',
+  'Live misconception injection',
+  'Session mastery report',
+  'Concept gap analysis',
+  'Knowledge graph visualisation',
+  'Voice teaching mode',
+  'PDF notes upload',
+  'Concept extraction from notes',
+  'XP and streak tracking',
+  'Badge system',
+  'Session replay and insights',
 ]
 
 const EverythingIncludedSection = () => {
@@ -42,13 +51,13 @@ const EverythingIncludedSection = () => {
           className="bg-[#0D1426] border border-slate-700/60 rounded-2xl p-10 text-center"
         >
           <p className="text-slate-400 max-w-md mx-auto mb-8 leading-relaxed">
-            Every feature, every mode, every insight — available to every learner from day one.
+            Every feature available to every learner from day one. No paywalls, no tiers.
           </p>
           <Link
             to="/register"
             className="inline-flex items-center px-8 py-3.5 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all duration-200 hover:shadow-xl hover:shadow-violet-500/30 mb-10"
           >
-            Get started
+            Get started free
           </Link>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 text-left max-w-3xl mx-auto">
