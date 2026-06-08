@@ -5,6 +5,10 @@ import morgan from 'morgan'
 import cookieParser from 'cookie-parser'
 import dotenv from 'dotenv'
 import logger from './utils/logger.js'
+import errorHandler from './middleware/errorHandler.js'
+import { generalLimiter } from './middleware/rateLimiter.js'
+import authRoutes from './routes/auth.js'
+import connectDB from './config/db.js'
 
 // dotenv.config() must be the FIRST thing that runs
 // It loads your .env file into process.env
@@ -67,6 +71,8 @@ app.use(morgan('dev', {
   }
 }))
 
+app.use('/api', generalLimiter)
+
 // ─────────────────────────────────────────
 // ROUTES
 // ─────────────────────────────────────────
@@ -84,7 +90,7 @@ app.get('/api/health', (req, res) => {
 })
 
 // Future routes added here in Phase 3+
-// app.use('/api/auth', authRoutes)
+app.use('/api/auth', authRoutes)
 // app.use('/api/sessions', sessionRoutes)
 // app.use('/api/concepts', conceptRoutes)
 // app.use('/api/users', userRoutes)
@@ -101,32 +107,25 @@ app.use((req, res) => {
   })
 })
 
-// ─────────────────────────────────────────
-// GLOBAL ERROR HANDLER
-// Any error thrown anywhere in the app lands here
-// Express knows this is an error handler because it has 4 params
-// The (err, req, res, next) signature is mandatory
-// ─────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  logger.error(err.stack)
-
-  res.status(err.status || 500).json({
-    status: 'error',
-    // Never expose real error details in production
-    // Attackers can use error messages to find vulnerabilities
-    message: process.env.NODE_ENV === 'production'
-      ? 'Something went wrong'
-      : err.message,
-  })
-})
+app.use(errorHandler)
 
 // ─────────────────────────────────────────
-// START SERVER
+// CONNECT TO DATABASE THEN START SERVER
 // ─────────────────────────────────────────
-app.listen(PORT, () => {
-  logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`)
-  logger.info(`Health check → http://localhost:${PORT}/api/health`)
-})
+const startServer = async () => {
+  try {
+    await connectDB()
+    app.listen(PORT, () => {
+      logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`)
+      logger.info(`Health check → http://localhost:${PORT}/api/health`)
+    })
+  } catch (err) {
+    logger.error('Failed to connect to database. Server not started.')
+    logger.error(err.message)
+    process.exit(1)
+  }
+}
+
+startServer()
 
 export default app
