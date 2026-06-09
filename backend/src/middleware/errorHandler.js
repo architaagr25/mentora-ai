@@ -13,7 +13,7 @@ export class AppError extends Error {
   }
 }
 
-// The actual error handler middleware — 4 params is what makes Express recognise it
+// eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
   // Default to 500 if no status code was set
   let statusCode = err.statusCode || 500

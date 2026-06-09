@@ -15,11 +15,9 @@ function App() {
   const { initialize } = useAuth()
 
   useEffect(() => {
-    // Run once on app startup
-    // Checks if the user has a valid session via refresh token cookie
-    // Sets user in store if found, sets isLoading: false when done
-    initialize()
-  }, [])
+  initialize()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [])
 
   return (
     <Routes>
