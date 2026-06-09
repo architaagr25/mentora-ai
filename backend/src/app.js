@@ -9,7 +9,7 @@ import errorHandler from './middleware/errorHandler.js'
 import { generalLimiter } from './middleware/rateLimiter.js'
 import authRoutes from './routes/auth.js'
 import connectDB from './config/db.js'
-
+import sessionRoutes from './routes/sessions.js'
 // dotenv.config() must be the FIRST thing that runs
 // It loads your .env file into process.env
 // Any code before this cannot access environment variables
@@ -91,7 +91,7 @@ app.get('/api/health', (req, res) => {
 
 // Future routes added here in Phase 3+
 app.use('/api/auth', authRoutes)
-// app.use('/api/sessions', sessionRoutes)
+app.use('/api/sessions', sessionRoutes)
 // app.use('/api/concepts', conceptRoutes)
 // app.use('/api/users', userRoutes)
 // app.use('/api/uploads', uploadRoutes)
