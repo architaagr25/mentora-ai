@@ -12,6 +12,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@google/genai": "^2.8.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.0.0",
     "cloudinary": "^2.0.0",

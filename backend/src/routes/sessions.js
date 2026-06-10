@@ -6,10 +6,11 @@ import {
   createSessionSchema,
   sendMessageSchema,
 } from '../validators/sessionValidator.js'
+import { getAIStudentResponse } from '../services/aiService.js'
+import { scoreSession } from '../services/scoringService.js'
 
 const router = express.Router()
 
-// All session routes require authentication
 router.use(auth)
 
 // ─────────────────────────────────────────
@@ -51,8 +52,6 @@ router.get('/', async (req, res, next) => {
   try {
     const sessions = await Session.find({ userId: req.user._id })
       .sort({ updatedAt: -1 })
-      // Sort by updatedAt not createdAt
-      // So recently continued sessions appear first
       .select('-messages')
       .limit(50)
 
@@ -93,8 +92,8 @@ router.get('/:id', async (req, res, next) => {
 
 // ─────────────────────────────────────────
 // POST /api/sessions/:id/message
-// Add a message to a session
-// Only active sessions can receive messages
+// User sends a message → AI student responds
+// Both messages saved to DB
 // ─────────────────────────────────────────
 router.post('/:id/message', async (req, res, next) => {
   try {
@@ -119,17 +118,49 @@ router.post('/:id/message', async (req, res, next) => {
     }
 
     if (session.status !== 'active') {
-      throw new AppError('This session has ended. Start a new session to continue learning this topic.', 400)
+      throw new AppError(
+        'This session has ended. Start a new session to continue learning this topic.',
+        400
+      )
     }
 
+    // Step 1 — Save the user message
     session.messages.push({ role: 'user', content })
     await session.save()
 
-    const newMessage = session.messages[session.messages.length - 1]
+    // Step 2 — Get AI student response
+    // Pass full message history so Claude has context
+    const aiResult = await getAIStudentResponse(
+      session.topic,
+      session.messages
+    )
+
+    if (!aiResult.success) {
+      // AI call failed — still return the user message
+      // so it's not lost, but flag the AI error
+      return res.status(200).json({
+        status: 'partial',
+        userMessage: session.messages[session.messages.length - 1],
+        aiError: 'AI student is unavailable right now. Please try again.',
+      })
+    }
+
+    // Step 3 — Save the AI response
+    session.messages.push({
+      role: 'assistant',
+      content: aiResult.content,
+    })
+    await session.save()
+
+    // Step 4 — Return both messages
+    const messages = session.messages
+    const userMessage = messages[messages.length - 2]
+    const aiMessage = messages[messages.length - 1]
 
     res.status(201).json({
       status: 'success',
-      message: newMessage,
+      userMessage,
+      aiMessage,
     })
   } catch (err) {
     next(err)
@@ -138,9 +169,8 @@ router.post('/:id/message', async (req, res, next) => {
 
 // ─────────────────────────────────────────
 // POST /api/sessions/:id/score
-// Request a score snapshot for the current session
-// Session stays active — user can keep chatting
-// Multiple scores can be requested over time
+// Request a real score for the current session
+// Session stays active after scoring
 // ─────────────────────────────────────────
 router.post('/:id/score', async (req, res, next) => {
   try {
@@ -158,29 +188,34 @@ router.post('/:id/score', async (req, res, next) => {
       throw new AppError('Cannot score a completed session', 400)
     }
 
-    if (session.messages.length === 0) {
+    const userMessages = session.messages.filter(
+      (msg) => msg.role === 'user'
+    )
+
+    if (userMessages.length === 0) {
       throw new AppError('No messages to score yet', 400)
     }
 
-    // Scoring logic will be added in Phase 4B
-    // when we integrate Claude Haiku
-    // For now return a placeholder
-    const scoreSnapshot = {
-      accuracy: null,
-      clarity: null,
-      completeness: null,
-      gaps: [],
-      feedback: 'Scoring will be available in Phase 4B',
-      scoredAt: new Date(),
+    // Call scoring service
+    const scoringResult = await scoreSession(
+      session.topic,
+      session.messages
+    )
+
+    if (!scoringResult.success) {
+      throw new AppError('Scoring failed. Please try again.', 500)
     }
 
-    session.scores.push(scoreSnapshot)
+    // Save score snapshot to session
+    session.scores.push(scoringResult.scores)
     await session.save()
 
     res.status(200).json({
       status: 'success',
-      score: scoreSnapshot,
+      score: scoringResult.scores,
       totalScores: session.scores.length,
+      // Send all scores so frontend can show progression
+      allScores: session.scores,
     })
   } catch (err) {
     next(err)
@@ -190,7 +225,6 @@ router.post('/:id/score', async (req, res, next) => {
 // ─────────────────────────────────────────
 // POST /api/sessions/:id/end
 // End a session — marks it completed and locks it
-// User explicitly chose to end this session
 // ─────────────────────────────────────────
 router.post('/:id/end', async (req, res, next) => {
   try {
@@ -208,7 +242,6 @@ router.post('/:id/end', async (req, res, next) => {
       throw new AppError('This session has already ended', 400)
     }
 
-    // Calculate duration
     const durationMs = Date.now() - session.createdAt.getTime()
     session.duration = Math.floor(durationMs / 1000)
     session.status = 'completed'
