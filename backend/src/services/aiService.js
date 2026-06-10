@@ -63,3 +63,67 @@ export const getAIStudentResponse = async (topic, messages) => {
     }
   }
 }
+
+// ─────────────────────────────────────────
+// GET AI STUDENT RESPONSE — STREAMING VERSION
+// Calls onChunk for every chunk received
+// Calls onComplete when done with the full text
+// Calls onError if something goes wrong
+// ─────────────────────────────────────────
+export const getAIStudentResponseStream = async (
+  topic,
+  messages,
+  { onChunk, onComplete, onError }
+) => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+
+    // Format history — all messages except the last one
+    const history = messages.slice(0, -1).map((msg) => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    }))
+
+    const lastMessage = messages[messages.length - 1]
+
+    // generateContentStream returns an async iterable
+    // we loop through it with for await
+    const stream = await ai.models.generateContentStream({
+      model: 'gemini-2.5-flash-lite',
+      contents: [
+        ...history,
+        {
+          role: 'user',
+          parts: [{ text: lastMessage.content }],
+        },
+      ],
+      config: {
+        systemInstruction: getStudentSystemPrompt(topic),
+        maxOutputTokens: 300,
+        temperature: 0.7,
+      },
+    })
+
+    // Accumulate the full response as chunks arrive
+    let fullResponse = ''
+
+    for await (const chunk of stream) {
+      // chunk.text is the new text in this chunk
+      const chunkText = chunk.text
+
+      if (chunkText) {
+        fullResponse += chunkText
+        // Call the callback with this chunk
+        // The socket handler will emit it to the client
+        onChunk(chunkText)
+      }
+    }
+
+    // Stream finished — call onComplete with the full text
+    // So the socket handler can save it to the database
+    onComplete(fullResponse)
+  } catch (err) {
+    logger.error(`AI streaming error: ${err.message}`)
+    onError(err.message)
+  }
+}

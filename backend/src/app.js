@@ -10,6 +10,9 @@ import { generalLimiter } from './middleware/rateLimiter.js'
 import authRoutes from './routes/auth.js'
 import connectDB from './config/db.js'
 import sessionRoutes from './routes/sessions.js'
+import { createServer } from 'http'
+import { Server } from 'socket.io'
+import initializeSocket from './socket/sessionSocket.js'
 // dotenv.config() must be the FIRST thing that runs
 // It loads your .env file into process.env
 // Any code before this cannot access environment variables
@@ -108,14 +111,31 @@ app.use((req, res) => {
 })
 
 app.use(errorHandler)
+// ─────────────────────────────────────────
+// SOCKET.IO SETUP
+// Attach Socket.io to the HTTP server
+// ─────────────────────────────────────────
+export const httpServer = createServer(app)
+// We export httpServer so sessionSocket.js can import io
 
+export const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+    // Must match your Express CORS config
+    // Without this, browser will block the WebSocket connection
+  },
+})
+
+// Initialize socket handlers
+initializeSocket(io)
 // ─────────────────────────────────────────
 // CONNECT TO DATABASE THEN START SERVER
 // ─────────────────────────────────────────
 const startServer = async () => {
   try {
     await connectDB()
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`)
       logger.info(`Health check → http://localhost:${PORT}/api/health`)
     })
@@ -125,7 +145,6 @@ const startServer = async () => {
     process.exit(1)
   }
 }
-
 startServer()
 
 export default app
