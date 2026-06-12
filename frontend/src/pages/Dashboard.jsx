@@ -179,13 +179,24 @@ const Dashboard = () => {
     setShowMobileSidebar(false)
   }, [])
 
-  const navItems = useMemo(() => [
-    { icon: LayoutDashboard, label: 'Dashboard', action: () => scrollTo(heroRef) },
-    { icon: Plus, label: 'New Session', action: () => { setShowNewSessionModal(true); setShowMobileSidebar(false) } },
-    { icon: History, label: 'History', action: () => scrollTo(historyRef) },
-    { icon: Network, label: 'Concepts', action: () => scrollTo(conceptsRef) },
-    { icon: User, label: 'Profile', action: () => scrollTo(profileRef) },
-  ], [scrollTo])
+// Replace navItems useMemo with a static array (no closures over refs)
+const navItems = useMemo(() => [
+  { icon: LayoutDashboard, label: 'Dashboard', target: 'hero' },
+  { icon: Plus, label: 'New Session', target: 'new-session' },
+  { icon: History, label: 'History', target: 'history' },
+  { icon: Network, label: 'Concepts', target: 'concepts' },
+  { icon: User, label: 'Profile', target: 'profile' },
+], [])
+
+const handleNavClick = (target) => {
+  if (target === 'new-session') {
+    setShowNewSessionModal(true)
+    setShowMobileSidebar(false)
+    return
+  }
+  const refMap = { hero: heroRef, history: historyRef, concepts: conceptsRef, profile: profileRef }
+  scrollTo(refMap[target])
+}
 
   const handleStartSession = async () => {
     if (!topic.trim()) {
@@ -280,7 +291,7 @@ const Dashboard = () => {
           {navItems.map((item) => (
             <button
               key={item.label}
-              onClick={item.action}
+  onClick={() => handleNavClick(item.target)}
               title={sidebarCollapsed ? item.label : undefined}
               className={`w-full flex items-center gap-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200 text-sm font-medium ${
                 sidebarCollapsed
