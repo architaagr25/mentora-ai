@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import axios from 'axios'
 import api, { setAccessToken, clearAccessToken } from '../api/index.js'
+import { connectSocket, disconnectSocket } from '../socket/socketClient.js'
 
 const useAuthStore = create((set, get) => ({
   user: null,
@@ -8,6 +9,8 @@ const useAuthStore = create((set, get) => ({
 
   login: (user, accessToken) => {
     setAccessToken(accessToken)
+    // Connect socket when user logs in
+    connectSocket(accessToken)
     set({ user })
   },
 
@@ -18,14 +21,14 @@ const useAuthStore = create((set, get) => ({
       // silent
     } finally {
       clearAccessToken()
+      // Disconnect socket on logout
+      disconnectSocket()
       set({ user: null })
     }
   },
 
   initialize: async () => {
     try {
-      // Use plain axios directly — bypasses the interceptor
-      // so a 401 here doesn't trigger infinite retry loop
       const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
       const refreshResponse = await axios.post(
         `${baseURL}/auth/refresh-token`,
@@ -34,6 +37,9 @@ const useAuthStore = create((set, get) => ({
       )
       const newAccessToken = refreshResponse.data.accessToken
       setAccessToken(newAccessToken)
+
+      // Connect socket after successful session restore
+      connectSocket(newAccessToken)
 
       const meResponse = await api.get('/auth/me')
       set({ user: meResponse.data.user })
@@ -50,6 +56,7 @@ const useAuthStore = create((set, get) => ({
 
 window.addEventListener('auth:logout', () => {
   clearAccessToken()
+  disconnectSocket()
   useAuthStore.setState({ user: null, isLoading: false })
 })
 
