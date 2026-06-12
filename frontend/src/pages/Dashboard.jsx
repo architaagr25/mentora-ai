@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -135,6 +135,8 @@ const Dashboard = () => {
   const [topic, setTopic] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [topicError, setTopicError] = useState('')
+  const [confirmCompleteId, setConfirmCompleteId] = useState(null)
+  const [isCompleting, setIsCompleting] = useState(false)
 
   const heroRef = useRef(null)
   const historyRef = useRef(null)
@@ -172,10 +174,18 @@ const Dashboard = () => {
     return Math.round((total / scored.length) * 10)
   })()
 
-  const scrollTo = (ref) => {
+  const scrollTo = useCallback((ref) => {
     ref.current?.scrollIntoView({ behavior: 'smooth' })
     setShowMobileSidebar(false)
-  }
+  }, [])
+
+  const navItems = useMemo(() => [
+    { icon: LayoutDashboard, label: 'Dashboard', action: () => scrollTo(heroRef) },
+    { icon: Plus, label: 'New Session', action: () => { setShowNewSessionModal(true); setShowMobileSidebar(false) } },
+    { icon: History, label: 'History', action: () => scrollTo(historyRef) },
+    { icon: Network, label: 'Concepts', action: () => scrollTo(conceptsRef) },
+    { icon: User, label: 'Profile', action: () => scrollTo(profileRef) },
+  ], [scrollTo])
 
   const handleStartSession = async () => {
     if (!topic.trim()) {
@@ -198,24 +208,21 @@ const Dashboard = () => {
   }
 
   const handleMarkComplete = async (sessionId) => {
-  try {
-    await api.post(`/sessions/${sessionId}/end`)
-    setSessions((prev) =>
-      prev.map((s) =>
-        s._id === sessionId ? { ...s, status: 'completed' } : s
+    setIsCompleting(true)
+    try {
+      await api.post(`/sessions/${sessionId}/end`)
+      setSessions((prev) =>
+        prev.map((s) =>
+          s._id === sessionId ? { ...s, status: 'completed' } : s
+        )
       )
-    )
-  } catch {
-    // silent — could add a toast here later
+      setConfirmCompleteId(null)
+    } catch {
+      // silent — could add a toast here later
+    } finally {
+      setIsCompleting(false)
+    }
   }
-}
-  const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', action: () => scrollTo(heroRef) },
-    { icon: Plus, label: 'New Session', action: () => { setShowNewSessionModal(true); setShowMobileSidebar(false) } },
-    { icon: History, label: 'History', action: () => scrollTo(historyRef) },
-    { icon: Network, label: 'Concepts', action: () => scrollTo(conceptsRef) },
-    { icon: User, label: 'Profile', action: () => scrollTo(profileRef) },
-  ]
 
   const greeting = new Date().getHours() < 12
     ? 'morning' : new Date().getHours() < 17
@@ -630,7 +637,7 @@ const Dashboard = () => {
                         <div className="flex-shrink-0 flex items-center gap-2">
                           {isActive && (
                             <button
-                              onClick={() => handleMarkComplete(session._id)}
+                              onClick={() => setConfirmCompleteId(session._id)}
                               title="Mark as completed"
                               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
                             >
@@ -815,6 +822,68 @@ const Dashboard = () => {
                     <><Plus size={18} />Start Teaching</>
                   )}
                 </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {/* ─── CONFIRM COMPLETE MODAL ─── */}
+      <AnimatePresence>
+        {confirmCompleteId && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isCompleting && setConfirmCompleteId(null)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center px-4"
+            >
+              <div className="bg-[#0D1426] border border-slate-700 rounded-2xl p-6 md:p-8 w-full max-w-sm shadow-2xl">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle size={20} className="text-green-400" />
+                    </div>
+                    <h2 className="text-lg font-bold text-white">Complete session?</h2>
+                  </div>
+                  <button
+                    onClick={() => !isCompleting && setConfirmCompleteId(null)}
+                    className="text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                  Are you sure you want to complete this session? You won't be able to resume it later.
+                </p>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setConfirmCompleteId(null)}
+                    disabled={isCompleting}
+                    className="flex-1 py-2.5 rounded-xl font-semibold text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleMarkComplete(confirmCompleteId)}
+                    disabled={isCompleting}
+                    className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                  >
+                    {isCompleting ? (
+                      <><Loader2 size={15} className="animate-spin" />Completing...</>
+                    ) : (
+                      <>Yes, complete it</>
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
