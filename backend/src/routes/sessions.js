@@ -50,10 +50,17 @@ router.post('/', async (req, res, next) => {
 // ─────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
-    const sessions = await Session.find({ userId: req.user._id })
+    const { status } = req.query
+
+    const query = { userId: req.user._id }
+    if (status === 'active' || status === 'completed') {
+      query.status = status
+    }
+
+    const sessions = await Session.find(query)
       .sort({ updatedAt: -1 })
       .select('-messages')
-      .limit(50)
+      .limit(100)
 
     res.status(200).json({
       status: 'success',

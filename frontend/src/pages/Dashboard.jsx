@@ -163,17 +163,15 @@ const Dashboard = () => {
   const weekActivity = computeWeekActivity(sessions)
   const totalSessions = sessions.length
   const sessionsThisWeek = weekActivity.reduce((sum, d) => sum + d.count, 0)
-
-  const avgClarityScore = (() => {
-    const scored = sessions.filter((s) => s.scores && s.scores.length > 0)
-    if (scored.length === 0) return null
-    const total = scored.reduce((sum, s) => {
-      const latest = s.scores[s.scores.length - 1]
-      return sum + latest.clarity
-    }, 0)
-    return Math.round((total / scored.length) * 10)
-  })()
-
+const avgMasteryScore = (() => {
+  const scored = sessions.filter((s) => s.scores?.length > 0)
+  if (scored.length === 0) return null
+  const total = scored.reduce((sum, s) => {
+    const latest = s.scores[s.scores.length - 1]
+    return sum + (latest.accuracy + latest.clarity + latest.completeness) / 3
+  }, 0)
+  return Math.round((total / scored.length) * 10)
+})()
   const scrollTo = useCallback((ref) => {
     ref.current?.scrollIntoView({ behavior: 'smooth' })
     setShowMobileSidebar(false)
@@ -540,7 +538,7 @@ const handleNavClick = (target) => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           {[
             { icon: BookOpen, color: 'bg-blue-500/20 text-blue-400', label: 'Sessions This Week', value: sessionsThisWeek },
-            { icon: TrendingUp, color: 'bg-violet-500/20 text-violet-400', label: 'Avg Clarity Score', value: avgClarityScore !== null ? `${avgClarityScore}%` : '—' },
+            { icon: TrendingUp, color: 'bg-violet-500/20 text-violet-400', label: 'Avg Mastery Score', value: avgMasteryScore !== null ? `${avgMasteryScore}%` : '—' },
             { icon: Target, color: 'bg-cyan-500/20 text-cyan-400', label: 'Total Sessions', value: totalSessions },
             { icon: Flame, color: 'bg-orange-500/20 text-orange-400', label: 'Current Streak', value: `${user?.streak || 0} days` },
           ].map((stat, i) => (
@@ -565,7 +563,16 @@ const handleNavClick = (target) => {
 
           {/* Recent sessions */}
           <div ref={historyRef} className="lg:col-span-2">
-            <h2 className="text-lg font-semibold text-white mb-4">Recent Sessions</h2>
+           <div className="flex items-center justify-between mb-4 gap-2">
+  <h2 className="text-lg font-semibold text-white">Recent Sessions</h2>
+  <button
+    onClick={() => navigate('/history')}
+    className="flex-shrink-0 text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors flex items-center gap-1"
+  >
+    View all
+    <ChevronRight size={14} />
+  </button>
+</div>
 
             {isLoadingSessions ? (
               <div className="flex items-center justify-center py-16">
@@ -593,80 +600,87 @@ const handleNavClick = (target) => {
                     ? session.scores[session.scores.length - 1]
                     : null
 
-                  return (
-                    <motion.div
-                      key={session._id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                      className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 hover:border-slate-600 transition-all duration-200"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-violet-600/40 to-cyan-500/40 flex items-center justify-center flex-shrink-0">
-                          <span className="text-white font-bold text-sm">
-                            {session.topic.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+ return (
+  <motion.div
+    key={session._id}
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay: i * 0.05 }}
+    className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 hover:border-slate-600 transition-all duration-200 overflow-hidden"
+  >
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <p className="text-white font-medium text-sm truncate">
-                              {session.topic}
-                            </p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-                              {isActive ? 'Active' : 'Done'}
-                            </span>
-                          </div>
-                          <p className="text-slate-500 text-xs">{formatDate(session.updatedAt)}</p>
-                        </div>
+      {/* Avatar + topic */}
+      <div className="flex items-center gap-3 min-w-0 sm:flex-1">
+        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-violet-600/40 to-cyan-500/40 flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-bold text-sm">
+            {session.topic.charAt(0).toUpperCase()}
+          </span>
+        </div>
 
-                        {latest && (
-                          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-                            {[
-                              { label: 'ACC', value: latest.accuracy },
-                              { label: 'CLR', value: latest.clarity },
-                              { label: 'CMP', value: latest.completeness },
-                            ].map((s) => (
-                              <div key={s.label} className="text-center">
-                                <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
-                                <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>
-                                  {s.value}/10
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+            <p className="text-white font-medium text-sm truncate max-w-[140px] sm:max-w-[200px]">
+              {session.topic}
+            </p>
+            <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+              {isActive ? 'Active' : 'Done'}
+            </span>
+          </div>
+          <p className="text-slate-500 text-xs">{formatDate(session.updatedAt)}</p>
+        </div>
+      </div>
 
-                        {latest && (
-                          <div className="md:hidden flex-shrink-0">
-                            <p className={`text-sm font-bold ${getScoreColor(getAverageScore(session.scores))}`}>
-                              {getAverageScore(session.scores)}/10
-                            </p>
-                          </div>
-                        )}
+      {/* Scores + actions */}
+      <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap sm:flex-shrink-0 pl-[48px] sm:pl-0">
+        {latest && (
+          <>
+            <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+              {[
+                { label: 'ACC', value: latest.accuracy },
+                { label: 'CLR', value: latest.clarity },
+                { label: 'CMP', value: latest.completeness },
+              ].map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
+                  <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>
+                    {s.value}/10
+                  </p>
+                </div>
+              ))}
+            </div>
 
-                        <div className="flex-shrink-0 flex items-center gap-2">
-                          {isActive && (
-                            <button
-                              onClick={() => setConfirmCompleteId(session._id)}
-                              title="Mark as completed"
-                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
-                            >
-                              <CheckCircle size={14} />
-                              <span className="hidden sm:inline">Complete</span>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => navigate(`/session/${session._id}`)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
-                          >
-                            {isActive ? 'Continue' : 'Review'}
-                            <ChevronRight size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )
+            <div className="md:hidden flex-shrink-0">
+              <p className={`text-sm font-bold ${getScoreColor(getAverageScore(session.scores))}`}>
+                {getAverageScore(session.scores)}/10
+              </p>
+            </div>
+          </>
+        )}
+
+        <div className="flex-shrink-0 flex items-center gap-2 sm:ml-auto">
+          {isActive && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setConfirmCompleteId(session._id) }}
+              title="Mark as completed"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+            >
+              <CheckCircle size={14} />
+              <span className="hidden lg:inline">Complete</span>
+            </button>
+          )}
+          <button
+            onClick={() => navigate(`/session/${session._id}`)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+          >
+            {isActive ? 'Continue' : 'Review'}
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  </motion.div>
+)
                 })}
               </div>
             )}
