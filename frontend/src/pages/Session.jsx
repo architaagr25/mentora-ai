@@ -133,7 +133,6 @@ const Session = () => {
   const handleEndSession = async () => {
     setIsEnding(true)
     endSession()
-    // session_ended event will update currentSession.status via store
     setTimeout(() => {
       setIsEnding(false)
       setShowEndConfirm(false)
@@ -180,194 +179,281 @@ const Session = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#080D1A] flex flex-col">
-      {/* ─── TOP BAR ─── */}
-      <header className="flex-shrink-0 border-b border-slate-800 bg-[#0D1426]">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-slate-500 hover:text-white transition-colors flex-shrink-0"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div className="min-w-0">
-              <p className="text-white font-semibold text-sm md:text-base truncate">
-                {currentSession?.topic || 'Loading...'}
-              </p>
-              <p className="text-slate-500 text-xs">
-                {isEnded ? 'Session completed' : 'Active session'}
-              </p>
-            </div>
-          </div>
+    <div className="h-screen bg-[#080D1A] flex overflow-hidden">
 
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {showScoreButton && (
-              <button
-                onClick={() => setShowScorePanel(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
-              >
-                <BarChart3 size={16} />
-                <span className="hidden sm:inline">
-                  {latestScore ? 'Score' : 'Get Score'}
-                </span>
-              </button>
-            )}
+      {/* ─── LEFT INFO PANEL (desktop only) ─── */}
+      <aside className="hidden lg:flex w-72 flex-shrink-0 border-r border-slate-800 bg-[#0D1426] flex-col p-6 h-screen overflow-y-auto">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors text-sm mb-8 w-fit"
+        >
+          <ArrowLeft size={16} />
+          Back to Dashboard
+        </button>
 
-            {!isEnded && (
-              <button
-                onClick={() => setShowEndConfirm(true)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-              >
-                <Flag size={16} />
-                <span className="hidden sm:inline">End</span>
-              </button>
-            )}
-          </div>
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center mb-4">
+          <GraduationCap size={22} className="text-white" />
         </div>
-      </header>
 
-      {/* ─── ERROR BANNER (non-fatal) ─── */}
-      <AnimatePresence>
-        {error && currentSession && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex-shrink-0 bg-red-500/10 border-b border-red-500/20"
-          >
-            <div className="max-w-4xl mx-auto px-4 py-2 flex items-center gap-2 text-red-400 text-sm">
-              <AlertCircle size={14} className="flex-shrink-0" />
-              {error}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        <h1 className="text-white font-bold text-lg leading-snug mb-2">
+          {currentSession?.topic || 'Loading...'}
+        </h1>
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium w-fit mb-6 ${
+            isEnded
+              ? 'bg-slate-700 text-slate-400'
+              : 'bg-green-500/20 text-green-400'
+          }`}
+        >
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              isEnded ? 'bg-slate-500' : 'bg-green-400 animate-pulse'
+            }`}
+          />
+          {isEnded ? 'Completed' : 'Active session'}
+        </span>
 
-      {/* ─── CHAT AREA ─── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
-
-          {/* Empty state */}
-          {messages.length === 0 && !isStreaming && (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-violet-600/20 flex items-center justify-center mb-4">
-                <GraduationCap size={24} className="text-violet-400" />
+        <div className="space-y-3 mb-8">
+          <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4">
+            <p className="text-slate-500 text-xs mb-1">Messages exchanged</p>
+            <p className="text-white font-bold text-xl">{messages.length}</p>
+          </div>
+          {latestScore && (
+            <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4">
+              <p className="text-slate-500 text-xs mb-2">Latest scores</p>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {[
+                  { label: 'ACC', value: latestScore.accuracy },
+                  { label: 'CLR', value: latestScore.clarity },
+                  { label: 'CMP', value: latestScore.completeness },
+                ].map((s) => (
+                  <div key={s.label}>
+                    <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
+                    <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>
+                      {s.value}
+                    </p>
+                  </div>
+                ))}
               </div>
-              <h3 className="text-white font-semibold mb-2">
-                Teach me about {currentSession?.topic}
-              </h3>
-              <p className="text-slate-400 text-sm max-w-sm">
-                Start explaining the concept like you're teaching someone who's never heard of it. I'll ask questions as I go.
-              </p>
             </div>
           )}
+        </div>
 
-          {/* Messages */}
-          {messages.map((msg, i) => (
-            <motion.div
-              key={msg._id || i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex items-start gap-3 ${
-                msg.role === 'user' ? 'justify-end' : 'justify-start'
-              }`}
+        <div className="mt-auto space-y-2">
+          {showScoreButton && (
+            <button
+              onClick={() => setShowScorePanel(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
             >
-              {msg.role === 'assistant' && (
+              <BarChart3 size={16} />
+              {latestScore ? 'View Score' : 'Get Score'}
+            </button>
+          )}
+          {!isEnded && (
+            <button
+              onClick={() => setShowEndConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            >
+              <Flag size={16} />
+              End Session
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* ─── MAIN CHAT COLUMN ─── */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+
+        {/* ─── TOP BAR (mobile + tablet) ─── */}
+        <header className="lg:hidden flex-shrink-0 border-b border-slate-800 bg-[#0D1426]">
+          <div className="px-4 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-slate-500 hover:text-white transition-colors flex-shrink-0"
+              >
+                <ArrowLeft size={20} />
+              </button>
+              <div className="min-w-0">
+                <p className="text-white font-semibold text-sm md:text-base truncate">
+                  {currentSession?.topic || 'Loading...'}
+                </p>
+                <p className="text-slate-500 text-xs">
+                  {isEnded ? 'Session completed' : 'Active session'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {showScoreButton && (
+                <button
+                  onClick={() => setShowScorePanel(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+                >
+                  <BarChart3 size={16} />
+                  <span className="hidden sm:inline">
+                    {latestScore ? 'Score' : 'Get Score'}
+                  </span>
+                </button>
+              )}
+
+              {!isEnded && (
+                <button
+                  onClick={() => setShowEndConfirm(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <Flag size={16} />
+                  <span className="hidden sm:inline">End</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
+
+        {/* ─── ERROR BANNER (non-fatal) ─── */}
+        <AnimatePresence>
+          {error && currentSession && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex-shrink-0 bg-red-500/10 border-b border-red-500/20"
+            >
+              <div className="px-4 py-2 flex items-center gap-2 text-red-400 text-sm">
+                <AlertCircle size={14} className="flex-shrink-0" />
+                {error}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ─── CHAT AREA ─── */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+
+            {/* Empty state */}
+            {messages.length === 0 && !isStreaming && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-violet-600/20 flex items-center justify-center mb-4">
+                  <GraduationCap size={24} className="text-violet-400" />
+                </div>
+                <h3 className="text-white font-semibold mb-2">
+                  Teach me about {currentSession?.topic}
+                </h3>
+                <p className="text-slate-400 text-sm max-w-sm">
+                  Start explaining the concept like you're teaching someone who's never heard of it. I'll ask questions as I go.
+                </p>
+              </div>
+            )}
+
+            {/* Messages */}
+            {messages.map((msg, i) => (
+              <motion.div
+                key={msg._id || i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex items-start gap-3 ${
+                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                {msg.role === 'assistant' && (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                    <GraduationCap size={14} className="text-white" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-1 max-w-[85%] sm:max-w-md">
+                  <div
+                    className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                      msg.role === 'user'
+                        ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white'
+                        : 'bg-slate-800/80 text-slate-200 border border-slate-700/40'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                  {msg.createdAt && (
+                    <span
+                      className={`text-slate-600 text-xs ${
+                        msg.role === 'user' ? 'text-right' : 'text-left'
+                      }`}
+                    >
+                      {formatTime(msg.createdAt)}
+                    </span>
+                  )}
+                </div>
+                {msg.role === 'user' && (
+                  <span className="text-slate-500 text-xs pt-2 flex-shrink-0">You</span>
+                )}
+              </motion.div>
+            ))}
+
+            {/* Streaming AI response */}
+            {isStreaming && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-3 justify-start"
+              >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
                   <GraduationCap size={14} className="text-white" />
                 </div>
-              )}
-              <div className="flex flex-col gap-1 max-w-[85%] sm:max-w-md">
-                <div
-                  className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                    msg.role === 'user'
-                      ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white'
-                      : 'bg-slate-800/80 text-slate-200 border border-slate-700/40'
-                  }`}
-                >
-                  {msg.content}
-                </div>
-                {msg.createdAt && (
-                  <span
-                    className={`text-slate-600 text-xs ${
-                      msg.role === 'user' ? 'text-right' : 'text-left'
-                    }`}
-                  >
-                    {formatTime(msg.createdAt)}
-                  </span>
-                )}
-              </div>
-              {msg.role === 'user' && (
-                <span className="text-slate-500 text-xs pt-2 flex-shrink-0">You</span>
-              )}
-            </motion.div>
-          ))}
-
-          {/* Streaming AI response */}
-          {isStreaming && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-start gap-3 justify-start"
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                <GraduationCap size={14} className="text-white" />
-              </div>
-              {streamingMessage ? (
-                <div className="max-w-[85%] sm:max-w-md px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words bg-slate-800/80 text-slate-200 border border-slate-700/40">
-                  {streamingMessage}
-                  <span className="inline-block w-1.5 h-4 bg-cyan-400 ml-1 animate-pulse align-middle" />
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-cyan-400 text-sm px-4 py-3">
-                  <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                  AI student is thinking...
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* ─── INPUT BAR ─── */}
-      <div className="flex-shrink-0 border-t border-slate-800 bg-[#0D1426]">
-        <div className="max-w-4xl mx-auto px-4 py-3">
-          {isEnded ? (
-            <div className="flex items-center justify-center gap-2 py-3 text-slate-500 text-sm">
-              <CheckCircle2 size={16} className="text-green-400" />
-              This session has ended. Start a new session to continue teaching this topic.
-            </div>
-          ) : (
-            <div className="flex items-end gap-2">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Explain the concept..."
-                rows={1}
-                maxLength={2000}
-                disabled={isStreaming}
-                className="flex-1 resize-none px-4 py-3 rounded-xl bg-[#080D1A] border border-slate-700 hover:border-slate-600 focus:border-violet-500 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all disabled:opacity-50"
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isStreaming}
-                className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {isStreaming ? (
-                  <Loader2 size={18} className="animate-spin" />
+                {streamingMessage ? (
+                  <div className="max-w-[85%] sm:max-w-md px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words bg-slate-800/80 text-slate-200 border border-slate-700/40">
+                    {streamingMessage}
+                    <span className="inline-block w-1.5 h-4 bg-cyan-400 ml-1 animate-pulse align-middle" />
+                  </div>
                 ) : (
-                  <Send size={18} />
+                  <div className="flex items-center gap-2 text-cyan-400 text-sm px-4 py-3">
+                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    AI student is thinking...
+                  </div>
                 )}
-              </button>
-            </div>
-          )}
+              </motion.div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
         </div>
+
+        {/* ─── INPUT BAR ─── */}
+        <div className="flex-shrink-0 border-t border-slate-800 bg-[#0D1426]">
+          <div className="max-w-3xl mx-auto px-4 py-3">
+            {isEnded ? (
+              <div className="flex items-center justify-center gap-2 py-3 text-slate-500 text-sm">
+                <CheckCircle2 size={16} className="text-green-400" />
+                This session has ended. Start a new session to continue teaching this topic.
+              </div>
+            ) : (
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Explain the concept..."
+                  rows={1}
+                  maxLength={2000}
+                  disabled={isStreaming}
+                  className="flex-1 resize-none px-4 py-3 rounded-xl bg-[#080D1A] border border-slate-700 hover:border-slate-600 focus:border-violet-500 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all disabled:opacity-50"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || isStreaming}
+                  className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {isStreaming ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Send size={18} />
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
+      {/* ─── END MAIN CHAT COLUMN ─── */}
 
       {/* ─── SCORE PANEL ─── */}
       <AnimatePresence>
@@ -477,34 +563,60 @@ const Session = () => {
                       </div>
                     )}
 
-                    {/* History */}
-                    {scores.length > 1 && (
-                      <div>
-                        <p className="text-white font-semibold text-sm mb-3">
-                          History ({scores.length} attempts)
-                        </p>
-                        <div className="space-y-2">
-                          {scores.slice(0, -1).reverse().map((s, i) => {
-                            const avg = Math.round(
-                              (s.accuracy + s.clarity + s.completeness) / 3
-                            )
-                            return (
-                              <div
-                                key={i}
-                                className="flex items-center justify-between bg-[#080D1A] border border-slate-800 rounded-xl px-4 py-2.5"
-                              >
+                    {/* All scores history */}
+                    <div>
+                      <p className="text-white font-semibold text-sm mb-3">
+                        All attempts ({scores.length})
+                      </p>
+                      <div className="space-y-2">
+                        {[...scores].reverse().map((s, i) => {
+                          const avg = Math.round(
+                            (s.accuracy + s.clarity + s.completeness) / 3
+                          )
+                          const isLatest = i === 0
+                          return (
+                            <div
+                              key={i}
+                              className={`rounded-xl px-4 py-3 border ${
+                                isLatest
+                                  ? 'bg-violet-600/10 border-violet-500/30'
+                                  : 'bg-[#080D1A] border-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-2">
                                 <span className="text-slate-500 text-xs">
                                   {formatDate(s.scoredAt)}
                                 </span>
-                                <span className={`text-sm font-bold ${getScoreColor(avg)}`}>
-                                  {avg}/10 avg
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  {isLatest && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400 font-medium">
+                                      latest
+                                    </span>
+                                  )}
+                                  <span className={`text-sm font-bold ${getScoreColor(avg)}`}>
+                                    {avg}/10 avg
+                                  </span>
+                                </div>
                               </div>
-                            )
-                          })}
-                        </div>
+                              <div className="grid grid-cols-3 gap-2 text-center">
+                                {[
+                                  { label: 'ACC', value: s.accuracy },
+                                  { label: 'CLR', value: s.clarity },
+                                  { label: 'CMP', value: s.completeness },
+                                ].map((sc) => (
+                                  <div key={sc.label}>
+                                    <p className="text-slate-600 text-xs mb-0.5">{sc.label}</p>
+                                    <p className={`text-sm font-bold ${getScoreColor(sc.value)}`}>
+                                      {sc.value}/10
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                    )}
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
@@ -584,6 +696,7 @@ const Session = () => {
           </>
         )}
       </AnimatePresence>
+
     </div>
   )
 }
