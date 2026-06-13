@@ -173,7 +173,12 @@ const useSessionStore = create((set, get) => ({
   handleError: (data) => {
     set({ error: data.message, isStreaming: false, isScoring: false })
   },
+
+    clearError: () => set({ error: null }),
+
 }))
+
+
 
 // ─────────────────────────────────────────
 // SOCKET EVENT LISTENERS

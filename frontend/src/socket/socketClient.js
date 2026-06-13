@@ -17,6 +17,20 @@ const socket = io(SOCKET_URL, {
 })
 
 // ─────────────────────────────────────────
+// RECONNECTION HANDLING
+// If the socket drops and reconnects (wifi blip, laptop sleep),
+// Socket.io creates a new connection — any rooms we'd joined are gone.
+// We listen for 'connect' and re-join the active session room if we have one.
+// ─────────────────────────────────────────
+let activeSessionId = null
+
+socket.on('connect', () => {
+  if (activeSessionId) {
+    socket.emit('join_session', { sessionId: activeSessionId })
+  }
+})
+
+// ─────────────────────────────────────────
 // CONNECT WITH TOKEN
 // Called after login with the access token
 // ─────────────────────────────────────────
@@ -37,15 +51,16 @@ export const disconnectSocket = () => {
   if (socket.connected) {
     socket.disconnect()
   }
+  activeSessionId = null
 }
 
 // ─────────────────────────────────────────
 // SESSION EVENTS — EMIT
 // ─────────────────────────────────────────
 export const joinSession = (sessionId) => {
+  activeSessionId = sessionId
   socket.emit('join_session', { sessionId })
 }
-
 export const sendMessage = (content) => {
   socket.emit('send_message', { content })
 }
