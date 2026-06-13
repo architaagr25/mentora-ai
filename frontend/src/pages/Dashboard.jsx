@@ -248,42 +248,29 @@ const handleNavClick = (target) => {
       <aside
         className={`hidden lg:flex ${sidebarWidth} bg-[#0D1426] border-r border-slate-800 flex-col fixed left-0 top-0 h-full z-20 transition-all duration-300`}
       >
-        {/* Logo + collapse button */}
-        <div className="px-3 py-5 border-b border-slate-800 flex items-center justify-between">
-          <AnimatePresence mode="wait">
-            {!sidebarCollapsed && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                className="flex items-center gap-2 overflow-hidden"
-              >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                  <Brain size={16} className="text-white" />
-                </div>
-                <span className="text-white font-semibold text-lg whitespace-nowrap">
-                  Mentora <span className="text-cyan-400">AI</span>
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+       {/* Logo + collapse/expand button */}
+<div className="px-3 py-5 border-b border-slate-800 flex flex-col items-center gap-3 overflow-hidden">
+  <div className="w-full flex items-center justify-center gap-2">
+    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
+      <Brain size={16} className="text-white" />
+    </div>
+    <span
+      className={`text-white font-semibold text-lg whitespace-nowrap transition-all duration-300 overflow-hidden ${
+        sidebarCollapsed ? 'max-w-0 opacity-0' : 'max-w-[140px] opacity-100'
+      }`}
+    >
+      Mentora <span className="text-cyan-400">AI</span>
+    </span>
+  </div>
 
-          {sidebarCollapsed && (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center mx-auto">
-              <Brain size={16} className="text-white" />
-            </div>
-          )}
-
-          {!sidebarCollapsed && (
-            <button
-              onClick={() => setSidebarCollapsed(true)}
-              className="text-slate-500 hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-slate-800"
-            >
-              <ChevronLeft size={16} />
-            </button>
-          )}
-        </div>
-
+  <button
+    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+    title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+    className="text-slate-500 hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-slate-800"
+  >
+    {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+  </button>
+</div>
         {/* Nav items */}
         <nav className="flex-1 px-2 py-4 space-y-1">
           {navItems.map((item) => (
@@ -314,41 +301,31 @@ const handleNavClick = (target) => {
           ))}
         </nav>
 
-        {/* Expand button when collapsed */}
-        {sidebarCollapsed && (
-          <div className="px-2 py-3 border-t border-slate-800">
-            <button
-              onClick={() => setSidebarCollapsed(false)}
-              title="Expand sidebar"
-              className="w-full flex items-center justify-center p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-slate-800/60 transition-all"
-            >
-              <Menu size={18} />
-            </button>
-          </div>
-        )}
-
-        {/* User profile at bottom */}
-        {!sidebarCollapsed && (
-          <div ref={profileRef} className="px-4 py-4 border-t border-slate-800">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm font-bold">
-                  {user?.name?.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-                <p className="text-slate-500 text-xs truncate">{user?.email}</p>
-              </div>
-            </div>
-            <button
-              onClick={logout}
-              className="w-full text-slate-500 hover:text-slate-300 text-xs transition-colors text-left px-1"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
+       
+ 
+   {/* User profile at bottom */}
+{!sidebarCollapsed && (
+  <div ref={profileRef} className="px-4 py-4 border-t border-slate-800">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
+        <span className="text-white text-sm font-bold">
+          {user?.name?.charAt(0).toUpperCase()}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <p className="text-white text-sm font-medium truncate">{user?.name}</p>
+        <p className="text-slate-500 text-xs truncate">{user?.email}</p>
+      </div>
+    </div>
+    <hr className="border-slate-800 mb-3" />
+    <button
+      onClick={logout}
+      className="w-full text-red-400 hover:text-red-300 text-sm font-semibold transition-colors text-left px-1"
+    >
+      Sign out
+    </button>
+  </div>
+)}
 
         {/* Collapsed user avatar */}
         {sidebarCollapsed && (
@@ -417,25 +394,26 @@ const handleNavClick = (target) => {
               </nav>
 
               {/* Mobile profile */}
-              <div className="px-4 py-4 border-t border-slate-800">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm font-bold">
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-                    <p className="text-slate-500 text-xs truncate">{user?.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={logout}
-                  className="w-full text-slate-500 hover:text-slate-300 text-xs transition-colors text-left px-1"
-                >
-                  Sign out
-                </button>
-              </div>
+<div className="px-4 py-4 border-t border-slate-800">
+  <div className="flex items-center gap-3 mb-3">
+    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
+      <span className="text-white text-sm font-bold">
+        {user?.name?.charAt(0).toUpperCase()}
+      </span>
+    </div>
+    <div className="min-w-0">
+      <p className="text-white text-sm font-medium truncate">{user?.name}</p>
+      <p className="text-slate-500 text-xs truncate">{user?.email}</p>
+    </div>
+  </div>
+  <hr className="border-slate-800 mb-3" />
+  <button
+    onClick={logout}
+    className="w-full text-red-400 hover:text-red-300 text-sm font-semibold transition-colors text-left px-1"
+  >
+    Sign out
+  </button>
+</div>
             </motion.aside>
           </>
         )}
@@ -564,7 +542,7 @@ const handleNavClick = (target) => {
           {/* Recent sessions */}
           <div ref={historyRef} className="lg:col-span-2">
            <div className="flex items-center justify-between mb-4 gap-2">
-  <h2 className="text-lg font-semibold text-white">Recent Sessions</h2>
+  <h2 className="text-lg font-semibold text-white truncate">Recent Sessions</h2>
   <button
     onClick={() => navigate('/history')}
     className="flex-shrink-0 text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors flex items-center gap-1"
@@ -601,85 +579,81 @@ const handleNavClick = (target) => {
                     : null
 
  return (
-  <motion.div
-    key={session._id}
-    initial={{ opacity: 0, x: -20 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ delay: i * 0.05 }}
-    className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 hover:border-slate-600 transition-all duration-200 overflow-hidden"
-  >
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+<motion.div
+  key={session._id}
+  initial={{ opacity: 0, x: -20 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ delay: i * 0.05 }}
+  className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 hover:border-slate-600 transition-all duration-200 overflow-hidden"
+>
+  <div className="flex items-center justify-between gap-3">
 
-      {/* Avatar + topic */}
-      <div className="flex items-center gap-3 min-w-0 sm:flex-1">
-        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-violet-600/40 to-cyan-500/40 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">
-            {session.topic.charAt(0).toUpperCase()}
-          </span>
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-            <p className="text-white font-medium text-sm truncate max-w-[140px] sm:max-w-[200px]">
-              {session.topic}
-            </p>
-            <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-              {isActive ? 'Active' : 'Done'}
-            </span>
-          </div>
-          <p className="text-slate-500 text-xs">{formatDate(session.updatedAt)}</p>
-        </div>
+    {/* Avatar + topic + timestamp + score (left side, always) */}
+    <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-violet-600/40 to-cyan-500/40 flex items-center justify-center flex-shrink-0">
+        <span className="text-white font-bold text-sm">
+          {session.topic.charAt(0).toUpperCase()}
+        </span>
       </div>
 
-      {/* Scores + actions */}
-      <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap sm:flex-shrink-0 pl-[48px] sm:pl-0">
-        {latest && (
-          <>
-            <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-              {[
-                { label: 'ACC', value: latest.accuracy },
-                { label: 'CLR', value: latest.clarity },
-                { label: 'CMP', value: latest.completeness },
-              ].map((s) => (
-                <div key={s.label} className="text-center">
-                  <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
-                  <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>
-                    {s.value}/10
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="md:hidden flex-shrink-0">
-              <p className={`text-sm font-bold ${getScoreColor(getAverageScore(session.scores))}`}>
-                {getAverageScore(session.scores)}/10
-              </p>
-            </div>
-          </>
-        )}
-
-        <div className="flex-shrink-0 flex items-center gap-2 sm:ml-auto">
-          {isActive && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setConfirmCompleteId(session._id) }}
-              title="Mark as completed"
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
-            >
-              <CheckCircle size={14} />
-              <span className="hidden lg:inline">Complete</span>
-            </button>
+      <div className="min-w-0 flex-1">
+        <p className="text-white font-medium text-sm truncate max-w-[120px] sm:max-w-[200px]">
+          {session.topic}
+        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-slate-500 text-xs">{formatDate(session.updatedAt)}</p>
+          {latest && (
+            <p className={`text-xs font-bold sm:hidden ${getScoreColor(getAverageScore(session.scores))}`}>
+              {getAverageScore(session.scores)}/10
+            </p>
           )}
-          <button
-            onClick={() => navigate(`/session/${session._id}`)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
-          >
-            {isActive ? 'Continue' : 'Review'}
-            <ChevronRight size={14} />
-          </button>
         </div>
       </div>
     </div>
-  </motion.div>
+
+    {/* Right side — badge, full scores (desktop), actions */}
+    <div className="flex items-center gap-2 flex-shrink-0">
+      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+        {isActive ? 'Active' : 'Completed'}
+      </span>
+
+      {latest && (
+        <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+          {[
+            { label: 'ACC', value: latest.accuracy },
+            { label: 'CLR', value: latest.clarity },
+            { label: 'CMP', value: latest.completeness },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
+              <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>
+                {s.value}/10
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isActive && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setConfirmCompleteId(session._id) }}
+          title="Mark as completed"
+          className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+        >
+          <CheckCircle size={14} />
+          <span className="hidden lg:inline">Mark as Complete</span>
+        </button>
+      )}
+      <button
+        onClick={() => navigate(`/session/${session._id}`)}
+        className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+      >
+        <span className="hidden sm:inline">{isActive ? 'Continue' : 'Review'}</span>
+        <ChevronRight size={14} />
+      </button>
+    </div>
+  </div>
+</motion.div>
 )
                 })}
               </div>
