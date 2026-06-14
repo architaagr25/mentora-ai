@@ -6,7 +6,7 @@ import {
   createSessionSchema,
   sendMessageSchema,
 } from '../validators/sessionValidator.js'
-import { getAIStudentResponse, getAIStudentResponseStream, transcribeAudio } from '../services/aiService.js'
+import { getAIStudentResponse, transcribeAudio } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 
 const router = express.Router()

@@ -71,7 +71,7 @@ const useSpeech = () => {
       utterance.onerror = (e) => {
         // 'interrupted' fires when we cancel() — not a real error
         if (e.error !== 'interrupted') {
-          console.error('Speech error:', e.error)
+          // silent — speech errors are non-fatal in voice mode
         }
         setIsSpeaking(false)
         resolve()
@@ -99,7 +99,7 @@ const useSpeech = () => {
       utterance.onerror = (e) => {
         clearInterval(chromeFix)
         if (e.error !== 'interrupted') {
-          console.error('Speech error:', e.error)
+          // silent — speech errors are non-fatal in voice mode
         }
         setIsSpeaking(false)
         resolve()

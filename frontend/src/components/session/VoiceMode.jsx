@@ -73,7 +73,6 @@ const VoiceMode = ({
   isStreaming,
   streamingMsg,
   onSendMessage,
-  sessionId,
   isEnded,
   latestAiMessage,
 }) => {
@@ -82,14 +81,13 @@ const VoiceMode = ({
   const messagesEndRef = useRef(null)
 
   const {
-    isRecording,
     error: recorderError,
     startRecording,
     stopRecording,
     cleanup,
   } = useVoiceRecorder()
 
-  const { isSpeaking, speak, cancelSpeech } = useSpeech()
+  const {speak, cancelSpeech } = useSpeech()
 
   // ─────────────────────────────────────────
   // AUTO-SCROLL messages
