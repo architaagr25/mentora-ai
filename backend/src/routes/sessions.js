@@ -6,7 +6,7 @@ import {
   createSessionSchema,
   sendMessageSchema,
 } from '../validators/sessionValidator.js'
-import { getAIStudentResponse } from '../services/aiService.js'
+import { getAIStudentResponse, getAIStudentResponseStream, transcribeAudio } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 
 const router = express.Router()
@@ -263,5 +263,40 @@ router.post('/:id/end', async (req, res, next) => {
     next(err)
   }
 })
+// ─────────────────────────────────────────
+// POST /api/sessions/transcribe
+// Accepts base64 audio, returns transcript
+// Used by voice mode on the frontend
+// ─────────────────────────────────────────
+router.post('/transcribe', async (req, res, next) => {
+  try {
+    const { audioBase64, mimeType } = req.body
 
+    if (!audioBase64) {
+      throw new AppError('No audio data provided', 400)
+    }
+
+    if (!mimeType) {
+      throw new AppError('No mimeType provided', 400)
+    }
+
+    // Validate mimeType is audio
+    if (!mimeType.startsWith('audio/')) {
+      throw new AppError('Invalid mimeType — must be audio/*', 400)
+    }
+
+    const result = await transcribeAudio(audioBase64, mimeType)
+
+    if (!result.success) {
+      throw new AppError('Transcription failed. Please try again.', 500)
+    }
+
+    res.status(200).json({
+      status: 'success',
+      transcript: result.transcript,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
 export default router

@@ -128,3 +128,52 @@ export const getAIStudentResponseStream = async (
     onError(err.message)
   }
 }
+
+// ─────────────────────────────────────────
+// TRANSCRIBE AUDIO
+// Accepts a base64-encoded audio string + mimeType
+// Sends to Gemini and returns the transcript text
+// Used by the voice mode endpoint
+// ─────────────────────────────────────────
+export const transcribeAudio = async (audioBase64, mimeType) => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-lite',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              inlineData: {
+                mimeType,        // e.g. 'audio/webm' or 'audio/mp4'
+                data: audioBase64,
+              },
+            },
+            {
+              text: 'Transcribe this audio exactly as spoken. Return only the transcript text, nothing else — no labels, no punctuation corrections, no commentary.',
+            },
+          ],
+        },
+      ],
+      config: {
+        maxOutputTokens: 500,
+        temperature: 0,
+        // temperature 0 = most deterministic/literal transcription
+        // we don't want creative interpretation here
+      },
+    })
+
+    return {
+      success: true,
+      transcript: response.text.trim(),
+    }
+  } catch (err) {
+    logger.error(`Transcription error: ${err.message}`)
+    return {
+      success: false,
+      error: err.message,
+    }
+  }
+}
