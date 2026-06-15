@@ -11,8 +11,11 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  Mic,
+  MessageSquare,
 } from 'lucide-react'
 import useSessionStore from '@/store/sessionStore'
+import VoiceMode from '@/components/session/VoiceMode'
 
 // ─────────────────────────────────────────
 // HELPERS
@@ -54,7 +57,7 @@ const Session = () => {
   const { id } = useParams()
   const navigate = useNavigate()
 
-const {
+  const {
     currentSession,
     messages,
     streamingMessage,
@@ -76,13 +79,15 @@ const {
   const [showScorePanel, setShowScorePanel] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
+  const [voiceMode, setVoiceMode] = useState(false)
+  const [latestAiMessage, setLatestAiMessage] = useState(null)
+const lastSpokenIdRef = useRef(null)
+  const prevVoiceModeRef = useRef(false)
 
   const messagesEndRef = useRef(null)
   const textareaRef = useRef(null)
 
-  // ─────────────────────────────────────────
-  // JOIN SESSION ON MOUNT
-  // ─────────────────────────────────────────
+  // ─── JOIN SESSION ON MOUNT ───
   useEffect(() => {
     if (id) {
       joinExistingSession(id)
@@ -93,16 +98,12 @@ const {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  // ─────────────────────────────────────────
-  // AUTO-SCROLL TO BOTTOM
-  // ─────────────────────────────────────────
+  // ─── AUTO-SCROLL ───
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingMessage])
 
-  // ─────────────────────────────────────────
-  // AUTO-GROW TEXTAREA
-  // ─────────────────────────────────────────
+  // ─── AUTO-GROW TEXTAREA ───
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -110,13 +111,43 @@ const {
     }
   }, [input])
 
+  // ─── TRACK LATEST AI MESSAGE FOR TTS ───
+  // Only fires when a genuinely new assistant message
+  // arrives — not when voice mode is toggled on
+  useEffect(() => {
+    // Voice mode just turned ON — mark existing last message
+    // as already seen so it doesn't get spoken
+    if (voiceMode && !prevVoiceModeRef.current) {
+      prevVoiceModeRef.current = true
+      const lastMsg = messages[messages.length - 1]
+      if (lastMsg && lastMsg.role === 'assistant') {
+        lastSpokenIdRef.current = lastMsg._id || lastMsg.content
+      }
+      return
+    }
+
+    // Voice mode just turned OFF — reset tracker
+    if (!voiceMode && prevVoiceModeRef.current) {
+      prevVoiceModeRef.current = false
+      return
+    }
+
+    // Voice mode is ON and messages changed — only speak
+    // if the new message is genuinely new (not pre-existing)
+    if (!voiceMode) return
+    const lastMsg = messages[messages.length - 1]
+    if (!lastMsg || lastMsg.role !== 'assistant') return
+    const msgId = lastMsg._id || lastMsg.content
+    if (msgId === lastSpokenIdRef.current) return
+    lastSpokenIdRef.current = msgId
+    setTimeout(() => setLatestAiMessage(lastMsg.content), 0)
+  }, [messages, voiceMode])
+
   const isEnded = currentSession?.status === 'completed'
   const userMessageCount = messages.filter((m) => m.role === 'user').length
   const showScoreButton = userMessageCount >= 2 || latestScore !== null
 
-  // ─────────────────────────────────────────
-  // HANDLERS
-  // ─────────────────────────────────────────
+  // ─── HANDLERS ───
   const handleSend = () => {
     const trimmed = input.trim()
     if (!trimmed || isStreaming || isEnded) return
@@ -140,9 +171,8 @@ const {
       navigate('/dashboard')
     }, 1200)
   }
-  // ─────────────────────────────────────────
-  // LOADING STATE
-  // ─────────────────────────────────────────
+
+  // ─── LOADING STATE ───
   if (isJoining && !currentSession) {
     return (
       <div className="min-h-screen bg-[#080D1A] flex items-center justify-center">
@@ -156,9 +186,7 @@ const {
     )
   }
 
-  // ─────────────────────────────────────────
-  // ERROR STATE (failed to join)
-  // ─────────────────────────────────────────
+  // ─── ERROR STATE ───
   if (error && !currentSession) {
     return (
       <div className="min-h-screen bg-[#080D1A] flex items-center justify-center px-4">
@@ -202,13 +230,13 @@ const {
         <span
           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium w-fit mb-6 ${
             isEnded
-              ? 'bg-slate-300 text-slate-100'
+              ? 'bg-slate-700 text-slate-400'
               : 'bg-green-500/20 text-green-400'
           }`}
         >
           <div
             className={`w-1.5 h-1.5 rounded-full ${
-              isEnded ? 'bg-slate-100' : 'bg-green-400 animate-pulse'
+              isEnded ? 'bg-slate-500' : 'bg-green-400 animate-pulse'
             }`}
           />
           {isEnded ? 'Completed' : 'Active session'}
@@ -216,15 +244,13 @@ const {
 
         <div className="space-y-3 mb-8">
           <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4">
-            <p className="text-slate-200 text-sm mb-1">Messages exchanged</p>
+            <p className="text-slate-500 text-xs mb-1">Messages exchanged</p>
             <p className="text-white font-bold text-xl">{messages.length}</p>
           </div>
-          
+
           {latestScore && (
             <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4">
-              <p className="text-slate-200 text-sm mb-2">
-                 Latest Scores</p>
-    
+              <p className="text-slate-500 text-xs mb-2">Latest Scores</p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[
                   { label: 'ACC', value: latestScore.accuracy },
@@ -232,7 +258,7 @@ const {
                   { label: 'CMP', value: latestScore.completeness },
                 ].map((s) => (
                   <div key={s.label}>
-                    <p className="text-slate-400 text-xs mb-0.5">{s.label}</p>
+                    <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
                     <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>
                       {s.value}
                     </p>
@@ -241,13 +267,25 @@ const {
               </div>
             </div>
           )}
+
+          {/* Past scores — max 2 shown, view all opens score panel */}
           {scores.length > 1 && (
             <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4">
-              <p className="text-slate-200 text-sm mb-3">Past Scores</p>
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {scores.slice(0, -1).reverse().map((s, i) => (
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-slate-500 text-xs">Past Scores</p>
+                {scores.length > 3 && (
+                  <button
+                    onClick={() => setShowScorePanel(true)}
+                    className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                  >
+                    View all
+                  </button>
+                )}
+              </div>
+              <div className="space-y-3">
+                {scores.slice(0, -1).reverse().slice(0, 2).map((s, i) => (
                   <div key={i} className={i > 0 ? 'pt-3 border-t border-slate-800' : ''}>
-                    <p className="text-slate-200 text-xs mb-2">{formatDate(s.scoredAt)}</p>
+                    <p className="text-slate-600 text-xs mb-2">{formatDate(s.scoredAt)}</p>
                     <div className="grid grid-cols-3 gap-2 text-center">
                       {[
                         { label: 'ACC', value: s.accuracy },
@@ -255,19 +293,45 @@ const {
                         { label: 'CMP', value: s.completeness },
                       ].map((sc) => (
                         <div key={sc.label}>
-                          <p className="text-slate-400 text-xs mb-0.5">{sc.label}</p>
-                          <p className={`text-sm font-bold ${getScoreColor(sc.value)}`}>{sc.value}</p>
+                          <p className="text-slate-600 text-xs mb-0.5">{sc.label}</p>
+                          <p className={`text-sm font-bold ${getScoreColor(sc.value)}`}>
+                            {sc.value}
+                          </p>
                         </div>
                       ))}
                     </div>
                   </div>
                 ))}
+                {scores.length > 3 && (
+                  <button
+                    onClick={() => setShowScorePanel(true)}
+                    className="w-full text-xs text-slate-500 hover:text-violet-400 transition-colors pt-2 border-t border-slate-800"
+                  >
+                    + {scores.length - 3} more — view all
+                  </button>
+                )}
               </div>
             </div>
           )}
         </div>
 
         <div className="mt-auto space-y-2">
+          {/* Voice/text toggle */}
+          <button
+            onClick={() => setVoiceMode((v) => !v)}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              voiceMode
+                ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
+                : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+            {voiceMode ? (
+              <><MessageSquare size={16} />Switch to Text</>
+            ) : (
+              <><Mic size={16} />Switch to Voice</>
+            )}
+          </button>
+
           {showScoreButton && (
             <button
               onClick={() => setShowScorePanel(true)}
@@ -313,6 +377,18 @@ const {
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Voice/text toggle */}
+              <button
+                onClick={() => setVoiceMode((v) => !v)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium transition-colors ${
+                  voiceMode
+                    ? 'bg-cyan-500/20 text-cyan-400'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                {voiceMode ? <MessageSquare size={16} /> : <Mic size={16} />}
+              </button>
+
               {showScoreButton && (
                 <button
                   onClick={() => setShowScorePanel(true)}
@@ -338,7 +414,7 @@ const {
           </div>
         </header>
 
-        {/* ─── ERROR BANNER (non-fatal) ─── */}
+        {/* ─── ERROR BANNER ─── */}
         <AnimatePresence>
           {error && currentSession && (
             <motion.div
@@ -352,7 +428,10 @@ const {
                   <AlertCircle size={14} className="flex-shrink-0" />
                   {error}
                 </div>
-                <button onClick={clearError} className="text-red-400/60 hover:text-red-400 transition-colors flex-shrink-0">
+                <button
+                  onClick={clearError}
+                  className="text-red-400/60 hover:text-red-400 transition-colors flex-shrink-0"
+                >
                   <X size={14} />
                 </button>
               </div>
@@ -360,133 +439,146 @@ const {
           )}
         </AnimatePresence>
 
-        {/* ─── CHAT AREA ─── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        {/* ─── CHAT AREA / VOICE MODE ─── */}
+        {voiceMode ? (
+          <VoiceMode
+            messages={messages}
+            isStreaming={isStreaming}
+            streamingMsg={streamingMessage}
+            onSendMessage={sendMessage}
+            isEnded={isEnded}
+            latestAiMessage={latestAiMessage}
+            showScoreButton={showScoreButton}
+            onSwitchToText={() => setVoiceMode(false)}
+            onOpenScore={() => setShowScorePanel(true)}
+            onEndSession={() => setShowEndConfirm(true)}
+          />
+        ) : (
+          <>
+            {/* ─── CHAT AREA ─── */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
 
-            {/* Empty state */}
-            {messages.length === 0 && !isStreaming && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-violet-600/20 flex items-center justify-center mb-4">
-                  <GraduationCap size={24} className="text-violet-400" />
-                </div>
-                <h3 className="text-white font-semibold mb-2">
-                  Teach me about {currentSession?.topic}
-                </h3>
-                <p className="text-slate-400 text-sm max-w-sm">
-                  Start explaining the concept like you're teaching someone who's never heard of it. I'll ask questions as I go.
-                </p>
-              </div>
-            )}
-
-            {/* Messages */}
-            {messages.map((msg, i) => (
-              <motion.div
-                key={msg._id || i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex items-start gap-3 ${
-                  msg.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                    <GraduationCap size={14} className="text-white" />
+                {messages.length === 0 && !isStreaming && (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-violet-600/20 flex items-center justify-center mb-4">
+                      <GraduationCap size={24} className="text-violet-400" />
+                    </div>
+                    <h3 className="text-white font-semibold mb-2">
+                      Teach me about {currentSession?.topic}
+                    </h3>
+                    <p className="text-slate-400 text-sm max-w-sm">
+                      Start explaining the concept like you're teaching someone who's never heard of it. I'll ask questions as I go.
+                    </p>
                   </div>
                 )}
-                <div className="flex flex-col gap-1 max-w-[85%] sm:max-w-md">
-                  <div
-                    className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                      msg.role === 'user'
-                        ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white'
-                        : 'bg-slate-800/80 text-slate-200 border border-slate-700/40'
+
+                {messages.map((msg, i) => (
+                  <motion.div
+                    key={msg._id || i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex items-start gap-3 ${
+                      msg.role === 'user' ? 'justify-end' : 'justify-start'
                     }`}
                   >
-                    {msg.content}
-                  </div>
-                  {msg.createdAt && (
-                    <span
-                      className={`text-slate-600 text-xs ${
-                        msg.role === 'user' ? 'text-right' : 'text-left'
-                      }`}
-                    >
-                      {formatTime(msg.createdAt)}
-                    </span>
-                  )}
-                </div>
-                {msg.role === 'user' && (
-                  <span className="text-slate-500 text-xs pt-2 flex-shrink-0">You</span>
-                )}
-              </motion.div>
-            ))}
+                    {msg.role === 'assistant' && (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                        <GraduationCap size={14} className="text-white" />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1 max-w-[85%] sm:max-w-md">
+                      <div
+                        className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                          msg.role === 'user'
+                            ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white'
+                            : 'bg-slate-800/80 text-slate-200 border border-slate-700/40'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                      {msg.createdAt && (
+                        <span
+                          className={`text-slate-600 text-xs ${
+                            msg.role === 'user' ? 'text-right' : 'text-left'
+                          }`}
+                        >
+                          {formatTime(msg.createdAt)}
+                        </span>
+                      )}
+                    </div>
+                    {msg.role === 'user' && (
+                      <span className="text-slate-500 text-xs pt-2 flex-shrink-0">You</span>
+                    )}
+                  </motion.div>
+                ))}
 
-            {/* Streaming AI response */}
-            {isStreaming && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-start gap-3 justify-start"
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                  <GraduationCap size={14} className="text-white" />
-                </div>
-                {streamingMessage ? (
-                  <div className="max-w-[85%] sm:max-w-md px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words bg-slate-800/80 text-slate-200 border border-slate-700/40">
-                    {streamingMessage}
-                    <span className="inline-block w-1.5 h-4 bg-cyan-400 ml-1 animate-pulse align-middle" />
+                {isStreaming && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-3 justify-start"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
+                      <GraduationCap size={14} className="text-white" />
+                    </div>
+                    {streamingMessage ? (
+                      <div className="max-w-[85%] sm:max-w-md px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words bg-slate-800/80 text-slate-200 border border-slate-700/40">
+                        {streamingMessage}
+                        <span className="inline-block w-1.5 h-4 bg-cyan-400 ml-1 animate-pulse align-middle" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-cyan-400 text-sm px-4 py-3">
+                        <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                        AI student is thinking...
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+
+            {/* ─── INPUT BAR ─── */}
+            <div className="flex-shrink-0 border-t border-slate-800 bg-[#0D1426]">
+              <div className="max-w-3xl mx-auto px-4 py-3">
+                {isEnded ? (
+                  <div className="flex items-center justify-center gap-2 py-3 text-slate-500 text-sm">
+                    <CheckCircle2 size={16} className="text-green-400" />
+                    This session has ended. Start a new session to continue teaching this topic.
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-cyan-400 text-sm px-4 py-3">
-                    <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                    AI student is thinking...
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      ref={textareaRef}
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Explain the concept..."
+                      rows={1}
+                      maxLength={2000}
+                      disabled={isStreaming}
+                      className="flex-1 resize-none px-4 py-3 rounded-xl bg-[#080D1A] border border-slate-700 hover:border-slate-600 focus:border-violet-500 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all disabled:opacity-50"
+                    />
+                    <button
+                      onClick={handleSend}
+                      disabled={!input.trim() || isStreaming}
+                      className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isStreaming ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <Send size={18} />
+                      )}
+                    </button>
                   </div>
                 )}
-              </motion.div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* ─── INPUT BAR ─── */}
-        <div className="flex-shrink-0 border-t border-slate-800 bg-[#0D1426]">
-          <div className="max-w-3xl mx-auto px-4 py-3">
-            {isEnded ? (
-              <div className="flex items-center justify-center gap-2 py-3 text-slate-500 text-sm">
-                <CheckCircle2 size={16} className="text-green-400" />
-                This session has ended. Start a new session to continue teaching this topic.
               </div>
-            ) : (
-              <div className="flex items-end gap-2">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Explain the concept..."
-                  rows={1}
-                  maxLength={2000}
-                  disabled={isStreaming}
-                  className="flex-1 resize-none px-4 py-3 rounded-xl bg-[#080D1A] border border-slate-700 hover:border-slate-600 focus:border-violet-500 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all disabled:opacity-50"
-                />
-                <button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isStreaming}
-                  className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {isStreaming ? (
-                    <Loader2 size={18} className="animate-spin" />
-                  ) : (
-                    <Send size={18} />
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
+            </div>
+          </>
+        )}
       </div>
-      {/* ─── END MAIN CHAT COLUMN ─── */}
 
       {/* ─── SCORE PANEL ─── */}
       <AnimatePresence>
@@ -506,7 +598,6 @@ const {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed right-0 top-0 h-full w-full sm:w-96 bg-[#0D1426] border-l border-slate-800 z-50 flex flex-col"
             >
-              {/* Panel header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 flex-shrink-0">
                 <h2 className="text-white font-bold text-lg">Mastery Score</h2>
                 <button
@@ -517,10 +608,8 @@ const {
                 </button>
               </div>
 
-              {/* Panel content */}
               <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
 
-                {/* Request score button */}
                 {!isEnded && (
                   <button
                     onClick={requestScore}
@@ -541,10 +630,8 @@ const {
                   </button>
                 )}
 
-                {/* Latest score */}
                 {latestScore ? (
                   <div className="space-y-5">
-                    {/* Score bars */}
                     <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4 space-y-4">
                       <p className="text-slate-500 text-xs mb-1">Latest result</p>
                       {[
@@ -571,7 +658,6 @@ const {
                       ))}
                     </div>
 
-                    {/* Feedback */}
                     {latestScore.feedback && (
                       <div>
                         <p className="text-white font-semibold text-sm mb-2">Feedback</p>
@@ -581,7 +667,6 @@ const {
                       </div>
                     )}
 
-                    {/* Gaps */}
                     {latestScore.gaps && latestScore.gaps.length > 0 && (
                       <div>
                         <p className="text-white font-semibold text-sm mb-3">Gaps found</p>
@@ -596,7 +681,7 @@ const {
                       </div>
                     )}
 
-                    {/* All scores history */}
+                    {/* All attempts */}
                     <div>
                       <p className="text-white font-semibold text-sm mb-3">
                         All attempts ({scores.length})

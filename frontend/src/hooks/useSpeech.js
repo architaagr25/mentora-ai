@@ -1,18 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-// ─────────────────────────────────────────
-// useSpeech
-// Wraps the browser's speechSynthesis API
-// Handles speaking text aloud, cancelling,
-// and tracking whether speech is in progress
-// ─────────────────────────────────────────
 const useSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false)
-  // Lazy initializer — runs once on mount, no setState needed
+  const [isPaused, setIsPaused] = useState(false)
   const [isSupported] = useState(() => 'speechSynthesis' in window)
   const utteranceRef = useRef(null)
 
-  // Cleanup only — no setState here
   useEffect(() => {
     return () => {
       if ('speechSynthesis' in window) {
@@ -21,12 +14,6 @@ const useSpeech = () => {
     }
   }, [])
 
-  // ─────────────────────────────────────────
-  // SPEAK
-  // Takes a text string, reads it aloud
-  // Cancels any currently-playing speech first
-  // Returns a Promise that resolves when done
-  // ─────────────────────────────────────────
   const speak = useCallback((text) => {
     return new Promise((resolve) => {
       if (!('speechSynthesis' in window) || !text?.trim()) {
@@ -34,57 +21,35 @@ const useSpeech = () => {
         return
       }
 
-      // Cancel anything currently playing
       window.speechSynthesis.cancel()
+      setIsPaused(false)
 
       const utterance = new SpeechSynthesisUtterance(text)
       utteranceRef.current = utterance
 
-      // ─── VOICE SETTINGS ───
-      // Rate: 1 is normal speed, 0.9 feels slightly more
-      // natural for a "confused student" character
       utterance.rate = 0.9
       utterance.pitch = 1
       utterance.volume = 1
 
-      // Pick a voice — prefer an English voice if available
-      // Falls back to browser default if none found
-      // We do this inside speak() rather than on mount because
-      // voices load asynchronously and may not be ready on mount
       const voices = window.speechSynthesis.getVoices()
       const englishVoice = voices.find(
         (v) => v.lang.startsWith('en') && !v.name.includes('Google')
-        // Avoid Google voices — they sometimes cut off mid-sentence
-        // on Chrome due to a known bug with long utterances
       )
       if (englishVoice) {
         utterance.voice = englishVoice
       }
 
-      utterance.onstart = () => setIsSpeaking(true)
-
-      utterance.onend = () => {
-        setIsSpeaking(false)
-        resolve()
+      utterance.onstart = () => {
+        setIsSpeaking(true)
+        setIsPaused(false)
       }
 
-      utterance.onerror = (e) => {
-        // 'interrupted' fires when we cancel() — not a real error
-        if (e.error !== 'interrupted') {
-          // silent — speech errors are non-fatal in voice mode
-        }
-        setIsSpeaking(false)
-        resolve()
-      }
-
-      // ─── CHROME BUG WORKAROUND ───
-      // Chrome has a bug where speechSynthesis pauses after ~15 seconds
-      // on long utterances. This interval keeps it alive.
-      // It clears itself when speech ends via onend/onerror.
+      // Chrome bug workaround — speechSynthesis silently
+      // pauses after ~15 seconds on long utterances
       const chromeFix = setInterval(() => {
         if (!window.speechSynthesis.speaking) {
           clearInterval(chromeFix)
-        } else {
+        } else if (!window.speechSynthesis.paused) {
           window.speechSynthesis.pause()
           window.speechSynthesis.resume()
         }
@@ -93,6 +58,7 @@ const useSpeech = () => {
       utterance.onend = () => {
         clearInterval(chromeFix)
         setIsSpeaking(false)
+        setIsPaused(false)
         resolve()
       }
 
@@ -102,6 +68,7 @@ const useSpeech = () => {
           // silent — speech errors are non-fatal in voice mode
         }
         setIsSpeaking(false)
+        setIsPaused(false)
         resolve()
       }
 
@@ -109,22 +76,32 @@ const useSpeech = () => {
     })
   }, [])
 
-  // ─────────────────────────────────────────
-  // CANCEL
-  // Stops any current speech immediately
-  // ─────────────────────────────────────────
   const cancelSpeech = useCallback(() => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel()
       setIsSpeaking(false)
+      setIsPaused(false)
+    }
+  }, [])
+
+  const togglePause = useCallback(() => {
+    if (!('speechSynthesis' in window)) return
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume()
+      setIsPaused(false)
+    } else {
+      window.speechSynthesis.pause()
+      setIsPaused(true)
     }
   }, [])
 
   return {
     isSpeaking,
+    isPaused,
     isSupported,
     speak,
     cancelSpeech,
+    togglePause,
   }
 }
 

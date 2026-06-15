@@ -1,27 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, Loader2, GraduationCap, Volume2 } from 'lucide-react'
+import { Mic, MicOff, Loader2, GraduationCap, Volume2, MessageSquare, BarChart3, Flag } from 'lucide-react'
 import useVoiceRecorder from '@/hooks/useVoiceRecorder'
 import useSpeech from '@/hooks/useSpeech'
 import api from '@/api'
 
-// ─────────────────────────────────────────
-// VOICE STATES
-// The mic button and status text cycle
-// through these states during a conversation
-// ─────────────────────────────────────────
 const VOICE_STATE = {
-  IDLE: 'idle',               // ready to record
-  RECORDING: 'recording',     // mic is active, user is speaking
-  TRANSCRIBING: 'transcribing', // audio sent to Gemini, waiting for text
-  WAITING: 'waiting',         // transcript sent, waiting for AI response
-  SPEAKING: 'speaking',       // AI is reading response aloud
+  IDLE: 'idle',
+  RECORDING: 'recording',
+  TRANSCRIBING: 'transcribing',
+  WAITING: 'waiting',
+  SPEAKING: 'speaking',
 }
 
-// ─────────────────────────────────────────
-// WAVEFORM ANIMATION
-// Simple animated bars shown while AI speaks
-// ─────────────────────────────────────────
 const Waveform = () => (
   <div className="flex items-center gap-1 h-8">
     {[0.4, 0.7, 1, 0.8, 0.5, 0.9, 0.6, 0.75, 0.45, 0.85].map((h, i) => (
@@ -43,11 +34,6 @@ const Waveform = () => (
   </div>
 )
 
-// ─────────────────────────────────────────
-// STATUS LABEL
-// Text shown below the mic button describing
-// what is currently happening
-// ─────────────────────────────────────────
 const statusConfig = {
   [VOICE_STATE.IDLE]: { text: 'Tap to speak', color: 'text-slate-400' },
   [VOICE_STATE.RECORDING]: { text: 'Listening... tap to stop', color: 'text-red-400' },
@@ -56,18 +42,6 @@ const statusConfig = {
   [VOICE_STATE.SPEAKING]: { text: 'AI student is speaking...', color: 'text-cyan-400' },
 }
 
-// ─────────────────────────────────────────
-// VOICE MODE COMPONENT
-// Props:
-//   messages       — full message array from sessionStore
-//   isStreaming    — whether AI is currently streaming text
-//   streamingMsg   — the partial streaming text
-//   onSendMessage  — calls sessionStore.sendMessage(text)
-//   onAiDone       — fires when ai_response_done comes in,
-//                    passes the full AI message text
-//   sessionId      — needed for the transcribe API call
-//   isEnded        — whether session is completed
-// ─────────────────────────────────────────
 const VoiceMode = ({
   messages,
   isStreaming,
@@ -75,10 +49,15 @@ const VoiceMode = ({
   onSendMessage,
   isEnded,
   latestAiMessage,
+  showScoreButton,
+  onSwitchToText,
+  onOpenScore,
+  onEndSession,
 }) => {
   const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE)
   const [error, setError] = useState(null)
   const messagesEndRef = useRef(null)
+  const spokenUpToRef = useRef('')
 
   const {
     error: recorderError,
@@ -87,20 +66,14 @@ const VoiceMode = ({
     cleanup,
   } = useVoiceRecorder()
 
-  const {speak, cancelSpeech } = useSpeech()
+  const { speak, cancelSpeech, togglePause, isPaused } = useSpeech()
 
-  // ─────────────────────────────────────────
-  // AUTO-SCROLL messages
-  // ─────────────────────────────────────────
+  // ─── AUTO SCROLL ───
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingMsg])
 
-  // ─────────────────────────────────────────
-  // CLEANUP on unmount
-  // Stop recording + cancel speech if user
-  // switches back to text mode mid-session
-  // ─────────────────────────────────────────
+  // ─── CLEANUP ON UNMOUNT ───
   useEffect(() => {
     return () => {
       cleanup()
@@ -109,48 +82,69 @@ const VoiceMode = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ─────────────────────────────────────────
-  // SYNC voiceState with streaming/speaking
-  // ─────────────────────────────────────────
- const prevIsStreamingRef = useRef(false)
-
+  // ─── SYNC VOICE STATE WITH STREAMING ───
   useEffect(() => {
-    if (isStreaming && !prevIsStreamingRef.current) {
-      prevIsStreamingRef.current = true
+    if (isStreaming && !streamingMsg) {
       setTimeout(() => setVoiceState(VOICE_STATE.WAITING), 0)
-    } else if (!isStreaming) {
-      prevIsStreamingRef.current = false
     }
-  }, [isStreaming])
-  // ─────────────────────────────────────────
-  // SPEAK when AI response completes
-  // latestAiMessage is the most recent
-  // assistant message — parent updates it
-  // when ai_response_done fires
-  // ─────────────────────────────────────────
-useEffect(() => {
+    if (isStreaming && streamingMsg) {
+      setTimeout(() => setVoiceState(VOICE_STATE.SPEAKING), 0)
+    }
+  }, [isStreaming, streamingMsg])
+
+  // ─── SPEAK SENTENCES AS THEY STREAM IN ───
+  useEffect(() => {
+    if (!isStreaming || !streamingMsg) return
+
+    const sentences = streamingMsg
+      .split(/(?<=[.!?])\s+/)
+      .filter(Boolean)
+
+    if (sentences.length < 2) return
+
+    const speakable = sentences.slice(0, -1).join(' ')
+
+    if (speakable === spokenUpToRef.current) return
+
+    const newPart = speakable.slice(spokenUpToRef.current.length).trim()
+    if (!newPart) return
+
+    spokenUpToRef.current = speakable
+    speak(newPart)
+  }, [streamingMsg, isStreaming, speak])
+
+  // ─── SPEAK REMAINING TEXT WHEN STREAMING ENDS ───
+  useEffect(() => {
     if (!latestAiMessage || isStreaming) return
 
-    const speakResponse = async () => {
+    const remaining = latestAiMessage
+      .slice(spokenUpToRef.current.length)
+      .trim()
+
+    spokenUpToRef.current = ''
+
+    if (!remaining) {
+      setTimeout(() => setVoiceState(VOICE_STATE.IDLE), 0)
+      return
+    }
+
+    const speakRemaining = async () => {
       setTimeout(() => setVoiceState(VOICE_STATE.SPEAKING), 0)
-      await speak(latestAiMessage)
+      await speak(remaining)
       setVoiceState((prev) =>
         prev === VOICE_STATE.SPEAKING ? VOICE_STATE.IDLE : prev
       )
     }
 
-    speakResponse()
+    speakRemaining()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestAiMessage])
 
-  // ─────────────────────────────────────────
-  // HANDLE MIC BUTTON TAP
-  // ─────────────────────────────────────────
+  // ─── MIC BUTTON HANDLER ───
   const handleMicTap = useCallback(async () => {
     setError(null)
 
     if (voiceState === VOICE_STATE.IDLE) {
-      // Cancel any ongoing speech first
       cancelSpeech()
       const started = await startRecording()
       if (started) {
@@ -171,13 +165,9 @@ useEffect(() => {
 
       const { blob, mimeType } = result
 
-      // Convert blob to base64 so we can send it as JSON
-      // FileReader is the standard browser API for this
       const reader = new FileReader()
       reader.onloadend = async () => {
         try {
-          // reader.result looks like "data:audio/webm;base64,AAAA..."
-          // we only want the part after the comma
           const base64 = reader.result.split(',')[1]
 
           const response = await api.post('/sessions/transcribe', {
@@ -193,7 +183,6 @@ useEffect(() => {
             return
           }
 
-          // Feed transcript into existing socket flow
           setVoiceState(VOICE_STATE.WAITING)
           onSendMessage(transcript)
         } catch {
@@ -206,9 +195,6 @@ useEffect(() => {
     }
   }, [voiceState, startRecording, stopRecording, cancelSpeech, onSendMessage])
 
-  // ─────────────────────────────────────────
-  // MIC BUTTON disabled conditions
-  // ─────────────────────────────────────────
   const micDisabled =
     isEnded ||
     voiceState === VOICE_STATE.TRANSCRIBING ||
@@ -219,6 +205,37 @@ useEffect(() => {
 
   return (
     <div className="flex flex-col h-full">
+
+      {/* ─── MOBILE ACTION BAR (top) ─── */}
+      <div className="lg:hidden flex-shrink-0 border-b border-slate-800 bg-[#080D1A] px-4 py-2 flex items-center gap-2">
+        <button
+          onClick={onSwitchToText}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+        >
+          <MessageSquare size={14} />
+          Text Mode
+        </button>
+
+        {showScoreButton && (
+          <button
+            onClick={onOpenScore}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+          >
+            <BarChart3 size={14} />
+            Score
+          </button>
+        )}
+
+        {!isEnded && (
+          <button
+            onClick={onEndSession}
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            <Flag size={14} />
+            End
+          </button>
+        )}
+      </div>
 
       {/* ─── MESSAGE HISTORY ─── */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -301,16 +318,26 @@ useEffect(() => {
           )}
         </AnimatePresence>
 
-        {/* Waveform — shown while AI is speaking */}
-        <div className="flex justify-center mb-4 h-8">
+        {/* Waveform + pause/resume */}
+        <div className="flex flex-col items-center gap-2 mb-4 min-h-12">
           <AnimatePresence>
             {voiceState === VOICE_STATE.SPEAKING && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
+                className="flex flex-col items-center gap-2"
               >
-                <Waveform />
+                {!isPaused && <Waveform />}
+                {isPaused && (
+                  <p className="text-slate-500 text-xs">Paused</p>
+                )}
+                <button
+                  onClick={togglePause}
+                  className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors underline underline-offset-2"
+                >
+                  {isPaused ? 'Resume' : 'Pause'}
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -320,8 +347,8 @@ useEffect(() => {
         <div className="flex flex-col items-center gap-3">
           <motion.button
             onClick={handleMicTap}
-            disabled={micDisabled}
-            whileTap={!micDisabled ? { scale: 0.95 } : {}}
+            disabled={micDisabled && !isPaused}
+            whileTap={(!micDisabled || isPaused) ? { scale: 0.95 } : {}}
             className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 disabled:cursor-not-allowed ${
               voiceState === VOICE_STATE.RECORDING
                 ? 'bg-red-500 shadow-lg shadow-red-500/40'
@@ -332,7 +359,6 @@ useEffect(() => {
                 : 'bg-gradient-to-br from-violet-600 to-cyan-500 shadow-lg shadow-violet-500/30'
             }`}
           >
-            {/* Pulsing ring while recording */}
             {voiceState === VOICE_STATE.RECORDING && (
               <motion.div
                 className="absolute inset-0 rounded-full bg-red-500"
@@ -341,7 +367,8 @@ useEffect(() => {
               />
             )}
 
-            {voiceState === VOICE_STATE.TRANSCRIBING || voiceState === VOICE_STATE.WAITING ? (
+            {voiceState === VOICE_STATE.TRANSCRIBING ||
+            voiceState === VOICE_STATE.WAITING ? (
               <Loader2 size={28} className="text-white animate-spin" />
             ) : voiceState === VOICE_STATE.SPEAKING ? (
               <Volume2 size={28} className="text-cyan-400" />
@@ -352,11 +379,12 @@ useEffect(() => {
             )}
           </motion.button>
 
-          {/* Status text */}
           <p className={`text-sm font-medium transition-colors ${status.color}`}>
             {isEnded ? 'Session ended' : status.text}
           </p>
         </div>
+
+        
       </div>
     </div>
   )
