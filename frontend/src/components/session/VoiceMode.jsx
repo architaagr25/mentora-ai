@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, Loader2, GraduationCap, Volume2, MessageSquare, BarChart3, Flag } from 'lucide-react'
+import { Mic, MicOff, Loader2, GraduationCap, Volume2, MessageSquare, BarChart3, Flag, ArrowLeft, Settings2 } from 'lucide-react'
 import useVoiceRecorder from '@/hooks/useVoiceRecorder'
 import useSpeech from '@/hooks/useSpeech'
 import api from '@/api'
@@ -53,12 +53,16 @@ const VoiceMode = ({
   onSwitchToText,
   onOpenScore,
   onEndSession,
+  onNavigateBack,
+  topic,
+  latestScore,
+  sessionError,
 }) => {
   const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE)
   const [error, setError] = useState(null)
   const messagesEndRef = useRef(null)
   const spokenUpToRef = useRef('')
-
+    const [failCount, setFailCount] = useState(0)
   const {
     error: recorderError,
     startRecording,
@@ -66,8 +70,17 @@ const VoiceMode = ({
     cleanup,
   } = useVoiceRecorder()
 
-  const { speak, cancelSpeech, togglePause, isPaused } = useSpeech()
-
+const {
+    speak,
+    cancelSpeech,
+    togglePause,
+    isPaused,
+    voices,
+    selectedVoiceName,
+    setVoice,
+    previewVoice,
+  } = useSpeech()
+  const [showVoicePicker, setShowVoicePicker] = useState(false)
   // ─── AUTO SCROLL ───
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -81,6 +94,17 @@ const VoiceMode = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (sessionError && (voiceState === VOICE_STATE.WAITING || voiceState === VOICE_STATE.SPEAKING)) {
+      cancelSpeech()
+      setTimeout(() => {
+        setError(sessionError)
+        setVoiceState(VOICE_STATE.IDLE)
+      }, 0)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionError])
 
   // ─── SYNC VOICE STATE WITH STREAMING ───
   useEffect(() => {
@@ -140,6 +164,7 @@ const VoiceMode = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [latestAiMessage])
 
+  
   // ─── MIC BUTTON HANDLER ───
   const handleMicTap = useCallback(async () => {
     setError(null)
@@ -178,23 +203,35 @@ const VoiceMode = ({
           const transcript = response.data.transcript
 
           if (!transcript || transcript.trim().length === 0) {
-            setError('Could not hear anything. Please try again.')
+            const newCount = failCount + 1
+            setFailCount(newCount)
+            setError(
+              newCount >= 3
+                ? "Still can't hear you. Check your mic is not muted, or switch to text mode."
+                : 'Could not hear anything. Please try again.'
+            )
             setVoiceState(VOICE_STATE.IDLE)
             return
           }
 
+          setFailCount(0)
           setVoiceState(VOICE_STATE.WAITING)
           onSendMessage(transcript)
         } catch {
-          setError('Transcription failed. Please try again.')
+          const newCount = failCount + 1
+          setFailCount(newCount)
+          setError(
+            newCount >= 3
+              ? 'Voice transcription keeps failing. Try switching to text mode.'
+              : 'Transcription failed. Please try again.'
+          )
           setVoiceState(VOICE_STATE.IDLE)
         }
       }
 
       reader.readAsDataURL(blob)
     }
-  }, [voiceState, startRecording, stopRecording, cancelSpeech, onSendMessage])
-
+}, [voiceState, startRecording, stopRecording, cancelSpeech, onSendMessage, failCount])
   const micDisabled =
     isEnded ||
     voiceState === VOICE_STATE.TRANSCRIBING ||
@@ -206,36 +243,64 @@ const VoiceMode = ({
   return (
     <div className="flex flex-col h-full">
 
-      {/* ─── MOBILE ACTION BAR (top) ─── */}
-      <div className="lg:hidden flex-shrink-0 border-b border-slate-800 bg-[#080D1A] px-4 py-2 flex items-center gap-2">
-        <button
-          onClick={onSwitchToText}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
-        >
-          <MessageSquare size={14} />
-          Text Mode
-        </button>
+      {/* ─── MOBILE TOP BAR ─── */}
+      <header className="lg:hidden flex-shrink-0 border-b border-slate-800 bg-[#0D1426]">
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          {/* Left — back + topic */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={onNavigateBack}
+              className="text-slate-500 hover:text-white transition-colors flex-shrink-0"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="min-w-0">
+              <p className="text-white font-semibold text-sm truncate">
+                {topic || 'Voice Mode'}
+              </p>
+              <p className="text-slate-500 text-xs">
+                {isEnded ? 'Session completed' : 'Voice session'}
+              </p>
+            </div>
+          </div>
 
-        {showScoreButton && (
-          <button
-            onClick={onOpenScore}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
-          >
-            <BarChart3 size={14} />
-            Score
-          </button>
-        )}
+          {/* Right — actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Switch to text */}
+            <button
+              onClick={onSwitchToText}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+            >
+              <MessageSquare size={16} />
+              <span className="hidden sm:inline">Text</span>
+            </button>
 
-        {!isEnded && (
-          <button
-            onClick={onEndSession}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            <Flag size={14} />
-            End
-          </button>
-        )}
-      </div>
+            {/* Score */}
+            {showScoreButton && (
+              <button
+                onClick={onOpenScore}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+              >
+                <BarChart3 size={16} />
+                <span className="hidden sm:inline">
+                  {latestScore ? 'Score' : 'Get Score'}
+                </span>
+              </button>
+            )}
+
+            {/* End session */}
+            {!isEnded && (
+              <button
+                onClick={onEndSession}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Flag size={16} />
+                <span className="hidden sm:inline">End</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
 
       {/* ─── MESSAGE HISTORY ─── */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
@@ -317,7 +382,50 @@ const VoiceMode = ({
             </motion.p>
           )}
         </AnimatePresence>
+{/* Voice picker toggle */}
+        {voices.length > 0 && (
+          <div className="flex justify-center mb-2">
+            <button
+              onClick={() => setShowVoicePicker((v) => !v)}
+              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              <Settings2 size={12} />
+              Voice settings
+            </button>
+          </div>
+        )}
 
+        {/* Voice picker dropdown */}
+        <AnimatePresence>
+          {showVoicePicker && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4 max-h-40 overflow-y-auto bg-[#080D1A] border border-slate-800 rounded-xl p-2"
+            >
+              {voices.map((v) => (
+                <button
+                  key={v.name}
+                  onClick={() => {
+                    setVoice(v.name)
+                    previewVoice(v.name)
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-left transition-colors ${
+                    selectedVoiceName === v.name
+                      ? 'bg-violet-600/20 text-violet-400'
+                      : 'text-slate-400 hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="truncate">{v.name.replace(/^Microsoft |^Google /, '')}</span>
+                  {selectedVoiceName === v.name && (
+                    <span className="text-violet-400 flex-shrink-0 ml-2">✓</span>
+                  )}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* Waveform + pause/resume */}
         <div className="flex flex-col items-center gap-2 mb-4 min-h-12">
           <AnimatePresence>

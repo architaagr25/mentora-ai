@@ -79,14 +79,33 @@ const Session = () => {
   const [showScorePanel, setShowScorePanel] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
-  const [voiceMode, setVoiceMode] = useState(false)
-  const [latestAiMessage, setLatestAiMessage] = useState(null)
+const [voiceMode, setVoiceMode] = useState(() => {
+    try {
+      return localStorage.getItem('mentora_voice_mode') === 'true'
+    } catch {
+      return false
+    }
+  })
+    const [latestAiMessage, setLatestAiMessage] = useState(null)
+    const [scrollToAttempts, setScrollToAttempts] = useState(false)
+
 const lastSpokenIdRef = useRef(null)
-  const prevVoiceModeRef = useRef(false)
 
   const messagesEndRef = useRef(null)
   const textareaRef = useRef(null)
 
+  const allAttemptsRef = useRef(null)
+
+
+  const toggleVoiceMode = (val) => {
+    const next = typeof val === 'function' ? val(voiceMode) : val
+    setVoiceMode(next)
+    try {
+      localStorage.setItem('mentora_voice_mode', String(next))
+    } catch {
+      // silent
+    }
+  }
   // ─── JOIN SESSION ON MOUNT ───
   useEffect(() => {
     if (id) {
@@ -114,11 +133,23 @@ const lastSpokenIdRef = useRef(null)
   // ─── TRACK LATEST AI MESSAGE FOR TTS ───
   // Only fires when a genuinely new assistant message
   // arrives — not when voice mode is toggled on
+  const hasInitializedVoiceRef = useRef(false)
+
   useEffect(() => {
-    // Voice mode just turned ON — mark existing last message
-    // as already seen so it doesn't get spoken
-    if (voiceMode && !prevVoiceModeRef.current) {
-      prevVoiceModeRef.current = true
+    if (!voiceMode) {
+      hasInitializedVoiceRef.current = false
+      return
+    }
+
+    // Wait until messages have actually loaded before deciding
+    // what counts as "already seen" — on refresh, messages
+    // arrive async via socket, so don't act on an empty array
+    if (messages.length === 0) return
+
+    // First time voice mode is active AND messages exist —
+    // mark current last message as already seen, don't speak it
+    if (!hasInitializedVoiceRef.current) {
+      hasInitializedVoiceRef.current = true
       const lastMsg = messages[messages.length - 1]
       if (lastMsg && lastMsg.role === 'assistant') {
         lastSpokenIdRef.current = lastMsg._id || lastMsg.content
@@ -126,15 +157,7 @@ const lastSpokenIdRef = useRef(null)
       return
     }
 
-    // Voice mode just turned OFF — reset tracker
-    if (!voiceMode && prevVoiceModeRef.current) {
-      prevVoiceModeRef.current = false
-      return
-    }
-
-    // Voice mode is ON and messages changed — only speak
-    // if the new message is genuinely new (not pre-existing)
-    if (!voiceMode) return
+    // After initialization — only speak genuinely new messages
     const lastMsg = messages[messages.length - 1]
     if (!lastMsg || lastMsg.role !== 'assistant') return
     const msgId = lastMsg._id || lastMsg.content
@@ -143,6 +166,17 @@ const lastSpokenIdRef = useRef(null)
     setTimeout(() => setLatestAiMessage(lastMsg.content), 0)
   }, [messages, voiceMode])
 
+  useEffect(() => {
+    if (showScorePanel && scrollToAttempts) {
+      // Small delay lets the slide-in animation start first
+      const timer = setTimeout(() => {
+        allAttemptsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        setScrollToAttempts(false)
+      }, 350)
+      return () => clearTimeout(timer)
+    }
+  }, [showScorePanel, scrollToAttempts])
+  
   const isEnded = currentSession?.status === 'completed'
   const userMessageCount = messages.filter((m) => m.role === 'user').length
   const showScoreButton = userMessageCount >= 2 || latestScore !== null
@@ -243,10 +277,7 @@ const lastSpokenIdRef = useRef(null)
         </span>
 
         <div className="space-y-3 mb-8">
-          <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4">
-            <p className="text-slate-500 text-xs mb-1">Messages exchanged</p>
-            <p className="text-white font-bold text-xl">{messages.length}</p>
-          </div>
+          
 
           {latestScore && (
             <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4">
@@ -275,7 +306,10 @@ const lastSpokenIdRef = useRef(null)
                 <p className="text-slate-500 text-xs">Past Scores</p>
                 {scores.length > 3 && (
                   <button
-                    onClick={() => setShowScorePanel(true)}
+                    onClick={() => {
+                      setScrollToAttempts(true)
+                      setShowScorePanel(true)
+                    }}
                     className="text-xs text-violet-400 hover:text-violet-300 transition-colors"
                   >
                     View all
@@ -304,7 +338,10 @@ const lastSpokenIdRef = useRef(null)
                 ))}
                 {scores.length > 3 && (
                   <button
-                    onClick={() => setShowScorePanel(true)}
+                    onClick={() => {
+                      setScrollToAttempts(true)
+                      setShowScorePanel(true)
+                    }}
                     className="w-full text-xs text-slate-500 hover:text-violet-400 transition-colors pt-2 border-t border-slate-800"
                   >
                     + {scores.length - 3} more — view all
@@ -318,7 +355,7 @@ const lastSpokenIdRef = useRef(null)
         <div className="mt-auto space-y-2">
           {/* Voice/text toggle */}
           <button
-            onClick={() => setVoiceMode((v) => !v)}
+            onClick={() => toggleVoiceMode((v) => !v)}
             className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               voiceMode
                 ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30'
@@ -379,7 +416,7 @@ const lastSpokenIdRef = useRef(null)
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* Voice/text toggle */}
               <button
-                onClick={() => setVoiceMode((v) => !v)}
+                onClick={() => toggleVoiceMode((v) => !v)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium transition-colors ${
                   voiceMode
                     ? 'bg-cyan-500/20 text-cyan-400'
@@ -441,7 +478,7 @@ const lastSpokenIdRef = useRef(null)
 
         {/* ─── CHAT AREA / VOICE MODE ─── */}
         {voiceMode ? (
-          <VoiceMode
+         <VoiceMode
             messages={messages}
             isStreaming={isStreaming}
             streamingMsg={streamingMessage}
@@ -449,9 +486,13 @@ const lastSpokenIdRef = useRef(null)
             isEnded={isEnded}
             latestAiMessage={latestAiMessage}
             showScoreButton={showScoreButton}
-            onSwitchToText={() => setVoiceMode(false)}
+            onSwitchToText={() => toggleVoiceMode(false)}
             onOpenScore={() => setShowScorePanel(true)}
             onEndSession={() => setShowEndConfirm(true)}
+            onNavigateBack={() => navigate('/dashboard')}
+            topic={currentSession?.topic}
+            latestScore={latestScore}
+            sessionError={error}
           />
         ) : (
           <>
@@ -682,7 +723,7 @@ const lastSpokenIdRef = useRef(null)
                     )}
 
                     {/* All attempts */}
-                    <div>
+                    <div ref={allAttemptsRef}>
                       <p className="text-white font-semibold text-sm mb-3">
                         All attempts ({scores.length})
                       </p>

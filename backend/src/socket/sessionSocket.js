@@ -147,6 +147,7 @@ const initializeSocket = (io) => {
 
         // Step 3 — Stream AI response
         // Emit each chunk as it arrives
+        logger.info(`Sending ${session.messages.length} messages to Gemini. Last 2: ${JSON.stringify(session.messages.slice(-2))}`)
 
         await getAIStudentResponseStream(
           session.topic,
