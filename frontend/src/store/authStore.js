@@ -59,5 +59,13 @@ window.addEventListener('auth:logout', () => {
   disconnectSocket()
   useAuthStore.setState({ user: null, isLoading: false })
 })
+window.addEventListener('streak:updated', async () => {
+  try {
+    const response = await api.get('/auth/me')
+    useAuthStore.setState({ user: response.data.user })
+  } catch {
+    // silent
+  }
+})
 
 export default useAuthStore

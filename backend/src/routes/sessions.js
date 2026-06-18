@@ -8,6 +8,8 @@ import {
 } from '../validators/sessionValidator.js'
 import { getAIStudentResponse, transcribeAudio } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
+import { calculateXpForScore } from '../utils/gamification.js'
+import User from '../models/User.js'
 
 const router = express.Router()
 
@@ -217,12 +219,24 @@ router.post('/:id/score', async (req, res, next) => {
     session.scores.push(scoringResult.scores)
     await session.save()
 
+    // Award XP if this score crosses the 70% threshold
+    const xpEarned = calculateXpForScore(scoringResult.scores)
+    let totalXp = req.user.xp
+    if (xpEarned > 0) {
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        { $inc: { xp: xpEarned } },
+        { new: true }
+      )
+      totalXp = updatedUser.xp
+    }
     res.status(200).json({
       status: 'success',
       score: scoringResult.scores,
       totalScores: session.scores.length,
-      // Send all scores so frontend can show progression
       allScores: session.scores,
+      xpEarned,
+      totalXp,
     })
   } catch (err) {
     next(err)

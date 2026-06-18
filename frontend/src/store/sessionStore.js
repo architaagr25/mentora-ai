@@ -23,6 +23,8 @@ const useSessionStore = create((set, get) => ({
   isJoining: false,
   // true while joining/loading a session
   error: null,
+  xpToast: null,
+  // Brief toast shown when XP is earned — { amount, totalXp }
 
   // ─────────────────────────────────────────
   // CREATE SESSION
@@ -162,6 +164,27 @@ const useSessionStore = create((set, get) => ({
     })
   },
 
+  handleXpEarned: (data) => {
+    set({ xpToast: { amount: data.xpEarned, totalXp: data.totalXp } })
+    // Auto-clear after a few seconds so it doesn't linger
+    setTimeout(() => {
+      set((state) =>
+        state.xpToast?.totalXp === data.totalXp
+          ? { xpToast: null }
+          : {}
+      )
+    }, 4000)
+  },
+
+  handleStreakUpdated: () => {
+    // Streak is on the user object (via useAuth), not session state.
+    // We just need to trigger a refetch of /auth/me to get the
+    // updated streak — simplest is to let the Dashboard refetch
+    // on next visit, but for live update we emit a custom event
+    // that useAuth can listen to.
+    window.dispatchEvent(new Event('streak:updated'))
+  },
+
   handleSessionEnded: () => {
     set((state) => ({
       currentSession: state.currentSession
@@ -175,6 +198,7 @@ const useSessionStore = create((set, get) => ({
   },
 
     clearError: () => set({ error: null }),
+  clearXpToast: () => set({ xpToast: null }),
 
 }))
 
@@ -196,6 +220,8 @@ const setupSocketListeners = () => {
   socket.on('score_result', store.handleScoreResult)
   socket.on('session_ended', store.handleSessionEnded)
   socket.on('error', store.handleError)
+  socket.on('xp_earned', store.handleXpEarned)
+  socket.on('streak_updated', store.handleStreakUpdated)
 }
 
 // Call once when the module loads

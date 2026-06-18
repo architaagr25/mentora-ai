@@ -34,7 +34,30 @@ const isNearDuplicate = (a, b) => {
   const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
   return normalize(a) === normalize(b)
 }
+// ─────────────────────────────────────────
+// HELPER — Retry a Gemini call once if it fails
+// with a transient 503 (server overload).
+// Does NOT retry on 429 (quota exhausted) since
+// that won't resolve with a short wait.
+// ─────────────────────────────────────────
+const withRetry503 = async (fn, retries = 1, delayMs = 1500) => {
+  try {
+    return await fn()
+  } catch (err) {
+    const is503 =
+      err.message?.includes('503') ||
+      err.message?.includes('UNAVAILABLE') ||
+      err.code === 503
 
+    if (is503 && retries > 0) {
+      logger.info(`Gemini 503 (high demand) — retrying in ${delayMs}ms...`)
+      await new Promise((r) => setTimeout(r, delayMs))
+      return withRetry503(fn, retries - 1, delayMs)
+    }
+
+    throw err
+  }
+}
 // ─────────────────────────────────────────
 // GET AI STUDENT RESPONSE — NON-STREAMING
 // Used by the REST endpoint POST /api/sessions/:id/message
@@ -50,21 +73,23 @@ export const getAIStudentResponse = async (topic, messages) => {
 
     const lastMessage = messages[messages.length - 1]
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: [
-        ...history,
-        {
-          role: 'user',
-          parts: [{ text: lastMessage.content }],
+    const response = await withRetry503(() =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: [
+          ...history,
+          {
+            role: 'user',
+            parts: [{ text: lastMessage.content }],
+          },
+        ],
+        config: {
+          systemInstruction: getStudentSystemPrompt(topic),
+          maxOutputTokens: 300,
+          temperature: 0.7,
         },
-      ],
-      config: {
-        systemInstruction: getStudentSystemPrompt(topic),
-        maxOutputTokens: 300,
-        temperature: 0.7,
-      },
-    })
+      })
+    )
 
     return {
       success: true,
@@ -109,27 +134,29 @@ export const getAIStudentResponseStream = async (
     const lastAiMessage = previousAiMessages[previousAiMessages.length - 1]?.content || ''
 
     const generateOnce = async (extraInstruction = '') => {
-      const stream = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash-lite',
-        contents: [
-          ...history,
-          {
-            role: 'user',
-            parts: [{ text: lastMessage.content }],
+      return withRetry503(async () => {
+        const stream = await ai.models.generateContentStream({
+          model: 'gemini-2.5-flash-lite',
+          contents: [
+            ...history,
+            {
+              role: 'user',
+              parts: [{ text: lastMessage.content }],
+            },
+          ],
+          config: {
+            systemInstruction: getStudentSystemPrompt(topic) + extraInstruction,
+            maxOutputTokens: 300,
+            temperature: 0.9,
           },
-        ],
-        config: {
-          systemInstruction: getStudentSystemPrompt(topic) + extraInstruction,
-          maxOutputTokens: 300,
-          temperature: 0.9,
-        },
-      })
+        })
 
-      let result = ''
-      for await (const chunk of stream) {
-        if (chunk.text) result += chunk.text
-      }
-      return result
+        let result = ''
+        for await (const chunk of stream) {
+          if (chunk.text) result += chunk.text
+        }
+        return result
+      })
     }
 
     let fullResponse = await generateOnce()
@@ -171,29 +198,31 @@ export const transcribeAudio = async (audioBase64, mimeType) => {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: audioBase64,
+    const response = await withRetry503(() =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  mimeType,
+                  data: audioBase64,
+                },
               },
-            },
-            {
-              text: 'You are a transcription engine, not a conversational assistant. Transcribe the speech in this audio exactly as spoken. If there is no discernible human speech (silence, background noise, a timestamp-like sound, or an unclear/very short clip), respond with exactly: [NO_SPEECH]. Never apologize, never explain, never refuse, never output a timestamp — only output the transcript or [NO_SPEECH].',
-            },
-          ],
+              {
+                text: 'You are a transcription engine, not a conversational assistant. Transcribe the speech in this audio exactly as spoken. If there is no discernible human speech (silence, background noise, a timestamp-like sound, or an unclear/very short clip), respond with exactly: [NO_SPEECH]. Never apologize, never explain, never refuse, never output a timestamp — only output the transcript or [NO_SPEECH].',
+              },
+            ],
+          },
+        ],
+        config: {
+          maxOutputTokens: 500,
+          temperature: 0,
         },
-      ],
-      config: {
-        maxOutputTokens: 500,
-        temperature: 0,
-      },
-    })
+      })
+    )
 
     const transcript = response.text.trim()
     logger.info(`Raw Gemini transcription: "${transcript}"`)

@@ -4,7 +4,7 @@ import Session from '../models/Session.js'
 import { getAIStudentResponseStream } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 import logger from '../utils/logger.js'
-
+import { calculateStreakUpdate, calculateXpForScore } from '../utils/gamification.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -140,6 +140,18 @@ const initializeSocket = (io) => {
         session.messages.push({ role: 'user', content: content.trim() })
         await session.save()
 
+        // Update streak — any message counts as daily activity
+        const { streak, lastActiveDate } = calculateStreakUpdate(
+          socket.user.lastActiveDate,
+          socket.user.streak
+        )
+        if (streak !== socket.user.streak || lastActiveDate.getTime() !== new Date(socket.user.lastActiveDate || 0).setHours(0,0,0,0)) {
+          await User.findByIdAndUpdate(socket.user._id, { streak, lastActiveDate })
+          socket.user.streak = streak
+          socket.user.lastActiveDate = lastActiveDate
+          socket.emit('streak_updated', { streak })
+        }
+
         const userMessage = session.messages[session.messages.length - 1]
 
         // Step 2 — Emit the saved user message back to confirm it was saved
@@ -229,6 +241,17 @@ const initializeSocket = (io) => {
         // Save score snapshot
         session.scores.push(scoringResult.scores)
         await session.save()
+
+        // Award XP if this score crosses the 70% threshold
+        const xpEarned = calculateXpForScore(scoringResult.scores)
+        if (xpEarned > 0) {
+          const updatedUser = await User.findByIdAndUpdate(
+            socket.user._id,
+            { $inc: { xp: xpEarned } },
+            { new: true }
+          )
+          socket.emit('xp_earned', { xpEarned, totalXp: updatedUser.xp })
+        }
 
         // Send score result to client
         socket.emit('score_result', {

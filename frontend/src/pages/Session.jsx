@@ -73,6 +73,8 @@ const Session = () => {
     joinExistingSession,
     resetSession,
     clearError,
+    xpToast,
+    clearXpToast,
   } = useSessionStore()
 
   const [input, setInput] = useState('')
@@ -856,6 +858,29 @@ const lastSpokenIdRef = useRef(null)
         )}
       </AnimatePresence>
 
+        {/* ─── XP TOAST ─── */}
+      <AnimatePresence>
+        {xpToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[60] bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl px-5 py-3 shadow-2xl shadow-orange-500/30 flex items-center gap-3"
+          >
+            <span className="text-2xl">⚡</span>
+            <div>
+              <p className="text-white font-bold text-sm">+{xpToast.amount} XP earned!</p>
+              <p className="text-white/80 text-xs">Total: {xpToast.totalXp} XP</p>
+            </div>
+            <button
+              onClick={clearXpToast}
+              className="text-white/60 hover:text-white transition-colors ml-2"
+            >
+              <X size={14} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
