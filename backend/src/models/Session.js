@@ -16,7 +16,6 @@ const messageSchema = new mongoose.Schema(
   { timestamps: true }
 )
 
-// Each time user requests scoring, a new snapshot is added
 const scoreSnapshotSchema = new mongoose.Schema(
   {
     accuracy: { type: Number, min: 0, max: 10 },
@@ -25,6 +24,31 @@ const scoreSnapshotSchema = new mongoose.Schema(
     gaps: { type: [String], default: [] },
     feedback: { type: String, default: null },
     scoredAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+)
+
+// Notes uploaded by the user for this session.
+// rawText is cleared when the session ends to save space.
+// extractedConcepts stay permanently for reference.
+const notesSchema = new mongoose.Schema(
+  {
+    extractedConcepts: {
+      type: [String],
+      default: [],
+    },
+    rawText: {
+      type: String,
+      default: null,
+    },
+    fileName: {
+      type: String,
+      default: null,
+    },
+    uploadedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { _id: false }
 )
@@ -48,15 +72,18 @@ const sessionSchema = new mongoose.Schema(
       type: [messageSchema],
       default: [],
     },
-    // Array of score snapshots — one added each time user requests scoring
     scores: {
       type: [scoreSnapshotSchema],
       default: [],
     },
+    // null means no notes uploaded for this session
+    notes: {
+      type: notesSchema,
+      default: null,
+    },
     status: {
       type: String,
       enum: ['active', 'completed'],
-      // removed abandoned — sessions stay active until user explicitly ends them
       default: 'active',
     },
     mode: {
@@ -67,21 +94,22 @@ const sessionSchema = new mongoose.Schema(
     duration: {
       type: Number,
       default: null,
-      // calculated in seconds when session is ended
     },
   },
   { timestamps: true }
 )
 
-// Virtual — gets the most recent score snapshot
-// Virtuals are computed properties that don't get stored in DB
-// Access it like: session.latestScore
+// Virtual: returns the most recent score snapshot
 sessionSchema.virtual('latestScore').get(function () {
   if (this.scores.length === 0) return null
   return this.scores[this.scores.length - 1]
 })
 
-// Make virtuals show up in JSON responses
+// Virtual: quick boolean — does this session have uploaded notes?
+sessionSchema.virtual('hasNotes').get(function () {
+  return !!(this.notes && this.notes.extractedConcepts.length > 0)
+})
+
 sessionSchema.set('toJSON', { virtuals: true })
 
 const Session = mongoose.model('Session', sessionSchema)
