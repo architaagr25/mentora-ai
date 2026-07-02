@@ -10,11 +10,106 @@ import { getAIStudentResponse, transcribeAudio } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 import { calculateXpForScore } from '../utils/gamification.js'
 import User from '../models/User.js'
+import multer from 'multer'
+import { extractTextFromPdf, extractConceptsFromText } from '../services/notesService.js'
 
 const router = express.Router()
 
 router.use(auth)
 
+// PDF upload middleware
+// memoryStorage keeps the file in RAM as req.file.buffer
+// We never write to disk
+const uploadPdf = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true)
+    } else {
+      cb(new AppError('Only PDF files are allowed', 400))
+    }
+  },
+})
+ 
+// ─────────────────────────────────────────
+// POST /api/sessions/:id/notes
+// Upload PDF notes for a session.
+// Must be called before the first message is sent.
+// ─────────────────────────────────────────
+router.post('/:id/notes', uploadPdf.single('pdf'), async (req, res, next) => {
+  try {
+    // uploadPdf.single('pdf') means we expect one file
+    // uploaded under the field name 'pdf'
+    if (!req.file) {
+      throw new AppError('No PDF file provided', 400)
+    }
+ 
+    const session = await Session.findById(req.params.id)
+    if (!session) throw new AppError('Session not found', 404)
+ 
+    // Make sure this session belongs to the logged-in user
+    if (session.userId.toString() !== req.user._id.toString()) {
+      throw new AppError('Not authorised', 403)
+    }
+ 
+    if (session.status !== 'active') {
+      throw new AppError('Session has ended', 400)
+    }
+ 
+    // Notes must be uploaded before the conversation starts.
+    // Once messages exist the AI persona is already set —
+    // changing the concept scope mid-conversation would be confusing.
+    if (session.messages.length > 0) {
+      throw new AppError(
+        'Notes must be uploaded before the conversation starts',
+        400
+      )
+    }
+ 
+    // Step 1: Extract text from the PDF buffer
+    const textResult = await extractTextFromPdf(req.file.buffer)
+    if (!textResult.success) {
+      throw new AppError(textResult.error, 422)
+      // 422 Unprocessable Entity — the request was valid but
+      // the content couldn't be processed (bad PDF, scanned, etc.)
+    }
+ 
+    // Step 2: Extract concepts from the text using Gemini
+    const conceptsResult = await extractConceptsFromText(
+      session.topic,
+      textResult.text
+    )
+    if (!conceptsResult.success) {
+      throw new AppError(conceptsResult.error, 422)
+    }
+ 
+    // Step 3: Save everything to the session
+    session.notes = {
+      extractedConcepts: conceptsResult.concepts,
+      rawText: textResult.text,
+      fileName: req.file.originalname,
+      uploadedAt: new Date(),
+    }
+    await session.save()
+ 
+    // Return notes metadata to the frontend.
+    // We deliberately exclude rawText — no need to send
+    // potentially large text back over the wire.
+    res.status(200).json({
+      status: 'success',
+      notes: {
+        extractedConcepts: conceptsResult.concepts,
+        fileName: req.file.originalname,
+        uploadedAt: session.notes.uploadedAt,
+        pageCount: textResult.pageCount,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+ 
 // ─────────────────────────────────────────
 // POST /api/sessions
 // Create a new session

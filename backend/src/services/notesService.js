@@ -117,11 +117,18 @@ export const extractTextFromPdf = async (buffer) => {
     const text = data.text?.trim() || ''
 
     if (!text || text.length < 20) {
-      return {
-        success: false,
-        error: 'PDF appears to be empty or unreadable. Try a text-based PDF rather than a scanned image.',
-      }
-    }
+  return {
+    success: false,
+    error: 'PDF appears to be empty or unreadable. Try a text-based PDF rather than a scanned image.',
+  }
+}
+
+if (data.numpages > 75) {
+  return {
+    success: false,
+    error: `Your PDF is ${data.numpages} pages. Please upload a PDF with 75 pages or fewer.`,
+  }
+}
 
     return {
       success: true,

@@ -96,12 +96,21 @@ const initializeSocket = (io) => {
         // Confirm to client they joined successfully
         // Send existing messages so they can restore the chat
         socket.emit('session_joined', {
-          sessionId,
-          topic: session.topic,
-          messages: session.messages,
-          scores: session.scores,
-          latestScore: session.latestScore,
-        })
+  sessionId,
+  topic: session.topic,
+  messages: session.messages,
+  scores: session.scores,
+  latestScore: session.latestScore,
+  // Send concepts to frontend so it can show the notes badge.
+  // We deliberately exclude rawText — it's large and the frontend doesn't need it.
+  notes: session.notes
+    ? {
+        extractedConcepts: session.notes.extractedConcepts,
+        fileName: session.notes.fileName,
+        uploadedAt: session.notes.uploadedAt,
+      }
+    : null,
+})
       } catch (err) {
         logger.error(`join_session error: ${err.message}`)
         socket.emit('error', { message: 'Failed to join session' })
@@ -160,7 +169,10 @@ const initializeSocket = (io) => {
         // Step 3 — Stream AI response
         // Emit each chunk as it arrives
         logger.info(`Sending ${session.messages.length} messages to Gemini. Last 2: ${JSON.stringify(session.messages.slice(-2))}`)
-
+        // Pull concepts from session notes if they exist
+const concepts = session.notes?.extractedConcepts?.length > 0
+  ? session.notes.extractedConcepts
+  : null
         await getAIStudentResponseStream(
           session.topic,
           session.messages,
@@ -194,7 +206,8 @@ const initializeSocket = (io) => {
               })
               logger.error(`AI stream error: ${errMessage}`)
             },
-          }
+          },
+          concepts 
         )
       } catch (err) {
         logger.error(`send_message error: ${err.message}`)
@@ -288,6 +301,11 @@ const initializeSocket = (io) => {
         const durationMs = Date.now() - session.createdAt.getTime()
         session.duration = Math.floor(durationMs / 1000)
         session.status = 'completed'
+        // Clear raw text when session ends — keeps the DB lean.
+// Concepts stay permanently for scoring reference.
+if (session.notes) {
+  session.notes.rawText = null
+}
         await session.save()
 
         socket.emit('session_ended', {
