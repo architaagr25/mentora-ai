@@ -23,6 +23,7 @@ import {
 import useAuth from '@/hooks/useAuth'
 import useSessionStore from '@/store/sessionStore'
 import api from '@/api'
+import NewSessionModal from '@/components/session/NewSessionModal'
 
 // ─────────────────────────────────────────
 // HELPERS
@@ -125,7 +126,7 @@ const computeWeekActivity = (sessions) => {
 const Dashboard = () => {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const { createSession, resetSession } = useSessionStore()
+  const { resetSession } = useSessionStore()
 
   const [sessions, setSessions] = useState([])
   const [isLoadingSessions, setIsLoadingSessions] = useState(true)
@@ -133,8 +134,7 @@ const Dashboard = () => {
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [topic, setTopic] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
-  const [topicError, setTopicError] = useState('')
+ 
   const [confirmCompleteId, setConfirmCompleteId] = useState(null)
   const [isCompleting, setIsCompleting] = useState(false)
 
@@ -196,25 +196,7 @@ const handleNavClick = (target) => {
   scrollTo(refMap[target])
 }
 
-  const handleStartSession = async () => {
-    if (!topic.trim()) {
-      setTopicError('Please enter a topic')
-      return
-    }
-    if (topic.trim().length < 2) {
-      setTopicError('Topic must be at least 2 characters')
-      return
-    }
-    setIsCreating(true)
-    setTopicError('')
-    const session = await createSession(topic.trim())
-    if (session) {
-      navigate(`/session/${session._id}`)
-    } else {
-      setIsCreating(false)
-      setTopicError('Failed to create session. Please try again.')
-    }
-  }
+  
 
   const handleMarkComplete = async (sessionId) => {
     setIsCompleting(true)
@@ -751,81 +733,17 @@ const handleNavClick = (target) => {
       </main>
 
       {/* ─── NEW SESSION MODAL ─── */}
-      <AnimatePresence>
-        {showNewSessionModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                setShowNewSessionModal(false)
-                setTopic('')
-                setTopicError('')
-              }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            >
-              <div className="bg-[#0D1426] border border-slate-700 rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-white">New Teaching Session</h2>
-                  <button
-                    onClick={() => {
-                      setShowNewSessionModal(false)
-                      setTopic('')
-                      setTopicError('')
-                    }}
-                    className="text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    What do you want to teach?
-                  </label>
-                  <input
-                    type="text"
-                    value={topic}
-                    onChange={(e) => {
-                      setTopic(e.target.value)
-                      setTopicError('')
-                    }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleStartSession() }}
-                    placeholder="e.g. TCP Handshake, Binary Search Trees..."
-                    autoFocus
-                    className={`w-full px-4 py-3 rounded-xl bg-[#080D1A] border text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${topicError ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'}`}
-                  />
-                  {topicError && (
-                    <p className="mt-1.5 text-xs text-red-400">{topicError}</p>
-                  )}
-                  <p className="mt-2 text-xs text-slate-600">
-                    Be specific — "TCP Handshake" works better than "Networking"
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleStartSession}
-                  disabled={isCreating}
-                  className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isCreating ? (
-                    <><Loader2 size={18} className="animate-spin" />Creating session...</>
-                  ) : (
-                    <><Plus size={18} />Start Teaching</>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+<AnimatePresence>
+  {showNewSessionModal && (
+    <NewSessionModal
+      initialTopic={topic}
+      onClose={() => {
+        setShowNewSessionModal(false)
+        setTopic('')
+      }}
+    />
+  )}
+</AnimatePresence>
       {/* ─── CONFIRM COMPLETE MODAL ─── */}
       <AnimatePresence>
         {confirmCompleteId && (
