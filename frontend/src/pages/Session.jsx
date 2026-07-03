@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Mic,
   MessageSquare,
+  FileText,
 } from 'lucide-react'
 import useSessionStore from '@/store/sessionStore'
 import VoiceMode from '@/components/session/VoiceMode'
@@ -67,6 +68,7 @@ const Session = () => {
     isScoring,
     isJoining,
     error,
+    notes,
     sendMessage,
     requestScore,
     endSession,
@@ -81,6 +83,7 @@ const Session = () => {
   const [showScorePanel, setShowScorePanel] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
+  const hasNotes = notes && notes.extractedConcepts?.length > 0
 const [voiceMode, setVoiceMode] = useState(() => {
     try {
       return localStorage.getItem('mentora_voice_mode') === 'true'
@@ -279,6 +282,34 @@ const lastSpokenIdRef = useRef(null)
         </span>
 
         <div className="space-y-3 mb-8">
+
+  {/* Notes scope card */}
+  {hasNotes && (
+    <div className="bg-[#080D1A] border border-cyan-500/20 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-2">
+        <FileText size={14} className="text-cyan-400" />
+        <p className="text-cyan-400 text-xs font-medium">
+          Testing from your notes
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {notes.extractedConcepts.slice(0, 6).map((c, i) => (
+          <span
+            key={i}
+            className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 text-xs border border-cyan-500/20"
+          >
+            {c}
+          </span>
+        ))}
+        {notes.extractedConcepts.length > 6 && (
+          <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs">
+            +{notes.extractedConcepts.length - 6} more
+          </span>
+        )}
+      </div>
+    </div>
+  )}
+
           
 
           {latestScore && (
@@ -396,6 +427,7 @@ const lastSpokenIdRef = useRef(null)
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
 
         {/* ─── TOP BAR (mobile + tablet) ─── */}
+        {!voiceMode && (
         <header className="lg:hidden flex-shrink-0 border-b border-slate-800 bg-[#0D1426]">
           <div className="px-4 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
@@ -409,9 +441,17 @@ const lastSpokenIdRef = useRef(null)
                 <p className="text-white font-semibold text-sm md:text-base truncate">
                   {currentSession?.topic || 'Loading...'}
                 </p>
-                <p className="text-slate-500 text-xs">
-                  {isEnded ? 'Session completed' : 'Active session'}
-                </p>
+               <div className="flex items-center gap-2">
+  <p className="text-slate-500 text-xs">
+    {isEnded ? 'Session completed' : 'Active session'}
+  </p>
+  {hasNotes && (
+    <span className="flex items-center gap-1 text-cyan-400 text-xs">
+      <FileText size={10} />
+      From notes
+    </span>
+  )}
+</div>
               </div>
             </div>
 
@@ -452,6 +492,7 @@ const lastSpokenIdRef = useRef(null)
             </div>
           </div>
         </header>
+        )}
 
         {/* ─── ERROR BANNER ─── */}
         <AnimatePresence>
@@ -495,6 +536,8 @@ const lastSpokenIdRef = useRef(null)
             topic={currentSession?.topic}
             latestScore={latestScore}
             sessionError={error}
+            hasNotes={hasNotes}
+            
           />
         ) : (
           <>

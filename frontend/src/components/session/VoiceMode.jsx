@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mic, MicOff, Loader2, GraduationCap, Volume2, MessageSquare, BarChart3, Flag, ArrowLeft, Settings2 } from 'lucide-react'
+import { Mic, MicOff, Loader2, GraduationCap, Volume2, MessageSquare, BarChart3, Flag, ArrowLeft, Settings2, FileText } from 'lucide-react'
 import useVoiceRecorder from '@/hooks/useVoiceRecorder'
 import useSpeech from '@/hooks/useSpeech'
 import api from '@/api'
@@ -57,6 +57,7 @@ const VoiceMode = ({
   topic,
   latestScore,
   sessionError,
+  hasNotes,
 }) => {
   const [voiceState, setVoiceState] = useState(VOICE_STATE.IDLE)
   const [error, setError] = useState(null)
@@ -258,9 +259,17 @@ const {
               <p className="text-white font-semibold text-sm truncate">
                 {topic || 'Voice Mode'}
               </p>
-              <p className="text-slate-500 text-xs">
-                {isEnded ? 'Session completed' : 'Voice session'}
-              </p>
+              <div className="flex items-center gap-2">
+  <p className="text-slate-500 text-xs">
+    {isEnded ? 'Session completed' : 'Voice session'}
+  </p>
+  {hasNotes && (
+    <span className="flex items-center gap-1 text-cyan-400 text-xs">
+      <FileText size={10} />
+      From notes
+    </span>
+  )}
+</div>
             </div>
           </div>
 
