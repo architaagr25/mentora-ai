@@ -84,6 +84,7 @@ const Session = () => {
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
   const hasNotes = notes && notes.extractedConcepts?.length > 0
+  const [showNotesModal, setShowNotesModal] = useState(false)
 const [voiceMode, setVoiceMode] = useState(() => {
     try {
       return localStorage.getItem('mentora_voice_mode') === 'true'
@@ -284,32 +285,34 @@ const lastSpokenIdRef = useRef(null)
         <div className="space-y-3 mb-8">
 
   {/* Notes scope card */}
-  {hasNotes && (
-    <div className="bg-[#080D1A] border border-cyan-500/20 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-2">
-        <FileText size={14} className="text-cyan-400" />
-        <p className="text-cyan-400 text-xs font-medium">
-          Testing from your notes
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {notes.extractedConcepts.slice(0, 6).map((c, i) => (
-          <span
-            key={i}
-            className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 text-xs border border-cyan-500/20"
-          >
-            {c}
-          </span>
-        ))}
-        {notes.extractedConcepts.length > 6 && (
-          <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs">
-            +{notes.extractedConcepts.length - 6} more
-          </span>
-        )}
-      </div>
+{hasNotes && (
+  <div
+    onClick={() => setShowNotesModal(true)}
+    className="bg-[#080D1A] border border-cyan-500/20 rounded-xl p-4 cursor-pointer hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all duration-200"
+  >
+    <div className="flex items-center gap-2 mb-2">
+      <FileText size={14} className="text-cyan-400" />
+      <p className="text-cyan-400 text-xs font-medium">
+        Testing from your notes
+      </p>
     </div>
-  )}
-
+    <div className="flex flex-wrap gap-1.5">
+      {notes.extractedConcepts.slice(0, 6).map((c, i) => (
+        <span
+          key={i}
+          className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 text-xs border border-cyan-500/20"
+        >
+          {c}
+        </span>
+      ))}
+      {notes.extractedConcepts.length > 6 && (
+        <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-xs">
+          +{notes.extractedConcepts.length - 6} more
+        </span>
+      )}
+    </div>
+  </div>
+)}
           
 
           {latestScore && (
@@ -446,11 +449,14 @@ const lastSpokenIdRef = useRef(null)
     {isEnded ? 'Session completed' : 'Active session'}
   </p>
   {hasNotes && (
-    <span className="flex items-center gap-1 text-cyan-400 text-xs">
-      <FileText size={10} />
-      From notes
-    </span>
-  )}
+  <button
+    onClick={() => setShowNotesModal(true)}
+    className="flex items-center gap-1 text-cyan-400 text-xs hover:text-cyan-300 transition-colors"
+  >
+    <FileText size={10} />
+    From notes
+  </button>
+)}
 </div>
               </div>
             </div>
@@ -900,6 +906,69 @@ const lastSpokenIdRef = useRef(null)
           </>
         )}
       </AnimatePresence>
+
+      {/* ─── NOTES MODAL ─── */}
+<AnimatePresence>
+  {showNotesModal && (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={() => setShowNotesModal(false)}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      >
+<div className="bg-[#0D1426] border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[85vh] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <FileText size={18} className="text-cyan-400" />
+              <h2 className="text-white font-bold text-lg">Notes Concepts</h2>
+            </div>
+            <button
+              onClick={() => setShowNotesModal(false)}
+              className="text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* File name */}
+          {notes?.fileName && (
+            <p className="text-slate-500 text-xs mb-4">
+              From: {notes.fileName}
+            </p>
+          )}
+
+          {/* All concepts */}
+<div className="flex flex-col gap-2 overflow-y-auto flex-1">
+            {notes?.extractedConcepts.map((c, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#080D1A] border border-slate-800"
+              >
+                <span className="text-cyan-500 text-xs font-bold w-5 flex-shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-slate-200 text-sm">{c}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-slate-600 text-xs mt-4 text-center">
+            The AI will quiz you on these concepts during this session
+          </p>
+        </div>
+      </motion.div>
+    </>
+  )}
+</AnimatePresence>
 
         {/* ─── XP TOAST ─── */}
       <AnimatePresence>
