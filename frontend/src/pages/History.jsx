@@ -1,8 +1,10 @@
+// frontend/src/pages/History.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { BookOpen, ChevronRight, Loader2, CheckCircle, Clock, History as HistoryIcon } from 'lucide-react'
 import api from '@/api'
+import SessionDetailPanel from '@/components/history/SessionDetailPanel'
 
 const getScoreColor = (score) => {
   if (score >= 8) return 'text-green-400'
@@ -32,6 +34,8 @@ const formatDuration = (seconds) => {
   return `${hrs}h ${mins % 60}m`
 }
 
+// SessionRow now takes onClick as-is from the parent —
+// the parent decides whether that means "navigate" or "open panel"
 const SessionRow = ({ session, isActive, onClick }) => {
   const latest = session.scores?.length > 0
     ? session.scores[session.scores.length - 1]
@@ -94,7 +98,10 @@ const SessionRow = ({ session, isActive, onClick }) => {
             </div>
           )}
 
-          <button className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors sm:ml-auto">
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick() }}
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors sm:ml-auto cursor-pointer"
+          >
             <span>{isActive ? 'Continue' : 'Review'}</span>
             <ChevronRight size={14} />
           </button>
@@ -131,6 +138,10 @@ const History = () => {
   const [isLoadingActive, setIsLoadingActive] = useState(true)
   const [isLoadingCompleted, setIsLoadingCompleted] = useState(true)
 
+  // Session currently open in the detail panel.
+  // null = panel closed. Only ever set for completed sessions.
+  const [selectedSessionId, setSelectedSessionId] = useState(null)
+
   useEffect(() => {
     const fetchActive = async () => {
       try {
@@ -159,6 +170,17 @@ const History = () => {
   }, [])
 
   const totalSessions = activeSessions.length + completedSessions.length
+
+  // Active sessions go to the live chat page.
+  // Completed sessions open the read-only detail panel instead —
+  // there's nothing to "continue" so a full navigation isn't needed.
+  const handleSessionClick = (session, isActive) => {
+    if (isActive) {
+      navigate(`/session/${session._id}`)
+    } else {
+      setSelectedSessionId(session._id)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#080D1A]">
@@ -222,7 +244,7 @@ const History = () => {
                     key={session._id}
                     session={session}
                     isActive
-                    onClick={() => navigate(`/session/${session._id}`)}
+                    onClick={() => handleSessionClick(session, true)}
                   />
                 ))}
               </div>
@@ -254,7 +276,7 @@ const History = () => {
                     key={session._id}
                     session={session}
                     isActive={false}
-                    onClick={() => navigate(`/session/${session._id}`)}
+                    onClick={() => handleSessionClick(session, false)}
                   />
                 ))}
               </div>
@@ -263,6 +285,12 @@ const History = () => {
 
         </div>
       </div>
+
+      {/* ─── SESSION DETAIL PANEL (completed sessions only) ─── */}
+      <SessionDetailPanel
+        sessionId={selectedSessionId}
+        onClose={() => setSelectedSessionId(null)}
+      />
     </div>
   )
 }

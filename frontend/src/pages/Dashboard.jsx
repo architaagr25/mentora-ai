@@ -24,6 +24,7 @@ import useAuth from '@/hooks/useAuth'
 import useSessionStore from '@/store/sessionStore'
 import api from '@/api'
 import NewSessionModal from '@/components/session/NewSessionModal'
+import SessionDetailPanel from '@/components/history/SessionDetailPanel'
 
 // ─────────────────────────────────────────
 // HELPERS
@@ -137,7 +138,7 @@ const Dashboard = () => {
  
   const [confirmCompleteId, setConfirmCompleteId] = useState(null)
   const [isCompleting, setIsCompleting] = useState(false)
-
+  const [selectedSessionId, setSelectedSessionId] = useState(null)
   const heroRef = useRef(null)
   const historyRef = useRef(null)
   const conceptsRef = useRef(null)
@@ -196,7 +197,15 @@ const handleNavClick = (target) => {
   scrollTo(refMap[target])
 }
 
-  
+  // Active sessions go to the live chat page.
+// Completed sessions open the read-only detail panel instead.
+const handleSessionClick = (session, isActive) => {
+  if (isActive) {
+    navigate(`/session/${session._id}`)
+  } else {
+    setSelectedSessionId(session._id)
+  }
+}
 
   const handleMarkComplete = async (sessionId) => {
     setIsCompleting(true)
@@ -566,7 +575,8 @@ const handleNavClick = (target) => {
   initial={{ opacity: 0, x: -20 }}
   animate={{ opacity: 1, x: 0 }}
   transition={{ delay: i * 0.05 }}
-  className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 hover:border-slate-600 transition-all duration-200 overflow-hidden"
+  onClick={() => handleSessionClick(session, isActive)}
+  className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 hover:border-slate-600 transition-all duration-200 overflow-hidden cursor-pointer"
 >
   <div className="flex items-center justify-between gap-3">
 
@@ -627,7 +637,7 @@ const handleNavClick = (target) => {
         </button>
       )}
       <button
-        onClick={() => navigate(`/session/${session._id}`)}
+        onClick={(e) => { e.stopPropagation(); handleSessionClick(session, isActive) }}
         className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
       >
         <span className="hidden sm:inline">{isActive ? 'Continue' : 'Review'}</span>
@@ -806,6 +816,11 @@ const handleNavClick = (target) => {
           </>
         )}
       </AnimatePresence>
+      {/* ─── SESSION DETAIL PANEL (completed sessions only) ─── */}
+      <SessionDetailPanel
+        sessionId={selectedSessionId}
+        onClose={() => setSelectedSessionId(null)}
+      />
     </div>
   )
 }
