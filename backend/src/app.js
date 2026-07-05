@@ -22,6 +22,36 @@ const app = express()
 const PORT = process.env.PORT || 5000
 
 // ─────────────────────────────────────────
+// CORS ALLOWED ORIGINS
+// Supports multiple origins (local dev + deployed frontend)
+// instead of a single FRONTEND_URL string. FRONTEND_URL can
+// optionally hold a comma-separated list, e.g.:
+//   FRONTEND_URL=http://localhost:5173,https://mentora-ai-khaki.vercel.app
+// Local dev origin is always included so switching FRONTEND_URL
+// to a deployed value never breaks localhost testing.
+// ─────────────────────────────────────────
+const DEFAULT_ORIGINS = ['http://localhost:5173']
+
+const configuredOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean)
+
+const allowedOrigins = [...new Set([...DEFAULT_ORIGINS, ...configuredOrigins])]
+
+// Shared by both Express CORS and Socket.io CORS below —
+// keeps the two allow-lists from drifting apart
+const corsOriginHandler = (origin, callback) => {
+  // No origin (curl, Postman, server-to-server calls) — allow it
+  if (!origin || allowedOrigins.includes(origin)) {
+    callback(null, true)
+  } else {
+    logger.warn(`Blocked by CORS: origin "${origin}" not in allow-list`)
+    callback(new Error('Not allowed by CORS'))
+  }
+}
+
+// ─────────────────────────────────────────
 // SECURITY MIDDLEWARE
 // These run on every single request
 // ─────────────────────────────────────────
@@ -39,7 +69,7 @@ app.use(helmet())
 // make requests to your backend at localhost:5000
 // Browsers enforce this - it is not optional
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: corsOriginHandler,
   credentials: true, // needed to send/receive cookies (JWT refresh tokens)
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -120,10 +150,11 @@ export const httpServer = createServer(app)
 
 export const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: corsOriginHandler,
     credentials: true,
-    // Must match your Express CORS config
-    // Without this, browser will block the WebSocket connection
+    // Must match the Express CORS config above —
+    // otherwise the browser will block the WebSocket handshake
+    // even when the REST API calls succeed.
   },
 })
 
@@ -138,6 +169,7 @@ const startServer = async () => {
     httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`)
       logger.info(`Health check → http://localhost:${PORT}/api/health`)
+      logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`)
     })
   } catch (err) {
     logger.error('Failed to connect to database. Server not started.')
