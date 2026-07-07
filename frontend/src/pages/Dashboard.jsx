@@ -193,7 +193,12 @@ const handleNavClick = (target) => {
     setShowMobileSidebar(false)
     return
   }
-  const refMap = { hero: heroRef, history: historyRef, concepts: conceptsRef, profile: profileRef }
+  if (target === 'history') {
+    navigate('/history')
+    setShowMobileSidebar(false)
+    return
+  }
+  const refMap = { hero: heroRef, concepts: conceptsRef, profile: profileRef }
   scrollTo(refMap[target])
 }
 
@@ -375,7 +380,7 @@ const handleSessionClick = (session, isActive) => {
                 {navItems.map((item) => (
                   <button
                     key={item.label}
-                    onClick={item.action}
+                    onClick={() => handleNavClick(item.target)}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200 text-sm font-medium"
                   >
                     <item.icon size={18} />
