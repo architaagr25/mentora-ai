@@ -26,7 +26,14 @@ createRoot(document.getElementById('root')).render(
   // It has no effect in production
   <StrictMode>
     {/* BrowserRouter enables URL-based routing */}
-    <BrowserRouter>
+    {/* future flags opt in early to v7 behavior — avoids a bigger
+        breaking jump later; both are no-op today, just silence warnings */}
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       {/* QueryClientProvider makes queryClient available to all components */}
       <QueryClientProvider client={queryClient}>
         <App />

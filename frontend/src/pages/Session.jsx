@@ -226,21 +226,33 @@ const lastSpokenIdRef = useRef(null)
     )
   }
 
-  // ─── ERROR STATE ───
+ // ─── ERROR STATE ───
   if (error && !currentSession) {
+    // Special-case: the backend rejects join_session for completed
+    // sessions with this exact message. Rather than show a generic
+    // error, point the user to where they can actually view it —
+    // the History page's read-only detail panel.
+    const isEndedSession = error === 'Session has ended'
+
     return (
       <div className="min-h-screen bg-[#080D1A] flex items-center justify-center px-4">
         <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-8 max-w-md text-center">
           <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/25 flex items-center justify-center mx-auto mb-4">
             <AlertCircle size={24} className="text-red-400" />
           </div>
-          <h3 className="text-white font-semibold mb-2">Couldn't load session</h3>
-          <p className="text-slate-400 text-sm mb-6">{error}</p>
+          <h3 className="text-white font-semibold mb-2">
+            {isEndedSession ? 'This session has ended' : "Couldn't load session"}
+          </h3>
+          <p className="text-slate-400 text-sm mb-6">
+            {isEndedSession
+              ? 'Completed sessions can no longer be continued, but you can still review the transcript and scores from your session history.'
+              : error}
+          </p>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(isEndedSession ? '/history' : '/dashboard')}
             className="px-5 py-2.5 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all text-sm"
           >
-            Back to Dashboard
+            {isEndedSession ? 'View in History' : 'Back to Dashboard'}
           </button>
         </div>
       </div>

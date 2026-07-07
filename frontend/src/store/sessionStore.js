@@ -180,8 +180,13 @@ const useSessionStore = create((set, get) => ({
     }))
   },
 
-  handleError: (data) => {
-    set({ error: data.message, isStreaming: false, isScoring: false })
+ handleError: (data) => {
+    // isJoining must be cleared here too — otherwise any error that
+    // arrives while still joining (e.g. "Session has ended", "Not
+    // authorised", "Session not found") leaves the UI stuck on the
+    // "Joining session..." loading screen forever, since that check
+    // runs before the error-card check in Session.jsx.
+    set({ error: data.message, isStreaming: false, isScoring: false, isJoining: false })
   },
 }))
 
