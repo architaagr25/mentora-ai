@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -18,9 +18,15 @@ const loginSchema = z.object({
 
 const Login = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [serverError, setServerError] = useState(null)
+
+  // Set by ChangePasswordCard after a successful password change —
+  // the backend invalidates all sessions on password change, so the
+  // user is redirected here and needs to know why they were logged out.
+  const infoMessage = location.state?.message || null
 
   const {
     register,
@@ -67,7 +73,15 @@ const Login = () => {
         </div>
 
         {/* Form card */}
+        {/* Form card */}
         <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-8">
+
+          {/* Info message — e.g. after a password change forces re-login */}
+          {infoMessage && (
+            <div className="mb-6 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-sm">
+              {infoMessage}
+            </div>
+          )}
 
           {/* Server error */}
           {serverError && (

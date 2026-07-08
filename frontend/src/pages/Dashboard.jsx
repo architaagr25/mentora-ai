@@ -142,7 +142,6 @@ const Dashboard = () => {
   const heroRef = useRef(null)
   const historyRef = useRef(null)
   const conceptsRef = useRef(null)
-  const profileRef = useRef(null)
 
   useEffect(() => {
     resetSession()
@@ -198,7 +197,12 @@ const handleNavClick = (target) => {
     setShowMobileSidebar(false)
     return
   }
-  const refMap = { hero: heroRef, concepts: conceptsRef, profile: profileRef }
+  if (target === 'profile') {
+    navigate('/profile')
+    setShowMobileSidebar(false)
+    return
+  }
+  const refMap = { hero: heroRef, concepts: conceptsRef }
   scrollTo(refMap[target])
 }
 
@@ -299,9 +303,9 @@ const handleSessionClick = (session, isActive) => {
 
        
  
-   {/* User profile at bottom */}
+  {/* User profile at bottom */}
 {!sidebarCollapsed && (
-  <div ref={profileRef} className="px-4 py-4 border-t border-slate-800">
+  <div className="px-4 py-4 border-t border-slate-800">
     <div className="flex items-center gap-3 mb-3">
       <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
         <span className="text-white text-sm font-bold">
