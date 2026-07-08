@@ -10,6 +10,7 @@ import { generalLimiter } from './middleware/rateLimiter.js'
 import authRoutes from './routes/auth.js'
 import connectDB from './config/db.js'
 import sessionRoutes from './routes/sessions.js'
+import usersRoutes from './routes/users.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import initializeSocket from './socket/sessionSocket.js'
@@ -104,8 +105,18 @@ app.use(morgan('dev', {
   }
 }))
 
-app.use('/api', generalLimiter)
+// Prevent the browser from ever serving cached API responses.
+// Without this, Express's default auto-generated ETag headers can
+// cause the browser to return a stale cached body via 304 Not
+// Modified — which is exactly why a profile update didn't show up
+// after reload: GET /auth/me was served from cache instead of
+// hitting the server for fresh user data.
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store')
+  next()
+})
 
+app.use('/api', generalLimiter)
 // ─────────────────────────────────────────
 // ROUTES
 // ─────────────────────────────────────────
@@ -122,11 +133,10 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-// Future routes added here in Phase 3+
 app.use('/api/auth', authRoutes)
 app.use('/api/sessions', sessionRoutes)
 // app.use('/api/concepts', conceptRoutes)
-// app.use('/api/users', userRoutes)
+app.use('/api/users', usersRoutes)
 // app.use('/api/uploads', uploadRoutes)
 
 // ─────────────────────────────────────────

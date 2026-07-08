@@ -14,6 +14,13 @@ const useAuthStore = create((set, get) => ({
     set({ user })
   },
 
+  // Called after a successful PATCH /users/me — the response already
+  // contains the full updated user object, so we just swap it in
+  // directly rather than making a second round-trip to /auth/me.
+  updateUser: (updatedUser) => {
+    set({ user: updatedUser })
+  },
+
   logout: async () => {
     try {
       await api.post('/auth/logout')
