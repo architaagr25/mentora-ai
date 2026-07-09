@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
+  User,
   Mail,
   Calendar,
   Flame,
@@ -19,6 +20,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  ArrowLeft,
 } from 'lucide-react'
 import useAuth from '@/hooks/useAuth'
 import useAuthStore from '@/store/authStore'
@@ -146,8 +148,18 @@ const AccountInfoCard = ({ user }) => {
         )}
       </div>
 
-      {!isEditing ? (
+     {!isEditing ? (
         <div className="space-y-4 mt-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+              <User size={16} className="text-orange-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-slate-500 text-xs">Name</p>
+              <p className="text-white text-sm font-medium truncate">{user?.name}</p>
+            </div>
+          </div>
+          <hr className="border-slate-800" />
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
               <Mail size={16} className="text-cyan-400" />
@@ -370,6 +382,7 @@ const ChangePasswordCard = () => {
 }
 
 const Profile = () => {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { data: sessions = [], isLoading: isLoadingStats } = useProfileStats()
 
@@ -379,6 +392,15 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-[#080D1A]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+
+        {/* ─── BACK TO DASHBOARD ─── */}
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-6"
+        >
+          <ArrowLeft size={16} />
+          Back to Dashboard
+        </button>
 
         {/* ─── HEADER ─── */}
         <motion.div
