@@ -9,6 +9,7 @@ import {
 import { getAIStudentResponse, transcribeAudio } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 import { calculateXpForScore } from '../utils/gamification.js'
+import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
 import { extractTextFromPdf, extractConceptsFromText } from '../services/notesService.js'
@@ -314,9 +315,10 @@ router.post('/:id/score', async (req, res, next) => {
     session.scores.push(scoringResult.scores)
     await session.save()
 
-    // Award XP if this score crosses the 70% threshold
+ // Award XP if this score crosses the 70% threshold
     const xpEarned = calculateXpForScore(scoringResult.scores)
     let totalXp = req.user.xp
+    let userForBadgeCheck = req.user
     if (xpEarned > 0) {
       const updatedUser = await User.findByIdAndUpdate(
         req.user._id,
@@ -324,7 +326,20 @@ router.post('/:id/score', async (req, res, next) => {
         { new: true }
       )
       totalXp = updatedUser.xp
+      userForBadgeCheck = updatedUser
     }
+
+    // Check for newly-earned badges now that this score (and any XP
+    // it awarded) has been saved. Fetches all of this user's sessions
+    // fresh — see badgeService.js for why this isn't cached/incremental.
+    const allSessions = await Session.find({ userId: req.user._id }).select('-messages')
+    const newBadges = checkForNewBadges(userForBadgeCheck, allSessions)
+    if (newBadges.length > 0) {
+      await User.findByIdAndUpdate(req.user._id, {
+        $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
+      })
+    }
+
     res.status(200).json({
       status: 'success',
       score: scoringResult.scores,
@@ -332,6 +347,11 @@ router.post('/:id/score', async (req, res, next) => {
       allScores: session.scores,
       xpEarned,
       totalXp,
+      newBadges: newBadges.map((b) => ({
+        id: b.id,
+        name: b.name,
+        description: b.description,
+      })),
     })
   } catch (err) {
     next(err)

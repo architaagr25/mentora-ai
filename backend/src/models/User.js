@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    xp: {
+   xp: {
       type: Number,
       default: 0,
     },
@@ -38,6 +38,13 @@ const userSchema = new mongoose.Schema(
     lastActiveDate: {
       type: Date,
       default: null,
+    },
+    // Stores only badge IDs (see backend/src/constants/badges.js for
+    // the full definitions) — never full badge objects, so badge
+    // copy/criteria can change later without a data migration.
+    badges: {
+      type: [String],
+      default: [],
     },
   },
   {

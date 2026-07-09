@@ -5,6 +5,7 @@ import { getAIStudentResponseStream } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 import logger from '../utils/logger.js'
 import { calculateStreakUpdate, calculateXpForScore } from '../utils/gamification.js'
+import { checkForNewBadges } from '../services/badgeService.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -159,6 +160,24 @@ const initializeSocket = (io) => {
           socket.user.streak = streak
           socket.user.lastActiveDate = lastActiveDate
           socket.emit('streak_updated', { streak })
+
+          // Streak just changed — check for streak-based badges.
+          // Only runs on an actual streak change (not every message),
+          // avoiding an extra Sessions query on every single send.
+          const allSessions = await Session.find({ userId: socket.user._id }).select('-messages')
+          const newBadges = checkForNewBadges(socket.user, allSessions)
+          if (newBadges.length > 0) {
+            await User.findByIdAndUpdate(socket.user._id, {
+              $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
+            })
+            socket.emit('badges_earned', {
+              badges: newBadges.map((b) => ({
+                id: b.id,
+                name: b.name,
+                description: b.description,
+              })),
+            })
+          }
         }
 
         const userMessage = session.messages[session.messages.length - 1]
@@ -255,14 +274,17 @@ const concepts = session.notes?.extractedConcepts?.length > 0
         session.scores.push(scoringResult.scores)
         await session.save()
 
-        // Award XP if this score crosses the 70% threshold
+ // Award XP if this score crosses the 70% threshold
         const xpEarned = calculateXpForScore(scoringResult.scores)
+        let userForBadgeCheck = socket.user
         if (xpEarned > 0) {
           const updatedUser = await User.findByIdAndUpdate(
             socket.user._id,
             { $inc: { xp: xpEarned } },
             { new: true }
           )
+          socket.user.xp = updatedUser.xp
+          userForBadgeCheck = updatedUser
           socket.emit('xp_earned', { xpEarned, totalXp: updatedUser.xp })
         }
 
@@ -272,6 +294,22 @@ const concepts = session.notes?.extractedConcepts?.length > 0
           totalScores: session.scores.length,
           allScores: session.scores,
         })
+
+        // Check for newly-earned badges now that this score is saved
+        const allSessions = await Session.find({ userId: socket.user._id }).select('-messages')
+        const newBadges = checkForNewBadges(userForBadgeCheck, allSessions)
+        if (newBadges.length > 0) {
+          await User.findByIdAndUpdate(socket.user._id, {
+            $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
+          })
+          socket.emit('badges_earned', {
+            badges: newBadges.map((b) => ({
+              id: b.id,
+              name: b.name,
+              description: b.description,
+            })),
+          })
+        }
       } catch (err) {
         logger.error(`request_score error: ${err.message}`)
         socket.emit('error', { message: 'Scoring failed' })
