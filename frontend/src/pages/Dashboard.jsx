@@ -138,6 +138,12 @@ const Dashboard = () => {
  
   const [confirmCompleteId, setConfirmCompleteId] = useState(null)
   const [isCompleting, setIsCompleting] = useState(false)
+
+  // Set when "Practice" is clicked on a topic whose only sessions are
+  // completed — passed to NewSessionModal so it can explain why a new
+  // session is being started rather than resuming the old one.
+  const [restartTopicMessage, setRestartTopicMessage] = useState(null)
+
   const [selectedSessionId, setSelectedSessionId] = useState(null)
   const heroRef = useRef(null)
   const historyRef = useRef(null)
@@ -202,7 +208,12 @@ const handleNavClick = (target) => {
     setShowMobileSidebar(false)
     return
   }
-  const refMap = { hero: heroRef, concepts: conceptsRef }
+  if (target === 'concepts') {
+    navigate('/concepts')
+    setShowMobileSidebar(false)
+    return
+  }
+  const refMap = { hero: heroRef }
   scrollTo(refMap[target])
 }
 
@@ -215,6 +226,26 @@ const handleSessionClick = (session, isActive) => {
     setSelectedSessionId(session._id)
   }
 }
+
+ // "Practice" on a Focus Area:
+  // - If an active (not completed) session already exists for this
+  //   topic, jump straight into it — no reason to start a duplicate.
+  // - If every session on this topic is completed, open the new-session
+  //   modal pre-filled with the topic, with a message explaining why.
+  const handlePracticeClick = (topic) => {
+    const activeSession = sessions.find(
+      (s) => s.topic === topic && s.status === 'active'
+    )
+
+    if (activeSession) {
+      navigate(`/session/${activeSession._id}`)
+      return
+    }
+
+    setTopic(topic)
+    setRestartTopicMessage(topic)
+    setShowNewSessionModal(true)
+  }
 
   const handleMarkComplete = async (sessionId) => {
     setIsCompleting(true)
@@ -735,10 +766,7 @@ const handleSessionClick = (session, isActive) => {
                       {area.avgCompleteness}%
                     </span>
                     <button
-                      onClick={() => {
-                        setTopic(area.topic)
-                        setShowNewSessionModal(true)
-                      }}
+                      onClick={() => handlePracticeClick(area.topic)}
                       className="flex-shrink-0 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
                     >
                       Practice
@@ -756,9 +784,11 @@ const handleSessionClick = (session, isActive) => {
   {showNewSessionModal && (
     <NewSessionModal
       initialTopic={topic}
+      restartNotice={restartTopicMessage}
       onClose={() => {
         setShowNewSessionModal(false)
         setTopic('')
+        setRestartTopicMessage(null)
       }}
     />
   )}

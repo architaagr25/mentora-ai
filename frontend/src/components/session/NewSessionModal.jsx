@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom'
 import useSessionStore from '@/store/sessionStore'
 import api from '@/api'
 
-const NewSessionModal = ({ onClose, initialTopic = '' }) => {
+const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) => {
   const navigate = useNavigate()
   const { createSession } = useSessionStore()
 
@@ -157,6 +157,15 @@ const NewSessionModal = ({ onClose, initialTopic = '' }) => {
             </button>
           </div>
 
+          {/* Restart notice — shown when opened via "Practice" on a topic
+              whose previous session(s) are all completed, explaining why
+              a new session is starting instead of resuming the old one. */}
+          {restartNotice && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs leading-relaxed">
+              Your previous session on <span className="font-semibold">"{restartNotice}"</span> is complete.
+              Start a new session to keep practicing this topic.
+            </div>
+          )}
           {/* Topic input */}
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-300 mb-2">
