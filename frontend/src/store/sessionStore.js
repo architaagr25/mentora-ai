@@ -23,8 +23,13 @@ const useSessionStore = create((set, get) => ({
   notes: null,
   // null = no notes for this session
   // { extractedConcepts: [], fileName: '', uploadedAt: '' } = has notes
-  xpToast: null,
+ xpToast: null,
   // { amount, totalXp } — shown briefly after scoring
+  badgeQueue: [],
+  // array of { id, name, description } waiting to be shown, one at a
+  // time, as a centered modal — not a toast. If a single event earns
+  // multiple badges at once, they queue up: the first is shown, and
+  // closing it reveals the next, rather than showing them all together.
 
   // ─────────────────────────────────────────
   // CREATE SESSION
@@ -84,7 +89,7 @@ const useSessionStore = create((set, get) => ({
   // RESET
   // Called when leaving the session page
   // ─────────────────────────────────────────
-  resetSession: () => {
+ resetSession: () => {
     set({
       currentSession: null,
       messages: [],
@@ -97,11 +102,19 @@ const useSessionStore = create((set, get) => ({
       error: null,
       notes: null,
       xpToast: null,
+      badgeQueue: [],
     })
   },
 
   clearError: () => set({ error: null }),
   clearXpToast: () => set({ xpToast: null }),
+
+  // Dismisses the currently-shown badge (always the front of the
+  // queue) — if more badges are waiting, the next one is now at the
+  // front and will render automatically on the next tick.
+  dismissCurrentBadge: () => {
+    set((state) => ({ badgeQueue: state.badgeQueue.slice(1) }))
+  },
 
   // ─────────────────────────────────────────
   // SOCKET EVENT HANDLERS
@@ -168,6 +181,13 @@ const useSessionStore = create((set, get) => ({
     }, 4000)
   },
 
+  handleBadgesEarned: (data) => {
+    // Append rather than overwrite — if a badge-earning event fires
+    // while a previous badge modal is still showing (e.g. two scoring
+    // actions in quick succession), the new ones join the back of the
+    // queue instead of replacing whatever's already waiting.
+    set((state) => ({ badgeQueue: [...state.badgeQueue, ...data.badges] }))
+  },
   handleStreakUpdated: () => {
     window.dispatchEvent(new Event('streak:updated'))
   },
@@ -207,6 +227,7 @@ const setupSocketListeners = () => {
   socket.on('error', store.handleError)
   socket.on('xp_earned', store.handleXpEarned)
   socket.on('streak_updated', store.handleStreakUpdated)
+  socket.on('badges_earned', store.handleBadgesEarned)
 }
 
 setupSocketListeners()

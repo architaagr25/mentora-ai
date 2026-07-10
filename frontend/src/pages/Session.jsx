@@ -14,6 +14,7 @@ import {
   Mic,
   MessageSquare,
   FileText,
+ 
 } from 'lucide-react'
 import useSessionStore from '@/store/sessionStore'
 import VoiceMode from '@/components/session/VoiceMode'
@@ -58,7 +59,7 @@ const Session = () => {
   const { id } = useParams()
   const navigate = useNavigate()
 
-  const {
+const {
     currentSession,
     messages,
     streamingMessage,
@@ -77,6 +78,7 @@ const Session = () => {
     clearError,
     xpToast,
     clearXpToast,
+    badgeQueue,
   } = useSessionStore()
 
   const [input, setInput] = useState('')
@@ -205,12 +207,34 @@ const lastSpokenIdRef = useRef(null)
   const handleEndSession = async () => {
     setIsEnding(true)
     endSession()
+
+    // Close the end-session confirm modal quickly once the request
+    // is sent, but don't navigate away yet — if ending the session
+    // unlocked a badge, the badge modal needs to actually be seen
+    // and dismissed first. Navigating immediately would yank the
+    // page (and the badge modal with it) out from under the user.
     setTimeout(() => {
       setIsEnding(false)
       setShowEndConfirm(false)
-      navigate('/dashboard')
     }, 1200)
   }
+
+  // Navigate to Dashboard only once the badge queue is empty AND we
+  // were in the middle of ending a session — this fires right after
+  // the confirm modal closes (isEnding flips false) if there's no
+  // badge to show, or waits until the last badge is dismissed if
+  // there is one.
+  const hasHandledEndRef = useRef(false)
+  useEffect(() => {
+    if (isEnding) {
+      hasHandledEndRef.current = true
+      return
+    }
+    if (hasHandledEndRef.current && badgeQueue.length === 0 && isEnded) {
+      hasHandledEndRef.current = false
+      navigate('/dashboard')
+    }
+  }, [isEnding, badgeQueue.length, isEnded, navigate])
 
   // ─── LOADING STATE ───
   if (isJoining && !currentSession) {
@@ -981,6 +1005,7 @@ const lastSpokenIdRef = useRef(null)
     </>
   )}
 </AnimatePresence>
+
 
         {/* ─── XP TOAST ─── */}
       <AnimatePresence>

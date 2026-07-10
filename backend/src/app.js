@@ -11,6 +11,7 @@ import authRoutes from './routes/auth.js'
 import connectDB from './config/db.js'
 import sessionRoutes from './routes/sessions.js'
 import usersRoutes from './routes/users.js'
+import badgesRoutes from './routes/badges.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import initializeSocket from './socket/sessionSocket.js'
@@ -133,11 +134,12 @@ app.get('/api/health', (req, res) => {
   })
 })
 
+
 app.use('/api/auth', authRoutes)
 app.use('/api/sessions', sessionRoutes)
-// app.use('/api/concepts', conceptRoutes)
 app.use('/api/users', usersRoutes)
-// app.use('/api/uploads', uploadRoutes)
+app.use('/api/badges', badgesRoutes)
+
 
 // ─────────────────────────────────────────
 // 404 HANDLER

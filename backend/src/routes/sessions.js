@@ -384,9 +384,26 @@ router.post('/:id/end', async (req, res, next) => {
 
     await session.save()
 
+    // Completing a session can unlock session-count badges (e.g.
+    // "First Steps") — this route is what Dashboard's "Mark as
+    // Complete" button actually calls, so badge-checking needs to
+    // happen here too, not just after scoring.
+    const allSessions = await Session.find({ userId: req.user._id }).select('-messages')
+    const newBadges = checkForNewBadges(req.user, allSessions)
+    if (newBadges.length > 0) {
+      await User.findByIdAndUpdate(req.user._id, {
+        $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
+      })
+    }
+
     res.status(200).json({
       status: 'success',
       session,
+      newBadges: newBadges.map((b) => ({
+        id: b.id,
+        name: b.name,
+        description: b.description,
+      })),
     })
   } catch (err) {
     next(err)

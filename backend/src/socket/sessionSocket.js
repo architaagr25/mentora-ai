@@ -320,7 +320,7 @@ const concepts = session.notes?.extractedConcepts?.length > 0
     // END SESSION
     // User ends the session — marks it completed
     // ─────────────────────────────────────────
-    socket.on('end_session', async () => {
+   socket.on('end_session', async () => {
       try {
         if (!socket.sessionId) {
           return socket.emit('error', { message: 'Join a session first' })
@@ -350,6 +350,25 @@ if (session.notes) {
           sessionId: socket.sessionId,
           duration: session.duration,
         })
+
+        // Completing a session can unlock session-count badges
+        // (e.g. "First Steps" at 1 completed session) — this was
+        // previously only checked after scoring or a streak update,
+        // so completing your very first session never triggered it.
+        const allSessions = await Session.find({ userId: socket.user._id }).select('-messages')
+        const newBadges = checkForNewBadges(socket.user, allSessions)
+        if (newBadges.length > 0) {
+          await User.findByIdAndUpdate(socket.user._id, {
+            $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
+          })
+          socket.emit('badges_earned', {
+            badges: newBadges.map((b) => ({
+              id: b.id,
+              name: b.name,
+              description: b.description,
+            })),
+          })
+        }
 
         // Leave the room
         socket.leave(socket.roomName)

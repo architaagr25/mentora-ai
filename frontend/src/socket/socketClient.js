@@ -35,12 +35,25 @@ socket.on('connect', () => {
 // Called after login with the access token
 // ─────────────────────────────────────────
 export const connectSocket = (token) => {
-  // Set the auth token before connecting
-  socket.auth = { token }
-
-  if (!socket.connected) {
-    socket.connect()
+  // If a socket is already connected (e.g. from a previous account
+  // that logged in earlier in this same browser tab without ever
+  // logging out), it keeps using whatever identity it authenticated
+  // with at ITS original handshake — updating `socket.auth` alone
+  // does NOT re-authenticate an already-connected socket. This caused
+  // a real bug: creating a session as a new account worked correctly
+  // over REST (fresh access token on every request), but the socket
+  // still thought it was the OLD account, so joining that session
+  // failed with "Not authorised".
+  //
+  // Force a full disconnect + reconnect every time this is called,
+  // so the socket's identity always matches whichever account most
+  // recently logged in — never a stale one.
+  if (socket.connected) {
+    socket.disconnect()
   }
+
+  socket.auth = { token }
+  socket.connect()
 }
 
 // ─────────────────────────────────────────

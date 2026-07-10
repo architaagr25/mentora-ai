@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
   ArrowLeft,
+  Award,
 } from 'lucide-react'
 import useAuth from '@/hooks/useAuth'
 import useAuthStore from '@/store/authStore'
@@ -86,6 +87,18 @@ const useProfileStats = () =>
     },
   })
 
+const useBadges = () =>
+  useQuery({
+    queryKey: ['badges'],
+    queryFn: async () => {
+      const res = await api.get('/badges')
+      return res.data.badges
+    },
+    // Badge definitions are static and never change during a session —
+    // no need to ever refetch once loaded.
+    staleTime: Infinity,
+  })
+
 const StatCard = ({ icon: Icon, color, label, value }) => (
   <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 md:p-5">
     <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center mb-2 md:mb-3 ${color}`}>
@@ -96,6 +109,66 @@ const StatCard = ({ icon: Icon, color, label, value }) => (
   </div>
 )
 
+const BadgeCard = ({ badge, isEarned }) => (
+  <div
+    className={`rounded-2xl p-4 md:p-5 border transition-all ${
+      isEarned
+        ? 'bg-[#0D1426] border-violet-500/30'
+        : 'bg-[#0D1426]/60 border-slate-800'
+    }`}
+  >
+    <div
+      className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${
+        isEarned
+          ? 'bg-gradient-to-br from-violet-600 to-cyan-500'
+          : 'bg-slate-800'
+      }`}
+    >
+      {isEarned ? (
+        <Award size={18} className="text-white" />
+      ) : (
+        <Lock size={16} className="text-slate-600" />
+      )}
+    </div>
+    <p className={`font-semibold text-sm mb-1 ${isEarned ? 'text-white' : 'text-slate-500'}`}>
+      {badge.name}
+    </p>
+    <p className={`text-xs leading-relaxed ${isEarned ? 'text-slate-400' : 'text-slate-600'}`}>
+      {badge.description}
+    </p>
+  </div>
+)
+const BadgesSection = ({ user }) => {
+  const { data: badges = [], isLoading } = useBadges()
+  const earnedIds = new Set(user?.badges || [])
+
+  const earnedCount = badges.filter((b) => earnedIds.has(b.id)).length
+
+  return (
+    <div className="mb-6 md:mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <h2 className="text-lg font-semibold text-white">Badges</h2>
+        {!isLoading && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400">
+            {earnedCount}/{badges.length}
+          </span>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-10">
+          <Loader2 size={22} className="text-violet-400 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          {badges.map((badge) => (
+            <BadgeCard key={badge.id} badge={badge} isEarned={earnedIds.has(badge.id)} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 // ─────────────────────────────────────────
 // ACCOUNT INFO CARD
 // ─────────────────────────────────────────
@@ -458,11 +531,14 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* ─── ACCOUNT INFO + CHANGE PASSWORD — balanced two-column below ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+{/* ─── ACCOUNT INFO + CHANGE PASSWORD — balanced two-column below ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-6 md:mb-8">
           <AccountInfoCard user={user} />
           <ChangePasswordCard />
         </div>
+
+        {/* ─── BADGES ─── */}
+        <BadgesSection user={user} />
 
       </div>
     </div>

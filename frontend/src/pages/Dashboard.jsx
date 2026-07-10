@@ -25,7 +25,6 @@ import useSessionStore from '@/store/sessionStore'
 import api from '@/api'
 import NewSessionModal from '@/components/session/NewSessionModal'
 import SessionDetailPanel from '@/components/history/SessionDetailPanel'
-
 // ─────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────
@@ -247,22 +246,33 @@ const handleSessionClick = (session, isActive) => {
     setShowNewSessionModal(true)
   }
 
-  const handleMarkComplete = async (sessionId) => {
-    setIsCompleting(true)
-    try {
-      await api.post(`/sessions/${sessionId}/end`)
-      setSessions((prev) =>
-        prev.map((s) =>
-          s._id === sessionId ? { ...s, status: 'completed' } : s
-        )
+ const handleMarkComplete = async (sessionId) => {
+  setIsCompleting(true)
+  try {
+    const response = await api.post(`/sessions/${sessionId}/end`)
+    setSessions((prev) =>
+      prev.map((s) =>
+        s._id === sessionId ? { ...s, status: 'completed' } : s
       )
-      setConfirmCompleteId(null)
-    } catch {
-      // silent — could add a toast here later
-    } finally {
-      setIsCompleting(false)
+    )
+    setConfirmCompleteId(null)
+
+    // Mark-as-complete is a REST call, not a socket event, so any
+    // newly-earned badges won't arrive via the usual socket listener.
+    // Push them into the same queue manually so the badge modal still
+    // shows, consistent with how completing a session in the live
+    // chat page (socket-based) already behaves.
+    if (response.data.newBadges?.length > 0) {
+      useSessionStore.setState((state) => ({
+        badgeQueue: [...state.badgeQueue, ...response.data.newBadges],
+      }))
     }
+  } catch {
+    // silent
+  } finally {
+    setIsCompleting(false)
   }
+}
 
   const greeting = new Date().getHours() < 12
     ? 'morning' : new Date().getHours() < 17
