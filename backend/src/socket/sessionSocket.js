@@ -170,6 +170,9 @@ const initializeSocket = (io) => {
             await User.findByIdAndUpdate(socket.user._id, {
               $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
             })
+            // Keep the in-memory socket.user in sync — see the same
+            // comment in request_score above for why this is required.
+            socket.user.badges = [...(socket.user.badges || []), ...newBadges.map((b) => b.id)]
             socket.emit('badges_earned', {
               badges: newBadges.map((b) => ({
                 id: b.id,
@@ -295,13 +298,20 @@ const concepts = session.notes?.extractedConcepts?.length > 0
           allScores: session.scores,
         })
 
-        // Check for newly-earned badges now that this score is saved
+     // Check for newly-earned badges now that this score is saved
         const allSessions = await Session.find({ userId: socket.user._id }).select('-messages')
         const newBadges = checkForNewBadges(userForBadgeCheck, allSessions)
         if (newBadges.length > 0) {
           await User.findByIdAndUpdate(socket.user._id, {
             $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
           })
+          // socket.user is cached in memory for the lifetime of this
+          // socket connection — the DB write above doesn't refresh it.
+          // Without this, checkForNewBadges would keep re-awarding the
+          // same badge every time this handler runs on the same
+          // connection, since it'd always see the stale (pre-award)
+          // badges list. Same pattern already used for xp/streak below.
+          socket.user.badges = [...(socket.user.badges || []), ...newBadges.map((b) => b.id)]
           socket.emit('badges_earned', {
             badges: newBadges.map((b) => ({
               id: b.id,
@@ -351,7 +361,7 @@ if (session.notes) {
           duration: session.duration,
         })
 
-        // Completing a session can unlock session-count badges
+       // Completing a session can unlock session-count badges
         // (e.g. "First Steps" at 1 completed session) — this was
         // previously only checked after scoring or a streak update,
         // so completing your very first session never triggered it.
@@ -361,6 +371,9 @@ if (session.notes) {
           await User.findByIdAndUpdate(socket.user._id, {
             $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
           })
+          // Keep the in-memory socket.user in sync — see the same
+          // comment in request_score above for why this is required.
+          socket.user.badges = [...(socket.user.badges || []), ...newBadges.map((b) => b.id)]
           socket.emit('badges_earned', {
             badges: newBadges.map((b) => ({
               id: b.id,
