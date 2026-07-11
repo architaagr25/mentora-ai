@@ -3,10 +3,15 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
 import auth from '../middleware/auth.js'
-import { loginLimiter, registerLimiter, refreshLimiter } from '../middleware/rateLimiter.js'
+import { loginLimiter, registerLimiter, refreshLimiter, passwordResetLimiter } from '../middleware/rateLimiter.js'
 import { registerSchema, loginSchema } from '../validators/authValidator.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { generateAccessToken, generateRefreshToken } from '../utils/generateTokens.js'
+import crypto from 'crypto'
+import { z } from 'zod'
+import { sendEmail } from '../services/emailService.js'
+import { resetPasswordTemplate } from '../utils/emailTemplates.js'
+import logger from '../utils/logger.js'
 
 const router = express.Router()
 
@@ -206,6 +211,135 @@ router.post('/logout', async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       message: 'Logged out successfully',
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ─────────────────────────────────────────
+// POST /api/auth/forgot-password
+// Always responds with the same generic message whether or not the
+// email exists — this is deliberate, not an oversight. Responding
+// differently ("email not found" vs "link sent") would let an
+// attacker enumerate every registered email by trying addresses one
+// at a time and watching which response comes back.
+// ─────────────────────────────────────────
+const forgotPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email').toLowerCase(),
+})
+
+router.post('/forgot-password', passwordResetLimiter, async (req, res, next) => {
+  try {
+    const result = forgotPasswordSchema.safeParse(req.body)
+    if (!result.success) {
+      return res.status(400).json({
+        status: 'error',
+        errors: result.error.flatten().fieldErrors,
+      })
+    }
+
+    const { email } = result.data
+    const genericMessage =
+      'If an account with that email exists, a password reset link has been sent.'
+
+    const user = await User.findOne({ email })
+
+    // Deliberately identical response whether or not the user exists —
+    // see comment above.
+    if (!user) {
+      return res.status(200).json({ status: 'success', message: genericMessage })
+    }
+
+    // Generate a random raw token — this is what goes in the email.
+    // Only its hash is ever stored in the database (see User.js for
+    // why: a DB leak shouldn't hand out working reset links).
+    const rawToken = crypto.randomBytes(32).toString('hex')
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+
+    user.resetPasswordToken = hashedToken
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    await user.save()
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${rawToken}`
+
+    const emailResult = await sendEmail({
+      to: user.email,
+      subject: 'Reset your Mentora AI password',
+      html: resetPasswordTemplate(resetUrl),
+    })
+
+    if (!emailResult.success) {
+      // Log for debugging, but still return the generic success
+      // message — telling the user "email failed to send" would
+      // itself confirm the account exists, defeating the point of
+      // the generic response above.
+      logger.error(`Failed to send reset email to ${user.email}: ${emailResult.error}`)
+    }
+
+    res.status(200).json({ status: 'success', message: genericMessage })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ─────────────────────────────────────────
+// POST /api/auth/reset-password
+// Takes the raw token from the emailed reset link + a new password.
+// Since only a hash of the token was ever stored, we hash whatever
+// the client submits and look for a matching, still-valid record —
+// same idea as password comparison, just with a fast hash suited to
+// a high-entropy random token rather than bcrypt (suited to
+// low-entropy human passwords).
+// ─────────────────────────────────────────
+const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  newPassword: z
+    .string({ required_error: 'New password is required' })
+    .min(8, 'New password must be at least 8 characters')
+    .max(72, 'New password cannot exceed 72 characters'),
+})
+
+router.post('/reset-password', passwordResetLimiter, async (req, res, next) => {
+  try {
+    const result = resetPasswordSchema.safeParse(req.body)
+    if (!result.success) {
+      return res.status(400).json({
+        status: 'error',
+        errors: result.error.flatten().fieldErrors,
+      })
+    }
+
+    const { token, newPassword } = result.data
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+
+    // select() needed here since resetPasswordToken/Expires are
+    // select: false by default on the schema (see User.js)
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+    }).select('+resetPasswordToken +resetPasswordExpires')
+
+    if (!user) {
+      throw new AppError('This reset link is invalid or has expired. Please request a new one.', 400)
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 12)
+    user.resetPasswordToken = null
+    user.resetPasswordExpires = null
+
+    // Same security pattern as the change-password flow — invalidate
+    // every existing session, since a password reset is exactly the
+    // kind of event (account recovery, possibly after a compromise)
+    // where old sessions shouldn't be trusted to continue silently.
+    user.refreshTokens = []
+
+    await user.save()
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password reset successfully. Please log in with your new password.',
     })
   } catch (err) {
     next(err)
