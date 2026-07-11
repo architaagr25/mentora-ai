@@ -20,6 +20,7 @@ import initializeSocket from './socket/sessionSocket.js'
 // Any code before this cannot access environment variables
 dotenv.config()
 
+
 const app = express()
 const PORT = process.env.PORT || 5000
 
