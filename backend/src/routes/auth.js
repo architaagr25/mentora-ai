@@ -10,7 +10,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/generateToke
 import crypto from 'crypto'
 import { z } from 'zod'
 import { sendEmail } from '../services/emailService.js'
-import { resetPasswordTemplate } from '../utils/emailTemplates.js'
+import { resetPasswordTemplate, welcomeTemplate } from '../utils/emailTemplates.js'
 import logger from '../utils/logger.js'
 
 const router = express.Router()
@@ -71,7 +71,17 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     await user.save()
 
     // Step 6: Send refresh token as httpOnly cookie
+   // Step 6: Send refresh token as httpOnly cookie
     res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS)
+
+    // Fire-and-forget welcome email — same reasoning as the
+    // password-changed email: registration has already succeeded,
+    // no reason to make the user wait on an email round-trip.
+    sendEmail({
+      to: user.email,
+      subject: 'Welcome to Mentora AI',
+      html: welcomeTemplate(user.name),
+    })
 
     // Step 7: Send response
     // user.toJSON() automatically strips passwordHash and refreshTokens

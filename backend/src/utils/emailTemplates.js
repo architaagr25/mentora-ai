@@ -92,3 +92,25 @@ export const passwordChangedTemplate = () => `
   </div>
 </div>
 `
+
+export const welcomeTemplate = (name) => `
+<div style="${EMAIL_WRAPPER_STYLE}">
+  <div style="${CARD_STYLE}">
+    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+      Mentora AI
+    </p>
+
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+      Welcome, ${name} 👋
+    </h1>
+
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+      Your Mentora AI account is ready. Pick any concept you think you understand, and start explaining it — the AI will ask exactly the questions that expose where your understanding breaks down.
+    </p>
+
+    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="${BUTTON_STYLE}">
+      Start Your First Session
+    </a>
+  </div>
+</div>
+`
