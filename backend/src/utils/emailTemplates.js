@@ -68,3 +68,27 @@ export const resetPasswordTemplate = (resetUrl) => `
   </div>
 </div>
 `
+
+export const passwordChangedTemplate = () => `
+<div style="${EMAIL_WRAPPER_STYLE}">
+  <div style="${CARD_STYLE}">
+    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+      Mentora AI
+    </p>
+
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+      Your password was changed
+    </h1>
+
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+      This is a confirmation that your Mentora AI account password was just changed. You've been signed out of all devices as a precaution — you'll need to log in again with your new password.
+    </p>
+
+    <hr style="border: none; border-top: 1px solid #1e293b; margin: 0 0 28px;" />
+
+    <p style="color: #f87171; font-size: 13px; line-height: 1.6; margin: 0;">
+      If you didn't make this change, your account may be compromised — reset your password immediately using the "Forgot password?" link on the login page.
+    </p>
+  </div>
+</div>
+`

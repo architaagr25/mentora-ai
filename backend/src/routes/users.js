@@ -4,6 +4,8 @@ import User from '../models/User.js'
 import auth from '../middleware/auth.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { updateProfileSchema, changePasswordSchema } from '../validators/userValidator.js'
+import { sendEmail } from '../services/emailService.js'
+import { passwordChangedTemplate } from '../utils/emailTemplates.js'
 import bcrypt from 'bcryptjs'
 
 const router = express.Router()
@@ -87,7 +89,7 @@ router.post('/change-password', async (req, res, next) => {
       throw new AppError('Current password is incorrect', 401)
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 12)
+  user.passwordHash = await bcrypt.hash(newPassword, 12)
 
     // Changing your password invalidates all existing refresh tokens —
     // forces re-login everywhere else you're signed in. This is a
@@ -98,6 +100,17 @@ router.post('/change-password', async (req, res, next) => {
 
     await user.save()
 
+    // Notify the account owner regardless of who made this change —
+    // the important case is when it *wasn't* them (compromised
+    // account). Deliberately fire-and-forget: email failure shouldn't
+    // block or fail the actual password change, which has already
+    // succeeded at this point.
+    sendEmail({
+      to: user.email,
+      subject: 'Your Mentora AI password was changed',
+      html: passwordChangedTemplate(),
+    })
+
     res.status(200).json({
       status: 'success',
       message: 'Password changed successfully. Please log in again.',
@@ -106,5 +119,4 @@ router.post('/change-password', async (req, res, next) => {
     next(err)
   }
 })
-
 export default router
