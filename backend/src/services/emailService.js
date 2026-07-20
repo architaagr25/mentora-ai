@@ -46,13 +46,17 @@ const FROM_ADDRESS = {
 // ─────────────────────────────────────────
 export const sendEmail = async ({ to, subject, html }) => {
   try {
-    const sendSmtpEmail = new brevo.SendSmtpEmail()
-    sendSmtpEmail.sender = FROM_ADDRESS
-    sendSmtpEmail.to = [{ email: to }]
-    sendSmtpEmail.subject = subject
-    sendSmtpEmail.htmlContent = html
-
-    await getBrevoClient().sendTransacEmail(sendSmtpEmail)
+    // Passing a plain object instead of constructing brevo.SendSmtpEmail()
+    // — the SDK's exported class shape has changed across versions and
+    // "new brevo.SendSmtpEmail()" isn't reliably available. The API
+    // client accepts a plain object with the same field names, so this
+    // sidesteps depending on that specific class export entirely.
+    await getBrevoClient().sendTransacEmail({
+      sender: FROM_ADDRESS,
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    })
     return { success: true }
   } catch (err) {
     const message = err.response?.body?.message || err.message

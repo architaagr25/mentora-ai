@@ -24,6 +24,17 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 5000
 
+// Render (and most hosting platforms) sit the app behind a reverse
+// proxy, which forwards the real client IP via X-Forwarded-For.
+// Express doesn't trust this header by default — for good reason,
+// since it can be spoofed by a client directly if there's no actual
+// trusted proxy in front. Since we ARE genuinely behind Render's
+// proxy, we tell Express to trust exactly one hop, so
+// express-rate-limit (loginLimiter, passwordResetLimiter, etc.) can
+// correctly identify each real client's IP instead of erroring or
+// misidentifying everyone as the same "user".
+app.set('trust proxy', 1)
+
 // ─────────────────────────────────────────
 // CORS ALLOWED ORIGINS
 // Supports multiple origins (local dev + deployed frontend)
