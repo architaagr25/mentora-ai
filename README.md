@@ -46,7 +46,8 @@ Most students study by re-reading notes — the least effective method known to 
 - Browser Web Speech API (`SpeechSynthesis`) — text-to-speech for the AI's spoken replies in Voice Mode; free, client-side, no AI call involved
 
 ### Email
-- Resend (transactional email API) — password reset, password-changed notifications, welcome emails. Sent via HTTPS API rather than SMTP, since most cloud hosts (including this project's, Render) block outbound SMTP ports by default.
+- Brevo (transactional email API) — password reset, password-changed notifications, welcome emails. Sent via HTTPS API rather than SMTP, since most cloud hosts (including this project's, Render) block outbound SMTP ports by default.
+- Sender is a single verified email address (not a domain), so deliverability is decent but not guaranteed — occasional spam-folder placement is possible, especially for first-time recipients. Every email includes a note to check spam if it's missing from the inbox.
 
 ### Deployment
 - Frontend: Vercel
@@ -57,6 +58,7 @@ Most students study by re-reading notes — the least effective method known to 
 These are installed as dependencies or referenced in code comments, but not wired up yet:
 - BullMQ + Upstash Redis — background job queues (would move notes/concept extraction and scoring off the request/response cycle)
 - MongoDB Atlas Vector Search — semantic grouping of similar concepts/gaps across sessions (today, the Concepts page groups by exact topic-string match only)
+- Custom domain email sending — verifying a real domain (rather than a single mailbox address) with Brevo/Resend would improve deliverability and remove the current spam-folder risk on account emails
 
 ## Getting Started
 
@@ -65,7 +67,7 @@ These are installed as dependencies or referenced in code comments, but not wire
 - npm 10+
 - MongoDB Atlas account (free)
 - Google Gemini API key (free tier available)
-- Resend account (free tier — for sending account emails)
+- Brevo account (free tier, 300 emails/day — for sending account emails)
 
 ### Installation
 

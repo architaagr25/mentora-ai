@@ -9,7 +9,11 @@
 // link, matching the app's actual violet/cyan brand rather than a
 // generic auto-generated look.
 // ─────────────────────────────────────────
-
+const SPAM_NOTICE = `
+  <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+    Don't see this in your inbox? Check your spam or junk folder.
+  </p>
+`
 const EMAIL_WRAPPER_STYLE = `
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #080D1A;
@@ -60,11 +64,12 @@ export const resetPasswordTemplate = (resetUrl) => `
       <a href="${resetUrl}" style="color: #22D3EE; word-break: break-all;">${resetUrl}</a>
     </p>
 
-    <hr style="border: none; border-top: 1px solid #1e293b; margin: 28px 0;" />
+   <hr style="border: none; border-top: 1px solid #1e293b; margin: 28px 0;" />
 
     <p style="color: #475569; font-size: 12px; line-height: 1.6; margin: 0;">
       If you didn't request a password reset, you can safely ignore this email — your password will not be changed.
     </p>
+    ${SPAM_NOTICE}
   </div>
 </div>
 `
@@ -84,11 +89,12 @@ export const passwordChangedTemplate = () => `
       This is a confirmation that your Mentora AI account password was just changed. You've been signed out of all devices as a precaution — you'll need to log in again with your new password.
     </p>
 
-    <hr style="border: none; border-top: 1px solid #1e293b; margin: 0 0 28px;" />
+   <hr style="border: none; border-top: 1px solid #1e293b; margin: 0 0 28px;" />
 
     <p style="color: #f87171; font-size: 13px; line-height: 1.6; margin: 0;">
       If you didn't make this change, your account may be compromised — reset your password immediately using the "Forgot password?" link on the login page.
     </p>
+    ${SPAM_NOTICE}
   </div>
 </div>
 `
@@ -111,6 +117,7 @@ export const welcomeTemplate = (name) => `
     <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="${BUTTON_STYLE}">
       Start Your First Session
     </a>
+    ${SPAM_NOTICE}
   </div>
 </div>
 `
