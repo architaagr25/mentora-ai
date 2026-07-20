@@ -16,6 +16,9 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        // Node 20+ has fetch() built in globally — used by
+        // emailService.js to call Brevo's REST API directly.
+        fetch: 'readonly',
       },
     },
     rules: {
