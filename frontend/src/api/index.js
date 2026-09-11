@@ -4,8 +4,10 @@ import axios from 'axios'
 // CREATE AXIOS INSTANCE
 // All API calls go through this instance
 // ─────────────────────────────────────────
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_BASE_URL,
   withCredentials: true,
   // withCredentials: true is critical
   // It tells the browser to include cookies in cross-origin requests
@@ -55,31 +57,45 @@ export const clearAccessToken = () => {
 }
 
 // ─────────────────────────────────────────
+// REFRESH ACCESS TOKEN
+// Single place that swaps the refresh-token cookie for a new access
+// token. Shared by the 401 interceptor below and the socket's
+// reconnect logic (socketClient.js).
+//
+// - Uses plain axios, not `api`, so a failed refresh (401) can never
+//   be caught by the interceptor and queued behind itself — the
+//   previous version deadlocked that way, hanging the request forever.
+// - Concurrent callers share one in-flight request instead of each
+//   firing their own refresh.
+// ─────────────────────────────────────────
+let refreshPromise = null
+
+export const refreshAccessToken = () => {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post(`${API_BASE_URL}/auth/refresh-token`, {}, { withCredentials: true })
+      .then((response) => {
+        const newToken = response.data.accessToken
+        setAccessToken(newToken)
+        return newToken
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+// ─────────────────────────────────────────
 // RESPONSE INTERCEPTOR
 // Runs after every response comes back
 // Handles 401 errors by silently refreshing the token
 // ─────────────────────────────────────────
 
-// Track if we're already refreshing to prevent infinite loops
-// Imagine two requests fail with 401 simultaneously
-// Without this flag, both would try to refresh at the same time
-// causing two refresh calls and potential race conditions
-let isRefreshing = false
-
-// Queue of requests that failed while we were refreshing
-// They wait for the new token then retry
-let failedQueue = []
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((promise) => {
-    if (error) {
-      promise.reject(error)
-    } else {
-      promise.resolve(token)
-    }
-  })
-  failedQueue = []
-}
+// A 401 from these means "wrong credentials / bad link", not "access
+// token expired" — refreshing and retrying would be pointless, and
+// would replace their real error message with the refresh failure.
+const isAuthFormRequest = (url = '') => url.startsWith('/auth/') && url !== '/auth/me'
 
 api.interceptors.response.use(
   // Success — just pass the response through unchanged
@@ -89,55 +105,26 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Only handle 401 errors
-    // And only if we haven't already retried this request
-    // _retry flag prevents infinite loops
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // Another request is already refreshing the token
-        // Add this request to the queue — it will retry when refresh completes
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`
-            return api(originalRequest)
-          })
-          .catch((err) => Promise.reject(err))
-      }
-
-      // Mark this request as retried so we don't loop
+    // Only handle 401 errors, and only once per request —
+    // _retry prevents an infinite refresh → retry → 401 loop
+    if (
+      error.response?.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isAuthFormRequest(originalRequest.url)
+    ) {
       originalRequest._retry = true
-      isRefreshing = true
 
       try {
-        // Try to get a new access token using the refresh token cookie
-        const response = await api.post('/auth/refresh-token')
-        const newToken = response.data.accessToken
-
-        // Store the new token
-        setAccessToken(newToken)
-
-        // Update the failed request's header with new token
+        const newToken = await refreshAccessToken()
         originalRequest.headers.Authorization = `Bearer ${newToken}`
-
-        // Resolve all queued requests with the new token
-        processQueue(null, newToken)
-
-        // Retry the original request
         return api(originalRequest)
       } catch (refreshError) {
         // Refresh failed — token is truly expired or user logged out
-        // Clear everything and let the app handle the logout
-        processQueue(refreshError, null)
         clearAccessToken()
-
         // Dispatch a custom event so the app knows to redirect to login
         window.dispatchEvent(new Event('auth:logout'))
-
         return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
       }
     }
 

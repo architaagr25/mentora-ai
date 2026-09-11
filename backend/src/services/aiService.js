@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
+import { filterTranscript } from '../utils/transcriptFilter.js'
 
 const getStudentSystemPrompt = (topic, concepts = null) => {
   const conceptsSection = concepts && concepts.length > 0
@@ -218,7 +219,7 @@ export const transcribeAudio = async (audioBase64, mimeType) => {
                 },
               },
               {
-                text: 'You are a transcription engine, not a conversational assistant. Transcribe the speech in this audio exactly as spoken. If there is no discernible human speech (silence, background noise, a timestamp-like sound, or an unclear/very short clip), respond with exactly: [NO_SPEECH]. Never apologize, never explain, never refuse, never output a timestamp — only output the transcript or [NO_SPEECH].',
+                text: 'You are a transcription engine, not a conversational assistant. Transcribe the speech in this audio exactly as spoken, including words like "sorry", "no", "blank" or "silence" if the speaker says them. If there is no discernible human speech (silence, background noise, a timestamp-like sound, or an unclear/very short clip), respond with exactly: [NO_SPEECH]. Never apologize, never explain, never refuse, never output a timestamp — only output the transcript or [NO_SPEECH].',
               },
             ],
           },
@@ -230,31 +231,17 @@ export const transcribeAudio = async (audioBase64, mimeType) => {
       })
     )
 
-    const transcript = response.text.trim()
-    logger.info(`Raw Gemini transcription: "${transcript}"`)
+    const rawTranscript = response.text ?? ''
+    logger.info(`Raw Gemini transcription: "${rawTranscript}"`)
 
-    const nonAnswerPatterns = [
-      /\[no_speech\]/i,
-      /i'?m sorry/i,
-      /sorry,? i/i,
-      /can'?t (help|assist|transcribe)/i,
-      /not (able|sure) (to|if)/i,
-      /\b(silence|no speech|no audio|inaudible|blank)\b/i,
-      /there is no/i,
-      /no speech/i,
-      /as an ai/i,
-    ]
-    const isNonAnswer = nonAnswerPatterns.some((pattern) => pattern.test(transcript))
+    const { transcript, reason } = filterTranscript(rawTranscript)
 
-    const isTimestamp = /^\[?\d{1,2}:\d{2}(:\d{2})?\]?$/.test(transcript)
-
-    const isTooShort = transcript.replace(/[^a-zA-Z0-9]/g, '').length < 3
-
-    if (isNonAnswer || isTimestamp || isTooShort || transcript.length === 0) {
-      logger.info(`Transcription rejected as non-speech: "${transcript}"`)
+    if (reason) {
+      logger.info(`Transcription rejected (${reason}): "${rawTranscript}"`)
       return {
         success: true,
         transcript: '',
+        reason,
       }
     }
 

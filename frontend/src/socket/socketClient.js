@@ -1,4 +1,5 @@
 import { io } from 'socket.io-client'
+import { getAccessToken, refreshAccessToken } from '../api/index.js'
 
 const SOCKET_URL = import.meta.env.VITE_API_URL
   ? import.meta.env.VITE_API_URL.replace('/api', '')
@@ -9,11 +10,19 @@ const SOCKET_URL = import.meta.env.VITE_API_URL
 // ─────────────────────────────────────────
 // CREATE SOCKET INSTANCE
 // autoConnect: false — we manually connect after login
-// so we can pass the auth token at connection time
+//
+// auth is a FUNCTION, not a fixed { token } object: socket.io calls it
+// on every connect *and every reconnect*, so each handshake uses the
+// newest access token in memory. With a fixed object, a reconnect
+// after the 15-minute access token expired (laptop sleep, wifi drop)
+// kept sending the old token and was rejected with "Invalid token".
+// Any refresh — by the API interceptor, on page load, or below —
+// updates the in-memory token, so this picks it up automatically.
 // ─────────────────────────────────────────
 const socket = io(SOCKET_URL, {
   autoConnect: false,
   withCredentials: true,
+  auth: (cb) => cb({ token: getAccessToken() }),
 })
 
 // ─────────────────────────────────────────
@@ -24,26 +33,64 @@ const socket = io(SOCKET_URL, {
 // ─────────────────────────────────────────
 let activeSessionId = null
 
+// Consecutive auth-rejected handshakes, reset on every successful
+// connect. Caps the refresh → reconnect loop if the server keeps
+// rejecting even fresh tokens (e.g. a misconfigured JWT secret).
+const MAX_AUTH_RETRIES = 2
+let authRetries = 0
+
+// Error messages from the server's io.use() auth middleware
+// (backend/src/socket/sessionSocket.js)
+const EXPIRED_TOKEN_ERRORS = new Set(['Invalid token', 'Authentication required'])
+
 socket.on('connect', () => {
+  authRetries = 0
   if (activeSessionId) {
     socket.emit('join_session', { sessionId: activeSessionId })
   }
 })
 
 // ─────────────────────────────────────────
-// CONNECT WITH TOKEN
-// Called after login with the access token
+// CONNECT ERROR
+// Network errors (server down, no internet): socket.io keeps retrying
+// on its own — nothing to do here.
+// Auth errors: socket.io does NOT retry after its middleware rejects
+// the handshake, so refresh the access token and reconnect manually.
+// If the refresh itself fails, the login is truly gone — log out.
 // ─────────────────────────────────────────
-export const connectSocket = (token) => {
+socket.on('connect_error', async (err) => {
+  if (err.message === 'User not found') {
+    window.dispatchEvent(new Event('auth:logout'))
+    return
+  }
+  if (!EXPIRED_TOKEN_ERRORS.has(err.message)) return
+
+  if (authRetries >= MAX_AUTH_RETRIES) {
+    window.dispatchEvent(new Event('socket:auth_failed'))
+    return
+  }
+  authRetries += 1
+
+  try {
+    await refreshAccessToken()
+    socket.connect() // auth() above reads the fresh token
+  } catch {
+    window.dispatchEvent(new Event('auth:logout'))
+  }
+})
+
+// ─────────────────────────────────────────
+// CONNECT
+// Called after login / session restore, once the access token has
+// been stored in memory with setAccessToken().
+// ─────────────────────────────────────────
+export const connectSocket = () => {
   // If a socket is already connected (e.g. from a previous account
   // that logged in earlier in this same browser tab without ever
   // logging out), it keeps using whatever identity it authenticated
-  // with at ITS original handshake — updating `socket.auth` alone
-  // does NOT re-authenticate an already-connected socket. This caused
-  // a real bug: creating a session as a new account worked correctly
-  // over REST (fresh access token on every request), but the socket
-  // still thought it was the OLD account, so joining that session
-  // failed with "Not authorised".
+  // with at ITS original handshake — a new token doesn't
+  // re-authenticate an already-connected socket. That caused a real
+  // bug: a new account's sessions failed to join with "Not authorised".
   //
   // Force a full disconnect + reconnect every time this is called,
   // so the socket's identity always matches whichever account most
@@ -52,7 +99,7 @@ export const connectSocket = (token) => {
     socket.disconnect()
   }
 
-  socket.auth = { token }
+  authRetries = 0
   socket.connect()
 }
 
@@ -73,6 +120,12 @@ export const disconnectSocket = () => {
 export const joinSession = (sessionId) => {
   activeSessionId = sessionId
   socket.emit('join_session', { sessionId })
+}
+
+// Called when leaving the session page — stops a later reconnect
+// (e.g. while on the Dashboard) from re-joining that old session
+export const leaveSession = () => {
+  activeSessionId = null
 }
 export const sendMessage = (content) => {
   socket.emit('send_message', { content })
