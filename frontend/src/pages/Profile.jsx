@@ -27,6 +27,7 @@ import useAuth from '@/hooks/useAuth'
 import useAuthStore from '@/store/authStore'
 import api from '@/api'
 import { updateProfile, changePassword } from '@/api/users'
+import XpInfo from '@/components/XpInfo'
 
 const profileEditSchema = z.object({
   name: z
@@ -99,13 +100,16 @@ const useBadges = () =>
     staleTime: Infinity,
   })
 
-const StatCard = ({ icon: Icon, color, label, value }) => (
+const StatCard = ({ icon: Icon, color, label, value, info }) => (
   <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 md:p-5">
     <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center mb-2 md:mb-3 ${color}`}>
       <Icon size={16} />
     </div>
     <p className="text-xl md:text-2xl font-bold text-white mb-1">{value}</p>
-    <p className="text-slate-500 text-xs">{label}</p>
+    <div className="flex items-center gap-1.5">
+      <p className="text-slate-500 text-xs">{label}</p>
+      {info}
+    </div>
   </div>
 )
 
@@ -509,6 +513,7 @@ const Profile = () => {
               color="bg-yellow-500/20 text-yellow-400"
               label="Total XP"
               value={user?.xp || 0}
+              info={<XpInfo />}
             />
             <StatCard
               icon={Target}

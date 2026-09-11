@@ -14,10 +14,11 @@ import {
   Mic,
   MessageSquare,
   FileText,
- 
+  Zap,
 } from 'lucide-react'
 import useSessionStore from '@/store/sessionStore'
 import VoiceMode from '@/components/session/VoiceMode'
+import XpInfo from '@/components/XpInfo'
 
 // ─────────────────────────────────────────
 // HELPERS
@@ -33,6 +34,35 @@ const getScoreBarColor = (score) => {
   if (score >= 6) return 'from-yellow-500 to-orange-500'
   return 'from-red-500 to-pink-500'
 }
+
+// Toast copy for each XP outcome — reasons come from
+// getXpBreakdown() in backend/src/utils/gamification.js
+const getScoreToastTitle = (t) => {
+  if (t.xpEarned > 0) return `+${t.xpEarned} XP earned`
+  if (t.reason === 'below_threshold') return `Scored ${t.scorePercent}% — no XP yet`
+  return `Scored ${t.scorePercent}% — no new XP`
+}
+
+const getScoreToastReason = (t) => {
+  switch (t.reason) {
+    case 'first_qualifying':
+      return `You scored ${t.scorePercent}%: 20 XP for reaching ${t.thresholdPercent}%, plus ${
+        t.scorePercent - t.thresholdPercent
+      } for the points above it.`
+    case 'improved':
+      return `New best in this session: ${t.previousBestPercent}% → ${t.scorePercent}%. You earn the extra XP over your previous best.`
+    case 'below_threshold':
+      return `Reach ${t.thresholdPercent}% to start earning XP. Keep explaining, then rescore.`
+    case 'not_improved':
+      return `Your best in this session is still ${t.previousBestPercent}%. Beat it to earn more XP.`
+    default:
+      return ''
+  }
+}
+
+// Keep in sync with MIN_USER_MESSAGES_TO_SCORE in
+// backend/src/constants/scoring.js
+const MIN_USER_MESSAGES_TO_SCORE = 2
 
 const formatTime = (dateString) => {
   if (!dateString) return ''
@@ -63,10 +93,13 @@ const {
     currentSession,
     messages,
     streamingMessage,
+    isSending,
     isStreaming,
     scores,
     latestScore,
     isScoring,
+    scoreError,
+    clearScoreError,
     isJoining,
     error,
     notes,
@@ -76,8 +109,8 @@ const {
     joinExistingSession,
     resetSession,
     clearError,
-    xpToast,
-    clearXpToast,
+    scoreToast,
+    clearScoreToast,
     badgeQueue,
   } = useSessionStore()
 
@@ -174,6 +207,11 @@ const lastSpokenIdRef = useRef(null)
     setTimeout(() => setLatestAiMessage(lastMsg.content), 0)
   }, [messages, voiceMode])
 
+  // A score error belongs to the panel — drop it once the panel closes
+  useEffect(() => {
+    if (!showScorePanel) clearScoreError()
+  }, [showScorePanel, clearScoreError])
+
   useEffect(() => {
     if (showScorePanel && scrollToAttempts) {
       // Small delay lets the slide-in animation start first
@@ -187,15 +225,56 @@ const lastSpokenIdRef = useRef(null)
   
   const isEnded = currentSession?.status === 'completed'
   const userMessageCount = messages.filter((m) => m.role === 'user').length
-  const showScoreButton = userMessageCount >= 2 || latestScore !== null
+  // Waiting on the AI: from the moment a message is sent until the
+  // reply has finished streaming. The input is read-only meanwhile.
+  const isAwaitingReply = isSending || isStreaming
+
+  // ─── SCORING AVAILABILITY ───
+  // Both rules mirror the backend guards in request_score.
+  const messagesNeededToScore = Math.max(0, MIN_USER_MESSAGES_TO_SCORE - userMessageCount)
+  // A new score needs new explanation since the last one. Older
+  // scores saved before messageCountAtScore existed are rescorable.
+  const hasNewSinceLastScore =
+    !latestScore ||
+    latestScore.messageCountAtScore == null ||
+    userMessageCount > latestScore.messageCountAtScore
+  const canRequestScore = messagesNeededToScore === 0 && hasNewSinceLastScore
+  const scoreHint =
+    messagesNeededToScore > 0
+      ? `Send at least ${MIN_USER_MESSAGES_TO_SCORE} messages to get a score — ${messagesNeededToScore} more to go.`
+      : !hasNewSinceLastScore
+      ? 'Explain more to rescore — a new score needs something new since the last one.'
+      : null
+  // The sidebar / top-bar button only opens the score panel, so it's
+  // disabled only while there's nothing to show and nothing to score yet
+  const isScoreButtonDisabled = !latestScore && messagesNeededToScore > 0
 
   // ─── HANDLERS ───
   const handleSend = () => {
     const trimmed = input.trim()
-    if (!trimmed || isStreaming || isEnded) return
+    if (!trimmed || isAwaitingReply || isEnded) return
     sendMessage(trimmed)
     setInput('')
+    // Keep the cursor in the box even when sending via the button
+    textareaRef.current?.focus()
   }
+
+  // When the AI finishes replying, put the cursor back in the box —
+  // unless the user deliberately moved focus somewhere else meanwhile
+  // (e.g. opened the score panel).
+  const wasAwaitingReplyRef = useRef(false)
+  useEffect(() => {
+    if (isAwaitingReply) {
+      wasAwaitingReplyRef.current = true
+      return
+    }
+    if (!wasAwaitingReplyRef.current) return
+    wasAwaitingReplyRef.current = false
+    const active = document.activeElement
+    if (!active || active === document.body || active === textareaRef.current) {
+      textareaRef.current?.focus()
+    }
+  }, [isAwaitingReply])
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -441,14 +520,17 @@ const lastSpokenIdRef = useRef(null)
             )}
           </button>
 
-          {showScoreButton && (
-            <button
-              onClick={() => setShowScorePanel(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
-            >
-              <BarChart3 size={16} />
-              {latestScore ? 'View Score' : 'Get Score'}
-            </button>
+          <button
+            onClick={() => setShowScorePanel(true)}
+            disabled={isScoreButtonDisabled}
+            title={isScoreButtonDisabled ? scoreHint : undefined}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-violet-600/20"
+          >
+            <BarChart3 size={16} />
+            {latestScore ? 'View Score' : 'Get Score'}
+          </button>
+          {isScoreButtonDisabled && !isEnded && (
+            <p className="text-slate-500 text-xs text-center px-1">{scoreHint}</p>
           )}
           {!isEnded && (
             <button
@@ -510,17 +592,18 @@ const lastSpokenIdRef = useRef(null)
                 {voiceMode ? <MessageSquare size={16} /> : <Mic size={16} />}
               </button>
 
-              {showScoreButton && (
-                <button
-                  onClick={() => setShowScorePanel(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
-                >
-                  <BarChart3 size={16} />
-                  <span className="hidden sm:inline">
-                    {latestScore ? 'Score' : 'Get Score'}
-                  </span>
-                </button>
-              )}
+              <button
+                onClick={() => setShowScorePanel(true)}
+                disabled={isScoreButtonDisabled}
+                title={isScoreButtonDisabled ? scoreHint : undefined}
+                aria-label={isScoreButtonDisabled ? scoreHint : 'Score'}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-violet-600/20"
+              >
+                <BarChart3 size={16} />
+                <span className="hidden sm:inline">
+                  {latestScore ? 'Score' : 'Get Score'}
+                </span>
+              </button>
 
               {!isEnded && (
                 <button
@@ -570,7 +653,8 @@ const lastSpokenIdRef = useRef(null)
             onSendMessage={sendMessage}
             isEnded={isEnded}
             latestAiMessage={latestAiMessage}
-            showScoreButton={showScoreButton}
+            isScoreButtonDisabled={isScoreButtonDisabled}
+            scoreHint={scoreHint}
             onSwitchToText={() => toggleVoiceMode(false)}
             onOpenScore={() => setShowScorePanel(true)}
             onEndSession={() => setShowEndConfirm(true)}
@@ -597,6 +681,9 @@ const lastSpokenIdRef = useRef(null)
                     </h3>
                     <p className="text-slate-400 text-sm max-w-sm">
                       Start explaining the concept like you're teaching someone who's never heard of it. I'll ask questions as I go.
+                    </p>
+                    <p className="text-slate-500 text-xs mt-3">
+                      You can get a score after {MIN_USER_MESSAGES_TO_SCORE} messages.
                     </p>
                   </div>
                 )}
@@ -683,18 +770,27 @@ const lastSpokenIdRef = useRef(null)
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="Explain the concept..."
+                      placeholder={
+                        isAwaitingReply ? 'AI student is replying...' : 'Explain the concept...'
+                      }
                       rows={1}
                       maxLength={2000}
-                      disabled={isStreaming}
-                      className="flex-1 resize-none px-4 py-3 rounded-xl bg-[#080D1A] border border-slate-700 hover:border-slate-600 focus:border-violet-500 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all disabled:opacity-50"
+                      // readOnly rather than disabled: a disabled field
+                      // loses focus, which kicked the cursor out of the
+                      // box on every send. readOnly blocks typing but
+                      // keeps the cursor here for when the reply ends.
+                      readOnly={isAwaitingReply}
+                      aria-busy={isAwaitingReply}
+                      className={`flex-1 resize-none px-4 py-3 rounded-xl bg-[#080D1A] border border-slate-700 hover:border-slate-600 focus:border-violet-500 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all ${
+                        isAwaitingReply ? 'opacity-50 cursor-wait' : ''
+                      }`}
                     />
                     <button
                       onClick={handleSend}
-                      disabled={!input.trim() || isStreaming}
+                      disabled={!input.trim() || isAwaitingReply}
                       className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      {isStreaming ? (
+                      {isAwaitingReply ? (
                         <Loader2 size={18} className="animate-spin" />
                       ) : (
                         <Send size={18} />
@@ -727,7 +823,10 @@ const lastSpokenIdRef = useRef(null)
               className="fixed right-0 top-0 h-full w-full sm:w-96 bg-[#0D1426] border-l border-slate-800 z-50 flex flex-col"
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800 flex-shrink-0">
-                <h2 className="text-white font-bold text-lg">Mastery Score</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-white font-bold text-lg">Mastery Score</h2>
+                  <XpInfo align="left" />
+                </div>
                 <button
                   onClick={() => setShowScorePanel(false)}
                   className="text-slate-500 hover:text-slate-300 transition-colors"
@@ -739,23 +838,44 @@ const lastSpokenIdRef = useRef(null)
               <div className="flex-1 overflow-y-auto px-5 py-5 space-y-6">
 
                 {!isEnded && (
-                  <button
-                    onClick={requestScore}
-                    disabled={isScoring || userMessageCount === 0}
-                    className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-                  >
-                    {isScoring ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        Scoring your explanation...
-                      </>
-                    ) : (
-                      <>
-                        <BarChart3 size={16} />
-                        {latestScore ? 'Request New Score' : 'Score My Explanation'}
-                      </>
+                  <div className="space-y-2">
+                    <button
+                      onClick={requestScore}
+                      disabled={isScoring || !canRequestScore}
+                      className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                    >
+                      {isScoring ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Scoring your explanation...
+                        </>
+                      ) : (
+                        <>
+                          <BarChart3 size={16} />
+                          {latestScore ? 'Request New Score' : 'Score My Explanation'}
+                        </>
+                      )}
+                    </button>
+                    {!isScoring && scoreError && (
+                      <div
+                        role="alert"
+                        className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-red-400 text-xs"
+                      >
+                        <AlertCircle size={14} className="flex-shrink-0 mt-px" />
+                        <span className="flex-1">{scoreError}</span>
+                        <button
+                          onClick={clearScoreError}
+                          aria-label="Dismiss"
+                          className="text-red-400/60 hover:text-red-400 transition-colors flex-shrink-0"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     )}
-                  </button>
+                    {!isScoring && !scoreError && scoreHint && (
+                      <p className="text-slate-500 text-xs text-center">{scoreHint}</p>
+                    )}
+                  </div>
                 )}
 
                 {latestScore ? (
@@ -1007,26 +1127,60 @@ const lastSpokenIdRef = useRef(null)
 </AnimatePresence>
 
 
-        {/* ─── XP TOAST ─── */}
+      {/* ─── SCORE / XP TOAST ─── */}
       <AnimatePresence>
-        {xpToast && (
+        {scoreToast && (
           <motion.div
+            key={scoreToast.id}
+            role="status"
             initial={{ opacity: 0, y: 50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="fixed bottom-6 right-6 z-[60] bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl px-5 py-3 shadow-2xl shadow-orange-500/30 flex items-center gap-3"
+            className={`fixed bottom-6 right-6 left-6 sm:left-auto sm:w-80 z-[60] rounded-2xl px-5 py-4 shadow-2xl border bg-[#0D1426] ${
+              scoreToast.xpEarned > 0 ? 'border-yellow-500/40' : 'border-slate-700'
+            }`}
           >
-            <span className="text-2xl">⚡</span>
-            <div>
-              <p className="text-white font-bold text-sm">+{xpToast.amount} XP earned!</p>
-              <p className="text-white/80 text-xs">Total: {xpToast.totalXp} XP</p>
+            <div className="flex items-start gap-3">
+              <Zap
+                size={18}
+                className={`mt-0.5 flex-shrink-0 ${
+                  scoreToast.xpEarned > 0 ? 'text-yellow-400' : 'text-slate-500'
+                }`}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-white font-bold text-sm">{getScoreToastTitle(scoreToast)}</p>
+                <p className="text-slate-400 text-xs leading-relaxed mt-1">
+                  {getScoreToastReason(scoreToast)}
+                </p>
+
+                {scoreToast.deltas.length > 0 && (
+                  <ul className="mt-3 space-y-1">
+                    {scoreToast.deltas.map((d) => (
+                      <li key={d.label} className="flex items-center justify-between text-xs">
+                        <span className="text-slate-400">{d.label}</span>
+                        <span className={d.to > d.from ? 'text-green-400' : 'text-red-400'}>
+                          {d.from} → {d.to} {d.to > d.from ? '▲' : '▼'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {!scoreToast.isFirstScore && scoreToast.deltas.length === 0 && (
+                  <p className="text-slate-500 text-xs mt-2">
+                    Same accuracy, clarity and completeness as your last score.
+                  </p>
+                )}
+
+                <p className="text-slate-500 text-xs mt-3">Total: {scoreToast.totalXp} XP</p>
+              </div>
+              <button
+                onClick={clearScoreToast}
+                aria-label="Dismiss"
+                className="text-slate-500 hover:text-white transition-colors flex-shrink-0"
+              >
+                <X size={14} />
+              </button>
             </div>
-            <button
-              onClick={clearXpToast}
-              className="text-white/60 hover:text-white transition-colors ml-2"
-            >
-              <X size={14} />
-            </button>
           </motion.div>
         )}
       </AnimatePresence>
