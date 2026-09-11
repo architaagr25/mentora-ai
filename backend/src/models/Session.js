@@ -23,6 +23,10 @@ const scoreSnapshotSchema = new mongoose.Schema(
     completeness: { type: Number, min: 0, max: 10 },
     gaps: { type: [String], default: [] },
     feedback: { type: String, default: null },
+    // How many user messages existed when this score was taken.
+    // Used to block re-scoring until the user has explained more.
+    // null on snapshots saved before this field existed.
+    messageCountAtScore: { type: Number, default: null },
     scoredAt: { type: Date, default: Date.now },
   },
   { _id: false }
@@ -104,6 +108,16 @@ sessionSchema.virtual('latestScore').get(function () {
   if (this.scores.length === 0) return null
   return this.scores[this.scores.length - 1]
 })
+
+// True when the user has said something new since the last score
+// (or there is no score yet). Legacy snapshots without
+// messageCountAtScore are treated as rescorable.
+sessionSchema.methods.hasNewMessagesSinceLastScore = function () {
+  const userMessageCount = this.messages.filter((m) => m.role === 'user').length
+  const lastScore = this.scores[this.scores.length - 1]
+  if (!lastScore || lastScore.messageCountAtScore == null) return true
+  return userMessageCount > lastScore.messageCountAtScore
+}
 
 // Virtual: quick boolean — does this session have uploaded notes?
 sessionSchema.virtual('hasNotes').get(function () {

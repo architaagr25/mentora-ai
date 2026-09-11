@@ -49,7 +49,8 @@ const VoiceMode = ({
   onSendMessage,
   isEnded,
   latestAiMessage,
-  showScoreButton,
+  isScoreButtonDisabled,
+  scoreHint,
   onSwitchToText,
   onOpenScore,
   onEndSession,
@@ -285,17 +286,18 @@ const {
             </button>
 
             {/* Score */}
-            {showScoreButton && (
-              <button
-                onClick={onOpenScore}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
-              >
-                <BarChart3 size={16} />
-                <span className="hidden sm:inline">
-                  {latestScore ? 'Score' : 'Get Score'}
-                </span>
-              </button>
-            )}
+            <button
+              onClick={onOpenScore}
+              disabled={isScoreButtonDisabled}
+              title={isScoreButtonDisabled ? scoreHint : undefined}
+              aria-label={isScoreButtonDisabled ? scoreHint : 'Score'}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-violet-600/20"
+            >
+              <BarChart3 size={16} />
+              <span className="hidden sm:inline">
+                {latestScore ? 'Score' : 'Get Score'}
+              </span>
+            </button>
 
             {/* End session */}
             {!isEnded && (
