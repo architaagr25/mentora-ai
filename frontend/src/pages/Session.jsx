@@ -15,6 +15,8 @@ import {
   MessageSquare,
   FileText,
   Zap,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react'
 import useSessionStore from '@/store/sessionStore'
 import VoiceMode from '@/components/session/VoiceMode'
@@ -58,6 +60,14 @@ const getScoreToastReason = (t) => {
     default:
       return ''
   }
+}
+
+// Banner text per sessionStore connectionStatus — statuses without an
+// entry ('connected', 'connecting', 'offline') show no banner
+const CONNECTION_BANNER = {
+  reconnecting: 'Connection lost — reconnecting… Your conversation is saved.',
+  rejoining: 'Reconnected — restoring your session…',
+  failed: "Couldn't reconnect. Reload the page to continue.",
 }
 
 // Keep in sync with MIN_USER_MESSAGES_TO_SCORE in
@@ -111,6 +121,7 @@ const {
     clearError,
     scoreToast,
     clearScoreToast,
+    connectionStatus,
     badgeQueue,
   } = useSessionStore()
 
@@ -228,6 +239,10 @@ const lastSpokenIdRef = useRef(null)
   // Waiting on the AI: from the moment a message is sent until the
   // reply has finished streaming. The input is read-only meanwhile.
   const isAwaitingReply = isSending || isStreaming
+  // Anything sent while offline would be rejected after reconnecting
+  // (see connectionStatus in sessionStore) — lock input until we're back
+  const isConnected = connectionStatus === 'connected'
+  const isInputLocked = isAwaitingReply || !isConnected
 
   // ─── SCORING AVAILABILITY ───
   // Both rules mirror the backend guards in request_score.
@@ -252,29 +267,29 @@ const lastSpokenIdRef = useRef(null)
   // ─── HANDLERS ───
   const handleSend = () => {
     const trimmed = input.trim()
-    if (!trimmed || isAwaitingReply || isEnded) return
+    if (!trimmed || isInputLocked || isEnded) return
     sendMessage(trimmed)
     setInput('')
     // Keep the cursor in the box even when sending via the button
     textareaRef.current?.focus()
   }
 
-  // When the AI finishes replying, put the cursor back in the box —
-  // unless the user deliberately moved focus somewhere else meanwhile
-  // (e.g. opened the score panel).
-  const wasAwaitingReplyRef = useRef(false)
+  // When the input unlocks (AI reply finished, or connection is back),
+  // put the cursor back in the box — unless the user deliberately
+  // moved focus somewhere else meanwhile (e.g. opened the score panel).
+  const wasInputLockedRef = useRef(false)
   useEffect(() => {
-    if (isAwaitingReply) {
-      wasAwaitingReplyRef.current = true
+    if (isInputLocked) {
+      wasInputLockedRef.current = true
       return
     }
-    if (!wasAwaitingReplyRef.current) return
-    wasAwaitingReplyRef.current = false
+    if (!wasInputLockedRef.current) return
+    wasInputLockedRef.current = false
     const active = document.activeElement
     if (!active || active === document.body || active === textareaRef.current) {
       textareaRef.current?.focus()
     }
-  }, [isAwaitingReply])
+  }, [isInputLocked])
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -619,6 +634,39 @@ const lastSpokenIdRef = useRef(null)
         </header>
         )}
 
+        {/* ─── CONNECTION BANNER ─── */}
+        <AnimatePresence>
+          {currentSession && CONNECTION_BANNER[connectionStatus] && (
+            <motion.div
+              role="status"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex-shrink-0 bg-yellow-500/10 border-b border-yellow-500/20"
+            >
+              <div className="px-4 py-2 flex items-center justify-between gap-2 text-yellow-400 text-sm">
+                <div className="flex items-center gap-2">
+                  {connectionStatus === 'failed' ? (
+                    <WifiOff size={14} className="flex-shrink-0" />
+                  ) : (
+                    <Loader2 size={14} className="flex-shrink-0 animate-spin" />
+                  )}
+                  {CONNECTION_BANNER[connectionStatus]}
+                </div>
+                {connectionStatus === 'failed' && (
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="flex items-center gap-1 text-yellow-300 hover:text-yellow-200 transition-colors flex-shrink-0 text-xs font-medium"
+                  >
+                    <RefreshCw size={12} />
+                    Reload
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* ─── ERROR BANNER ─── */}
         <AnimatePresence>
           {error && currentSession && (
@@ -655,6 +703,7 @@ const lastSpokenIdRef = useRef(null)
             latestAiMessage={latestAiMessage}
             isScoreButtonDisabled={isScoreButtonDisabled}
             scoreHint={scoreHint}
+            isConnected={isConnected}
             onSwitchToText={() => toggleVoiceMode(false)}
             onOpenScore={() => setShowScorePanel(true)}
             onEndSession={() => setShowEndConfirm(true)}
@@ -771,7 +820,11 @@ const lastSpokenIdRef = useRef(null)
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
                       placeholder={
-                        isAwaitingReply ? 'AI student is replying...' : 'Explain the concept...'
+                        !isConnected
+                          ? 'Waiting for connection...'
+                          : isAwaitingReply
+                          ? 'AI student is replying...'
+                          : 'Explain the concept...'
                       }
                       rows={1}
                       maxLength={2000}
@@ -779,15 +832,15 @@ const lastSpokenIdRef = useRef(null)
                       // loses focus, which kicked the cursor out of the
                       // box on every send. readOnly blocks typing but
                       // keeps the cursor here for when the reply ends.
-                      readOnly={isAwaitingReply}
-                      aria-busy={isAwaitingReply}
+                      readOnly={isInputLocked}
+                      aria-busy={isInputLocked}
                       className={`flex-1 resize-none px-4 py-3 rounded-xl bg-[#080D1A] border border-slate-700 hover:border-slate-600 focus:border-violet-500 text-white placeholder-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 transition-all ${
-                        isAwaitingReply ? 'opacity-50 cursor-wait' : ''
+                        isInputLocked ? 'opacity-50 cursor-wait' : ''
                       }`}
                     />
                     <button
                       onClick={handleSend}
-                      disabled={!input.trim() || isAwaitingReply}
+                      disabled={!input.trim() || isInputLocked}
                       className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {isAwaitingReply ? (
@@ -841,7 +894,7 @@ const lastSpokenIdRef = useRef(null)
                   <div className="space-y-2">
                     <button
                       onClick={requestScore}
-                      disabled={isScoring || !canRequestScore}
+                      disabled={isScoring || !canRequestScore || !isConnected}
                       className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                     >
                       {isScoring ? (
@@ -1047,7 +1100,7 @@ const lastSpokenIdRef = useRef(null)
                   </button>
                   <button
                     onClick={handleEndSession}
-                    disabled={isEnding}
+                    disabled={isEnding || !isConnected}
                     className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                   >
                     {isEnding ? (
