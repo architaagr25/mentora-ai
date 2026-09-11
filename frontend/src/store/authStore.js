@@ -1,6 +1,5 @@
 import { create } from 'zustand'
-import axios from 'axios'
-import api, { setAccessToken, clearAccessToken } from '../api/index.js'
+import api, { setAccessToken, clearAccessToken, refreshAccessToken } from '../api/index.js'
 import { connectSocket, disconnectSocket } from '../socket/socketClient.js'
 
 const useAuthStore = create((set, get) => ({
@@ -9,8 +8,8 @@ const useAuthStore = create((set, get) => ({
 
   login: (user, accessToken) => {
     setAccessToken(accessToken)
-    // Connect socket when user logs in
-    connectSocket(accessToken)
+    // Connect socket when user logs in — it reads the token set above
+    connectSocket()
     set({ user })
   },
 
@@ -36,17 +35,12 @@ const useAuthStore = create((set, get) => ({
 
   initialize: async () => {
     try {
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-      const refreshResponse = await axios.post(
-        `${baseURL}/auth/refresh-token`,
-        {},
-        { withCredentials: true }
-      )
-      const newAccessToken = refreshResponse.data.accessToken
-      setAccessToken(newAccessToken)
+      // Stores the new access token in memory on success
+      await refreshAccessToken()
 
-      // Connect socket after successful session restore
-      connectSocket(newAccessToken)
+      // Connect socket after successful session restore — it reads
+      // the token set above
+      connectSocket()
 
       const meResponse = await api.get('/auth/me')
       set({ user: meResponse.data.user })

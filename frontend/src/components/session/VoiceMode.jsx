@@ -51,6 +51,7 @@ const VoiceMode = ({
   latestAiMessage,
   isScoreButtonDisabled,
   scoreHint,
+  isConnected = true,
   onSwitchToText,
   onOpenScore,
   onEndSession,
@@ -107,6 +108,16 @@ const {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionError])
+
+  // ─── CONNECTION LOST WHILE WAITING FOR A REPLY ───
+  // No reply is coming on a dropped connection — go back to idle
+  // instead of sitting on "AI student is thinking..." forever.
+  // The reply (if the server finished it) appears once reconnected.
+  useEffect(() => {
+    if (!isConnected && voiceState === VOICE_STATE.WAITING) {
+      setTimeout(() => setVoiceState(VOICE_STATE.IDLE), 0)
+    }
+  }, [isConnected, voiceState])
 
   // ─── SYNC VOICE STATE WITH STREAMING ───
   useEffect(() => {
@@ -202,21 +213,34 @@ const {
             mimeType,
           })
 
-          const transcript = response.data.transcript
+          const { transcript, reason } = response.data
 
           if (!transcript || transcript.trim().length === 0) {
             const newCount = failCount + 1
             setFailCount(newCount)
+            // reason comes from the backend filter: 'too_short' means
+            // something was heard but not enough to use
             setError(
               newCount >= 3
-                ? "Still can't hear you. Check your mic is not muted, or switch to text mode."
-                : 'Could not hear anything. Please try again.'
+                ? "Still can't hear you. Check your mic isn't muted, or switch to text mode."
+                : reason === 'too_short'
+                ? "That was too short to make out — nothing was sent. Try a full sentence."
+                : "Didn't catch that — nothing was sent. Tap the mic and try again."
             )
             setVoiceState(VOICE_STATE.IDLE)
             return
           }
 
           setFailCount(0)
+
+          // The connection dropped while recording/transcribing — the
+          // store would silently refuse to send, so say so instead
+          if (!isConnected) {
+            setError("Connection lost — that recording wasn't sent. Try again once reconnected.")
+            setVoiceState(VOICE_STATE.IDLE)
+            return
+          }
+
           setVoiceState(VOICE_STATE.WAITING)
           onSendMessage(transcript)
         } catch {
@@ -233,9 +257,12 @@ const {
 
       reader.readAsDataURL(blob)
     }
-}, [voiceState, startRecording, stopRecording, cancelSpeech, onSendMessage, failCount])
+}, [voiceState, startRecording, stopRecording, cancelSpeech, onSendMessage, failCount, isConnected])
   const micDisabled =
     isEnded ||
+    // Can't start a new recording while offline — but a recording
+    // already in progress can still be stopped
+    (!isConnected && voiceState === VOICE_STATE.IDLE) ||
     voiceState === VOICE_STATE.TRANSCRIBING ||
     voiceState === VOICE_STATE.WAITING ||
     voiceState === VOICE_STATE.SPEAKING
