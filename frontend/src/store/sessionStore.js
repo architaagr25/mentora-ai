@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import api from '../api/index.js'
 import socket, {
   joinSession as socketJoinSession,
+  leaveSession as socketLeaveSession,
   sendMessage as socketSendMessage,
   requestScore as socketRequestScore,
   endSession as socketEndSession,
@@ -48,6 +49,17 @@ const useSessionStore = create((set, get) => ({
   // multiple badges at once, they queue up: the first is shown, and
   // closing it reveals the next, rather than showing them all together.
 
+  connectionStatus: socket.connected ? 'connected' : 'connecting',
+  // 'connecting'   — first connection after load/login
+  // 'connected'    — live; safe to send
+  // 'reconnecting' — connection dropped; socket.io is retrying
+  // 'rejoining'    — back online, waiting for the session room re-join
+  // 'failed'       — couldn't re-authenticate; the user must reload
+  // 'offline'      — deliberately disconnected (logout)
+  // Sending is only allowed while 'connected': anything emitted while
+  // offline would be flushed on reconnect BEFORE the room is re-joined,
+  // and the server would reject it with "Join a session first".
+
   // ─────────────────────────────────────────
   // CREATE SESSION
   // ─────────────────────────────────────────
@@ -82,7 +94,8 @@ const useSessionStore = create((set, get) => ({
   // SEND MESSAGE
   // ─────────────────────────────────────────
   sendMessage: (content) => {
-    if (get().isStreaming || get().isSending) return
+    const { isStreaming, isSending, connectionStatus } = get()
+    if (isStreaming || isSending || connectionStatus !== 'connected') return
     set({ isSending: true })
     socketSendMessage(content)
   },
@@ -91,7 +104,7 @@ const useSessionStore = create((set, get) => ({
   // REQUEST SCORE
   // ─────────────────────────────────────────
   requestScore: () => {
-    if (get().isScoring) return
+    if (get().isScoring || get().connectionStatus !== 'connected') return
     set({ isScoring: true, scoreError: null })
     socketRequestScore()
   },
@@ -100,6 +113,7 @@ const useSessionStore = create((set, get) => ({
   // END SESSION
   // ─────────────────────────────────────────
   endSession: () => {
+    if (get().connectionStatus !== 'connected') return
     socketEndSession()
   },
 
@@ -107,7 +121,8 @@ const useSessionStore = create((set, get) => ({
   // RESET
   // Called when leaving the session page
   // ─────────────────────────────────────────
- resetSession: () => {
+  resetSession: () => {
+    socketLeaveSession()
     set({
       currentSession: null,
       messages: [],
@@ -156,6 +171,10 @@ const useSessionStore = create((set, get) => ({
           : null,
       notes: data.notes || null,
       isJoining: false,
+      // After a reconnect this is the moment it's safe to send again.
+      // The messages above come fresh from the DB, so an AI reply that
+      // finished while we were offline shows up here too.
+      connectionStatus: socket.connected ? 'connected' : get().connectionStatus,
     })
   },
 
@@ -250,13 +269,18 @@ const useSessionStore = create((set, get) => ({
     // authorised", "Session not found") leaves the UI stuck on the
     // "Joining session..." loading screen forever, since that check
     // runs before the error-card check in Session.jsx.
-    set({
+    set((state) => ({
       error: data.message,
       isSending: false,
       isStreaming: false,
       isScoring: false,
       isJoining: false,
-    })
+      // A failed re-join (e.g. the session was ended in another tab)
+      // still means we're online — unlock and show the error instead
+      // of an endless "restoring session" banner
+      connectionStatus:
+        state.connectionStatus === 'rejoining' ? 'connected' : state.connectionStatus,
+    }))
   },
 
   handleScoreError: (data) => {
@@ -275,10 +299,32 @@ const useSessionStore = create((set, get) => ({
     })
   },
 
-  // A dropped connection means no reply is coming — unlock the input
-  // rather than leaving it stuck waiting forever
-  handleDisconnect: () => {
-    set({ isSending: false, isStreaming: false, streamingMessage: '', isScoring: false })
+  // ─────────────────────────────────────────
+  // CONNECTION STATUS HANDLERS
+  // ─────────────────────────────────────────
+
+  handleConnect: () => {
+    // In a session, socketClient re-emits join_session on connect —
+    // wait for session_joined before allowing sends again
+    set({ connectionStatus: get().currentSession ? 'rejoining' : 'connected' })
+  },
+
+  // A dropped connection means no reply is coming — clear the
+  // waiting states rather than leaving them stuck forever. Sending
+  // stays blocked (via connectionStatus) until we're back.
+  handleDisconnect: (reason) => {
+    set({
+      isSending: false,
+      isStreaming: false,
+      streamingMessage: '',
+      isScoring: false,
+      // 'io client disconnect' = we disconnected on purpose (logout)
+      connectionStatus: reason === 'io client disconnect' ? 'offline' : 'reconnecting',
+    })
+  },
+
+  handleAuthFailed: () => {
+    set({ connectionStatus: 'failed' })
   },
 }))
 
@@ -298,7 +344,10 @@ const setupSocketListeners = () => {
   socket.on('session_ended', store.handleSessionEnded)
   socket.on('error', store.handleError)
   socket.on('score_error', store.handleScoreError)
+  socket.on('connect', store.handleConnect)
   socket.on('disconnect', store.handleDisconnect)
+  // Fired by socketClient when re-authentication keeps failing
+  window.addEventListener('socket:auth_failed', store.handleAuthFailed)
   socket.on('streak_updated', store.handleStreakUpdated)
   socket.on('badges_earned', store.handleBadgesEarned)
 }

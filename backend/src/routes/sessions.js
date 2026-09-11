@@ -453,6 +453,9 @@ router.post('/transcribe', async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       transcript: result.transcript,
+      // Only set when the transcript was rejected: 'no_speech' | 'too_short'
+      // — lets the client explain why nothing was sent
+      reason: result.reason ?? null,
     })
   } catch (err) {
     next(err)
