@@ -4,8 +4,9 @@ import Session from '../models/Session.js'
 import { getAIStudentResponseStream } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 import logger from '../utils/logger.js'
-import { calculateStreakUpdate, calculateXpForScore } from '../utils/gamification.js'
+import { calculateStreakUpdate, getXpBreakdown } from '../utils/gamification.js'
 import { checkForNewBadges } from '../services/badgeService.js'
+import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -242,23 +243,39 @@ const concepts = session.notes?.extractedConcepts?.length > 0
     // User requests scoring for current session
     // ─────────────────────────────────────────
     socket.on('request_score', async () => {
+      // Scoring problems go to 'score_error' (shown inside the score
+      // panel), not the generic 'error' (the page-level banner behind
+      // it). latestScore lets the client resync if its view was stale.
+      const emitScoreError = (message, session = null) =>
+        socket.emit('score_error', {
+          message,
+          latestScore: session?.scores?.[session.scores.length - 1] ?? null,
+        })
+
       try {
         if (!socket.sessionId) {
-          return socket.emit('error', { message: 'Join a session first' })
+          return emitScoreError('Join a session first')
         }
 
         const session = await Session.findById(socket.sessionId)
 
         if (!session || session.status !== 'active') {
-          return socket.emit('error', { message: 'Session not found or ended' })
+          return emitScoreError('Session not found or ended')
         }
 
         const userMessages = session.messages.filter(
           (msg) => msg.role === 'user'
         )
 
-        if (userMessages.length === 0) {
-          return socket.emit('error', { message: 'No messages to score yet' })
+        if (userMessages.length < MIN_USER_MESSAGES_TO_SCORE) {
+          return emitScoreError(
+            `Send at least ${MIN_USER_MESSAGES_TO_SCORE} messages before requesting a score.`,
+            session
+          )
+        }
+
+        if (!session.hasNewMessagesSinceLastScore()) {
+          return emitScoreError('Explain a bit more before requesting a new score.', session)
         }
 
         // Tell client scoring has started so they can show a loading state
@@ -270,32 +287,38 @@ const concepts = session.notes?.extractedConcepts?.length > 0
         )
 
         if (!scoringResult.success) {
-          return socket.emit('error', { message: 'Scoring failed. Please try again.' })
+          return emitScoreError('Scoring failed. Please try again.', session)
         }
 
-        // Save score snapshot
-        session.scores.push(scoringResult.scores)
-        await session.save()
+        // Only XP above this session's previous best is awarded —
+        // the breakdown also carries the "why" for the client toast
+        const xp = getXpBreakdown(scoringResult.scores, session.scores)
 
- // Award XP if this score crosses the 70% threshold
-        const xpEarned = calculateXpForScore(scoringResult.scores)
+        // Save score snapshot
+        session.scores.push({
+          ...scoringResult.scores,
+          messageCountAtScore: userMessages.length,
+        })
+        await session.save()
         let userForBadgeCheck = socket.user
-        if (xpEarned > 0) {
+        if (xp.xpEarned > 0) {
           const updatedUser = await User.findByIdAndUpdate(
             socket.user._id,
-            { $inc: { xp: xpEarned } },
+            { $inc: { xp: xp.xpEarned } },
             { new: true }
           )
           socket.user.xp = updatedUser.xp
           userForBadgeCheck = updatedUser
-          socket.emit('xp_earned', { xpEarned, totalXp: updatedUser.xp })
         }
 
         // Send score result to client
+        // Send the saved snapshot (not the raw scoring result) so the
+        // client gets messageCountAtScore for its rescore guard
         socket.emit('score_result', {
-          score: scoringResult.scores,
+          score: session.scores[session.scores.length - 1],
           totalScores: session.scores.length,
           allScores: session.scores,
+          xp: { ...xp, totalXp: socket.user.xp },
         })
 
      // Check for newly-earned badges now that this score is saved
@@ -322,7 +345,7 @@ const concepts = session.notes?.extractedConcepts?.length > 0
         }
       } catch (err) {
         logger.error(`request_score error: ${err.message}`)
-        socket.emit('error', { message: 'Scoring failed' })
+        emitScoreError('Scoring failed. Please try again.')
       }
     })
 

@@ -25,6 +25,7 @@ import useSessionStore from '@/store/sessionStore'
 import api from '@/api'
 import NewSessionModal from '@/components/session/NewSessionModal'
 import SessionDetailPanel from '@/components/history/SessionDetailPanel'
+import XpInfo from '@/components/XpInfo'
 // ─────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────
@@ -512,6 +513,7 @@ const handleSessionClick = (session, isActive) => {
               <span className="text-yellow-400 text-sm font-semibold">
                 {user?.xp || 0} XP
               </span>
+              <XpInfo className="ml-0.5" />
             </div>
           </div>
         </div>
