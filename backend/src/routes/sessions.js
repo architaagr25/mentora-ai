@@ -8,7 +8,8 @@ import {
 } from '../validators/sessionValidator.js'
 import { getAIStudentResponse, transcribeAudio } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
-import { calculateXpForScore } from '../utils/gamification.js'
+import { getXpBreakdown } from '../utils/gamification.js'
+import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -297,8 +298,15 @@ router.post('/:id/score', async (req, res, next) => {
       (msg) => msg.role === 'user'
     )
 
-    if (userMessages.length === 0) {
-      throw new AppError('No messages to score yet', 400)
+    if (userMessages.length < MIN_USER_MESSAGES_TO_SCORE) {
+      throw new AppError(
+        `Send at least ${MIN_USER_MESSAGES_TO_SCORE} messages before requesting a score.`,
+        400
+      )
+    }
+
+    if (!session.hasNewMessagesSinceLastScore()) {
+      throw new AppError('Explain a bit more before requesting a new score.', 400)
     }
 
     // Call scoring service
@@ -311,12 +319,16 @@ router.post('/:id/score', async (req, res, next) => {
       throw new AppError('Scoring failed. Please try again.', 500)
     }
 
-    // Save score snapshot to session
-    session.scores.push(scoringResult.scores)
-    await session.save()
+    // Only XP above this session's previous best is awarded
+    const xp = getXpBreakdown(scoringResult.scores, session.scores)
+    const { xpEarned } = xp
 
- // Award XP if this score crosses the 70% threshold
-    const xpEarned = calculateXpForScore(scoringResult.scores)
+    // Save score snapshot to session
+    session.scores.push({
+      ...scoringResult.scores,
+      messageCountAtScore: userMessages.length,
+    })
+    await session.save()
     let totalXp = req.user.xp
     let userForBadgeCheck = req.user
     if (xpEarned > 0) {
@@ -342,11 +354,12 @@ router.post('/:id/score', async (req, res, next) => {
 
     res.status(200).json({
       status: 'success',
-      score: scoringResult.scores,
+      score: session.scores[session.scores.length - 1],
       totalScores: session.scores.length,
       allScores: session.scores,
       xpEarned,
       totalXp,
+      xp: { ...xp, totalXp },
       newBadges: newBadges.map((b) => ({
         id: b.id,
         name: b.name,

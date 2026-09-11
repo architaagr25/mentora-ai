@@ -1,21 +1,51 @@
 // ─────────────────────────────────────────
 // XP CALCULATION
-// Awards XP when a score crosses the 70% threshold.
-// Base 20 XP + 1 XP per percentage point above 70%.
-// A perfect 100% score gives 50 XP total.
+// A score's XP value: 0 below 70%, otherwise base 20 XP + 1 XP per
+// percentage point above 70% (a perfect 100% is worth 50 XP).
 // ─────────────────────────────────────────
-export const calculateXpForScore = (scores) => {
-  // scores = { accuracy, clarity, completeness } each 0-10
-  const avgOutOf10 = (scores.accuracy + scores.clarity + scores.completeness) / 3
-  const avgPercent = avgOutOf10 * 10 // convert to 0-100 scale
+export const XP_THRESHOLD_PERCENT = 70
+const BASE_XP = 20
 
-  if (avgPercent < 70) {
-    return 0
+// scores = { accuracy, clarity, completeness } each 0-10
+const scorePercentOf = (scores) =>
+  Math.round(((scores.accuracy + scores.clarity + scores.completeness) / 3) * 10)
+
+const xpValueOf = (scores) => {
+  const avgPercent = scorePercentOf(scores)
+  if (avgPercent < XP_THRESHOLD_PERCENT) return 0
+  return BASE_XP + (avgPercent - XP_THRESHOLD_PERCENT) // 20 to 50
+}
+
+// XP awarded for a new score in a session = how much it beats the
+// session's previous best. A session's total XP therefore always
+// equals the XP value of its single best score (max 50), so
+// rescoring the same explanation can never farm XP.
+//
+// Returns the amount plus the "why", so the client can explain it:
+//   reason: 'first_qualifying' | 'improved' | 'below_threshold' | 'not_improved'
+export const getXpBreakdown = (newScores, previousScores = []) => {
+  const scorePercent = scorePercentOf(newScores)
+  const xpValue = xpValueOf(newScores)
+
+  const previousBestPercent = previousScores.length
+    ? Math.max(...previousScores.map(scorePercentOf))
+    : null
+  const previousBestXp = Math.max(0, ...previousScores.map(xpValueOf))
+
+  const xpEarned = Math.max(0, xpValue - previousBestXp)
+
+  let reason
+  if (xpEarned > 0) reason = previousBestXp === 0 ? 'first_qualifying' : 'improved'
+  else if (previousBestXp > 0) reason = 'not_improved' // already earned; didn't beat best
+  else reason = 'below_threshold' // nothing in this session has reached 70% yet
+
+  return {
+    xpEarned,
+    reason,
+    scorePercent,
+    previousBestPercent,
+    thresholdPercent: XP_THRESHOLD_PERCENT,
   }
-
-  const baseXp = 20
-  const bonusXp = Math.round(avgPercent - 70) // 0 to 30
-  return baseXp + bonusXp
 }
 
 // ─────────────────────────────────────────
