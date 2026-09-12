@@ -10,6 +10,7 @@ import { getAIStudentResponse, transcribeAudio } from '../services/aiService.js'
 import { scoreSession } from '../services/scoringService.js'
 import { getXpBreakdown } from '../utils/gamification.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
+import { transcribeLimiter } from '../middleware/rateLimiter.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -427,7 +428,7 @@ router.post('/:id/end', async (req, res, next) => {
 // Accepts base64 audio, returns transcript
 // Used by voice mode on the frontend
 // ─────────────────────────────────────────
-router.post('/transcribe', async (req, res, next) => {
+router.post('/transcribe', transcribeLimiter, async (req, res, next) => {
   try {
     const { audioBase64, mimeType } = req.body
 

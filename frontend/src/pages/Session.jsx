@@ -122,6 +122,8 @@ const {
     scoreToast,
     clearScoreToast,
     connectionStatus,
+    unsentMessage,
+    clearUnsentMessage,
     badgeQueue,
   } = useSessionStore()
 
@@ -168,6 +170,19 @@ const lastSpokenIdRef = useRef(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  // ─── RESTORE A REJECTED MESSAGE ───
+  // The box is cleared on send; if the server rejected the message
+  // (e.g. rate limited), put the text back — unless the user has
+  // already started typing something new.
+  useEffect(() => {
+    if (!unsentMessage) return
+    const timer = setTimeout(() => {
+      setInput((current) => (current.trim() ? current : unsentMessage))
+      clearUnsentMessage()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [unsentMessage, clearUnsentMessage])
 
   // ─── AUTO-SCROLL ───
   useEffect(() => {

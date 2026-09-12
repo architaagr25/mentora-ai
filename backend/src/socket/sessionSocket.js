@@ -7,6 +7,7 @@ import logger from '../utils/logger.js'
 import { calculateStreakUpdate, getXpBreakdown } from '../utils/gamification.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
+import { messageRateLimiter, scoreRateLimiter } from './socketRateLimit.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -140,6 +141,16 @@ const initializeSocket = (io) => {
           return socket.emit('error', { message: 'Join a session first' })
         }
 
+        // Checked after validation (so rejected messages don't use up
+        // the allowance) but before any DB or Gemini work
+        const rate = messageRateLimiter(socket.user._id)
+        if (!rate.allowed) {
+          logger.warn(`Message rate limit hit — user ${socket.user._id}`)
+          return socket.emit('error', {
+            message: `You're sending messages too quickly. Please wait ${rate.retryAfterSeconds} seconds and try again.`,
+          })
+        }
+
         // Fetch the session
         const session = await Session.findById(socket.sessionId)
 
@@ -255,6 +266,14 @@ const concepts = session.notes?.extractedConcepts?.length > 0
       try {
         if (!socket.sessionId) {
           return emitScoreError('Join a session first')
+        }
+
+        const rate = scoreRateLimiter(socket.user._id)
+        if (!rate.allowed) {
+          logger.warn(`Score rate limit hit — user ${socket.user._id}`)
+          return emitScoreError(
+            `You're requesting scores too quickly. Please wait ${rate.retryAfterSeconds} seconds and try again.`
+          )
         }
 
         const session = await Session.findById(socket.sessionId)
