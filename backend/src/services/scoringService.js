@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
 import { stripReservedTags } from '../utils/promptSafety.js'
+import { withGeminiRetry } from '../utils/geminiRetry.js'
 
 const getScoringSystemPrompt = (topic) => `
 You are an expert educator evaluating a student's explanation of "${topic}".
@@ -99,15 +100,19 @@ export const scoreSession = async (topic, messages) => {
       }
     }
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-lite',
-      contents: buildScoringInput(messages),
-      config: {
-        systemInstruction: getScoringSystemPrompt(topic),
-        maxOutputTokens: 400,
-        temperature: 0.1,
-      },
-    })
+    const response = await withGeminiRetry(
+      () =>
+        ai.models.generateContent({
+          model: 'gemini-2.5-flash-lite',
+          contents: buildScoringInput(messages),
+          config: {
+            systemInstruction: getScoringSystemPrompt(topic),
+            maxOutputTokens: 400,
+            temperature: 0.1,
+          },
+        }),
+      { label: 'Scoring' }
+    )
 
     const responseText = response.text
 

@@ -1,6 +1,7 @@
 import pdf from 'pdf-parse/lib/pdf-parse.js'
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
+import { withGeminiRetry } from '../utils/geminiRetry.js'
 
 const CHUNK_SIZE = 15000
 // Each chunk sent to Gemini separately.
@@ -68,15 +69,19 @@ The shape must be exactly:
 { "concepts": ["concept 1", "concept 2"] }
 `
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-lite',
-    contents: chunkText,
-    config: {
-      systemInstruction: systemPrompt,
-      maxOutputTokens: 400,
-      temperature: 0.2,
-    },
-  })
+  const response = await withGeminiRetry(
+    () =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: chunkText,
+        config: {
+          systemInstruction: systemPrompt,
+          maxOutputTokens: 400,
+          temperature: 0.2,
+        },
+      }),
+    { label: `Concept extraction (chunk ${chunkIndex + 1}/${totalChunks})` }
+  )
 
   const raw = response.text.replace(/```json|```/g, '').trim()
 
