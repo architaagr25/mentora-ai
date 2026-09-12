@@ -80,7 +80,7 @@ export const generalLimiter = rateLimit({
 // ─────────────────────────────────────────
 export const transcribeLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 2,
+  max: 10,
   keyGenerator: (req) => (req.user ? `user:${req.user._id}` : `ip:${req.ip}`),
   message: {
     status: 'error',
