@@ -71,6 +71,26 @@ export const generalLimiter = rateLimit({
 
 
 // ─────────────────────────────────────────
+// TRANSCRIBE LIMITER
+// Voice mode's POST /sessions/transcribe — each call sends audio to
+// Gemini. A voice conversation needs one call per spoken turn, so 10
+// a minute is comfortably more than real use.
+// Keyed by user (the route sits behind `auth`), so several tabs share
+// one allowance; falls back to IP if there's somehow no user.
+// ─────────────────────────────────────────
+export const transcribeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  keyGenerator: (req) => (req.user ? `user:${req.user._id}` : `ip:${req.ip}`),
+  message: {
+    status: 'error',
+    message: "You're sending voice messages too quickly. Please wait a moment and try again.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// ─────────────────────────────────────────
 // PASSWORD RESET LIMITER
 // Shared by both /forgot-password and /reset-password.
 // Without this, someone could spam a target's inbox with reset
