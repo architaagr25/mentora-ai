@@ -52,6 +52,7 @@ const VoiceMode = ({
   isScoreButtonDisabled,
   scoreHint,
   isConnected = true,
+  isSending = false,
   onSwitchToText,
   onOpenScore,
   onEndSession,
@@ -278,6 +279,10 @@ const {
     // Can't start a new recording while offline — but a recording
     // already in progress can still be stopped
     (!isConnected && voiceState === VOICE_STATE.IDLE) ||
+    // A reply is on its way: isSending covers the gap between sending
+    // and the server confirming, before voiceState catches up
+    isSending ||
+    isStreaming ||
     voiceState === VOICE_STATE.TRANSCRIBING ||
     voiceState === VOICE_STATE.WAITING ||
     voiceState === VOICE_STATE.SPEAKING
