@@ -1,7 +1,8 @@
 import pdf from 'pdf-parse/lib/pdf-parse.js'
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
-import { withGeminiRetry } from '../utils/geminiRetry.js'
+import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
+import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
 
 const CHUNK_SIZE = 15000
 // Each chunk sent to Gemini separately.
@@ -72,7 +73,7 @@ The shape must be exactly:
   const response = await withGeminiRetry(
     () =>
       ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: getGeminiModel(),
         contents: chunkText,
         config: {
           systemInstruction: systemPrompt,
@@ -178,6 +179,10 @@ export const extractConceptsFromText = async (topic, text) => {
     return { success: true, concepts: deduplicated }
   } catch (err) {
     logger.error(`Concept extraction error: ${err.message}`)
-    return { success: false, error: err.message }
+    return {
+      success: false,
+      error: isQuotaExceeded(err) ? AI_LIMIT_MESSAGE : err.message,
+      quotaExceeded: isQuotaExceeded(err),
+    }
   }
 }

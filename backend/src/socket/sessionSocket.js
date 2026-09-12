@@ -8,6 +8,7 @@ import { calculateStreakUpdate, getXpBreakdown } from '../utils/gamification.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { messageRateLimiter, scoreRateLimiter } from './socketRateLimit.js'
+import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -234,9 +235,11 @@ const concepts = session.notes?.extractedConcepts?.length > 0
               )
             },
 
-            onError: (errMessage) => {
+            onError: (errMessage, quotaExceeded) => {
               socket.emit('error', {
-                message: 'AI student is unavailable. Please try again.',
+                message: quotaExceeded
+                  ? AI_LIMIT_MESSAGE
+                  : 'AI student is unavailable. Please try again.',
               })
               logger.error(`AI stream error: ${errMessage}`)
             },
@@ -306,7 +309,10 @@ const concepts = session.notes?.extractedConcepts?.length > 0
         )
 
         if (!scoringResult.success) {
-          return emitScoreError('Scoring failed. Please try again.', session)
+          return emitScoreError(
+            scoringResult.quotaExceeded ? AI_LIMIT_MESSAGE : 'Scoring failed. Please try again.',
+            session
+          )
         }
 
         // Only XP above this session's previous best is awarded —

@@ -1,7 +1,8 @@
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
 import { stripReservedTags } from '../utils/promptSafety.js'
-import { withGeminiRetry } from '../utils/geminiRetry.js'
+import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
+import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
 
 const getScoringSystemPrompt = (topic) => `
 You are an expert educator evaluating a student's explanation of "${topic}".
@@ -103,7 +104,7 @@ export const scoreSession = async (topic, messages) => {
     const response = await withGeminiRetry(
       () =>
         ai.models.generateContent({
-          model: 'gemini-2.5-flash-lite',
+          model: getGeminiModel(),
           contents: buildScoringInput(messages),
           config: {
             systemInstruction: getScoringSystemPrompt(topic),
@@ -148,7 +149,8 @@ export const scoreSession = async (topic, messages) => {
     logger.error(`Scoring service error: ${err.message}`)
     return {
       success: false,
-      error: err.message,
+      error: isQuotaExceeded(err) ? AI_LIMIT_MESSAGE : err.message,
+      quotaExceeded: isQuotaExceeded(err),
     }
   }
 }
