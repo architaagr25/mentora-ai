@@ -1,7 +1,8 @@
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
 import { filterTranscript } from '../utils/transcriptFilter.js'
-import { withGeminiRetry } from '../utils/geminiRetry.js'
+import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
+import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
 
 const getStudentSystemPrompt = (topic, concepts = null) => {
   const conceptsSection = concepts && concepts.length > 0
@@ -63,7 +64,7 @@ export const getAIStudentResponse = async (topic, messages, concepts = null) => 
 
     const response = await withGeminiRetry(() =>
       ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: getGeminiModel(),
         contents: [
           ...history,
           {
@@ -87,7 +88,8 @@ export const getAIStudentResponse = async (topic, messages, concepts = null) => 
     logger.error(`AI service error: ${err.message}`)
     return {
       success: false,
-      error: err.message,
+      error: isQuotaExceeded(err) ? AI_LIMIT_MESSAGE : err.message,
+      quotaExceeded: isQuotaExceeded(err),
     }
   }
 }
@@ -120,7 +122,7 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     const generateOnce = async (extraInstruction = '') => {
       return withGeminiRetry(async () => {
         const stream = await ai.models.generateContentStream({
-          model: 'gemini-2.5-flash-lite',
+          model: getGeminiModel(),
           contents: [
             ...history,
             {
@@ -166,7 +168,9 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     onComplete(fullResponse)
   } catch (err) {
     logger.error(`AI streaming error: ${err.message}`)
-    onError(err.message)
+    // Second argument tells the caller to show the "limit reached"
+    // message instead of inviting an immediate retry
+    onError(err.message, isQuotaExceeded(err))
   }
 }
 
@@ -184,7 +188,7 @@ export const transcribeAudio = async (audioBase64, mimeType) => {
 
     const response = await withGeminiRetry(() =>
       ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: getGeminiModel(),
         contents: [
           {
             role: 'user',
@@ -230,7 +234,8 @@ export const transcribeAudio = async (audioBase64, mimeType) => {
     logger.error(`Transcription error: ${err.message}`)
     return {
       success: false,
-      error: err.message,
+      error: isQuotaExceeded(err) ? AI_LIMIT_MESSAGE : err.message,
+      quotaExceeded: isQuotaExceeded(err),
     }
   }
 }
