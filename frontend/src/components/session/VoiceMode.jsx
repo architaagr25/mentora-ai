@@ -243,7 +243,22 @@ const {
 
           setVoiceState(VOICE_STATE.WAITING)
           onSendMessage(transcript)
-        } catch {
+        } catch (err) {
+          const status = err.response?.status
+          // Rate limited (429) or recording too large (413) — not a
+          // transcription failure, so show the server's explanation and
+          // don't count it towards the "keeps failing" message
+          if (status === 429 || status === 413) {
+            setError(
+              err.response?.data?.message ||
+                (status === 429
+                  ? 'Too many voice messages — please wait a moment.'
+                  : 'That recording is too long. Try a shorter one.')
+            )
+            setVoiceState(VOICE_STATE.IDLE)
+            return
+          }
+
           const newCount = failCount + 1
           setFailCount(newCount)
           setError(
