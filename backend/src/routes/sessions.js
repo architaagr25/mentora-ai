@@ -11,6 +11,7 @@ import { scoreSession } from '../services/scoringService.js'
 import { getXpBreakdown } from '../utils/gamification.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { transcribeLimiter } from '../middleware/rateLimiter.js'
+import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -84,7 +85,7 @@ router.post('/:id/notes', uploadPdf.single('pdf'), async (req, res, next) => {
       textResult.text
     )
     if (!conceptsResult.success) {
-      throw new AppError(conceptsResult.error, 422)
+      throw new AppError(conceptsResult.error, conceptsResult.quotaExceeded ? 429 : 422)
     }
  
     // Step 3: Save everything to the session
@@ -248,7 +249,9 @@ router.post('/:id/message', async (req, res, next) => {
       return res.status(200).json({
         status: 'partial',
         userMessage: session.messages[session.messages.length - 1],
-        aiError: 'AI student is unavailable right now. Please try again.',
+        aiError: aiResult.quotaExceeded
+          ? AI_LIMIT_MESSAGE
+          : 'AI student is unavailable right now. Please try again.',
       })
     }
 
@@ -317,6 +320,7 @@ router.post('/:id/score', async (req, res, next) => {
     )
 
     if (!scoringResult.success) {
+      if (scoringResult.quotaExceeded) throw new AppError(AI_LIMIT_MESSAGE, 429)
       throw new AppError('Scoring failed. Please try again.', 500)
     }
 
@@ -448,6 +452,8 @@ router.post('/transcribe', transcribeLimiter, async (req, res, next) => {
     const result = await transcribeAudio(audioBase64, mimeType)
 
     if (!result.success) {
+      // 429 so the client shows this message as-is (see VoiceMode.jsx)
+      if (result.quotaExceeded) throw new AppError(AI_LIMIT_MESSAGE, 429)
       throw new AppError('Transcription failed. Please try again.', 500)
     }
 
