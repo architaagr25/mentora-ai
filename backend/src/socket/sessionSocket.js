@@ -15,7 +15,6 @@ import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 // Sets up authentication middleware and event handlers
 // ─────────────────────────────────────────
 const initializeSocket = (io) => {
-
   // ─────────────────────────────────────────
   // SOCKET AUTHENTICATION MIDDLEWARE
   // Runs before any connection is established
@@ -100,21 +99,21 @@ const initializeSocket = (io) => {
         // Confirm to client they joined successfully
         // Send existing messages so they can restore the chat
         socket.emit('session_joined', {
-  sessionId,
-  topic: session.topic,
-  messages: session.messages,
-  scores: session.scores,
-  latestScore: session.latestScore,
-  // Send concepts to frontend so it can show the notes badge.
-  // We deliberately exclude rawText — it's large and the frontend doesn't need it.
-  notes: session.notes
-    ? {
-        extractedConcepts: session.notes.extractedConcepts,
-        fileName: session.notes.fileName,
-        uploadedAt: session.notes.uploadedAt,
-      }
-    : null,
-})
+          sessionId,
+          topic: session.topic,
+          messages: session.messages,
+          scores: session.scores,
+          latestScore: session.latestScore,
+          // Send concepts to frontend so it can show the notes badge.
+          // We deliberately exclude rawText — it's large and the frontend doesn't need it.
+          notes: session.notes
+            ? {
+                extractedConcepts: session.notes.extractedConcepts,
+                fileName: session.notes.fileName,
+                uploadedAt: session.notes.uploadedAt,
+              }
+            : null,
+        })
       } catch (err) {
         logger.error(`join_session error: ${err.message}`)
         socket.emit('error', { message: 'Failed to join session' })
@@ -142,6 +141,21 @@ const initializeSocket = (io) => {
           return socket.emit('error', { message: 'Join a session first' })
         }
 
+        // One send at a time. The client blocks this too, but a second
+        // message arriving mid-reply would run two Gemini calls against
+        // the same session and save the turns out of order.
+        if (socket.isGenerating) {
+          return socket.emit('error', {
+            message: 'Wait for the AI student to finish replying.',
+          })
+        }
+
+        // Claimed here, BEFORE the first await — not later, next to the
+        // Gemini call. The DB fetch and save take a few hundred ms, and
+        // a second message arriving in that window would sail past the
+        // check above. `finally` at the end of the handler releases it.
+        socket.isGenerating = true
+
         // Checked after validation (so rejected messages don't use up
         // the allowance) but before any DB or Gemini work
         const rate = messageRateLimiter(socket.user._id)
@@ -168,8 +182,15 @@ const initializeSocket = (io) => {
           socket.user.lastActiveDate,
           socket.user.streak
         )
-        if (streak !== socket.user.streak || lastActiveDate.getTime() !== new Date(socket.user.lastActiveDate || 0).setHours(0,0,0,0)) {
-          await User.findByIdAndUpdate(socket.user._id, { streak, lastActiveDate })
+        if (
+          streak !== socket.user.streak ||
+          lastActiveDate.getTime() !==
+            new Date(socket.user.lastActiveDate || 0).setHours(0, 0, 0, 0)
+        ) {
+          await User.findByIdAndUpdate(socket.user._id, {
+            streak,
+            lastActiveDate,
+          })
           socket.user.streak = streak
           socket.user.lastActiveDate = lastActiveDate
           socket.emit('streak_updated', { streak })
@@ -177,7 +198,9 @@ const initializeSocket = (io) => {
           // Streak just changed — check for streak-based badges.
           // Only runs on an actual streak change (not every message),
           // avoiding an extra Sessions query on every single send.
-          const allSessions = await Session.find({ userId: socket.user._id }).select('-messages')
+          const allSessions = await Session.find({
+            userId: socket.user._id,
+          }).select('-messages')
           const newBadges = checkForNewBadges(socket.user, allSessions)
           if (newBadges.length > 0) {
             await User.findByIdAndUpdate(socket.user._id, {
@@ -185,7 +208,10 @@ const initializeSocket = (io) => {
             })
             // Keep the in-memory socket.user in sync — see the same
             // comment in request_score above for why this is required.
-            socket.user.badges = [...(socket.user.badges || []), ...newBadges.map((b) => b.id)]
+            socket.user.badges = [
+              ...(socket.user.badges || []),
+              ...newBadges.map((b) => b.id),
+            ]
             socket.emit('badges_earned', {
               badges: newBadges.map((b) => ({
                 id: b.id,
@@ -203,11 +229,14 @@ const initializeSocket = (io) => {
 
         // Step 3 — Stream AI response
         // Emit each chunk as it arrives
-        logger.info(`Sending ${session.messages.length} messages to Gemini. Last 2: ${JSON.stringify(session.messages.slice(-2))}`)
+        logger.info(
+          `Sending ${session.messages.length} messages to Gemini. Last 2: ${JSON.stringify(session.messages.slice(-2))}`
+        )
         // Pull concepts from session notes if they exist
-const concepts = session.notes?.extractedConcepts?.length > 0
-  ? session.notes.extractedConcepts
-  : null
+        const concepts =
+          session.notes?.extractedConcepts?.length > 0
+            ? session.notes.extractedConcepts
+            : null
         await getAIStudentResponseStream(
           session.topic,
           session.messages,
@@ -244,11 +273,16 @@ const concepts = session.notes?.extractedConcepts?.length > 0
               logger.error(`AI stream error: ${errMessage}`)
             },
           },
-          concepts 
+          concepts
         )
       } catch (err) {
         logger.error(`send_message error: ${err.message}`)
         socket.emit('error', { message: 'Failed to send message' })
+      } finally {
+        // Released however the handler ended — reply sent, validation
+        // rejected, or an error thrown — so a send can never be
+        // permanently blocked for this connection
+        socket.isGenerating = false
       }
     })
 
@@ -297,7 +331,10 @@ const concepts = session.notes?.extractedConcepts?.length > 0
         }
 
         if (!session.hasNewMessagesSinceLastScore()) {
-          return emitScoreError('Explain a bit more before requesting a new score.', session)
+          return emitScoreError(
+            'Explain a bit more before requesting a new score.',
+            session
+          )
         }
 
         // Tell client scoring has started so they can show a loading state
@@ -310,7 +347,9 @@ const concepts = session.notes?.extractedConcepts?.length > 0
 
         if (!scoringResult.success) {
           return emitScoreError(
-            scoringResult.quotaExceeded ? AI_LIMIT_MESSAGE : 'Scoring failed. Please try again.',
+            scoringResult.quotaExceeded
+              ? AI_LIMIT_MESSAGE
+              : 'Scoring failed. Please try again.',
             session
           )
         }
@@ -346,8 +385,10 @@ const concepts = session.notes?.extractedConcepts?.length > 0
           xp: { ...xp, totalXp: socket.user.xp },
         })
 
-     // Check for newly-earned badges now that this score is saved
-        const allSessions = await Session.find({ userId: socket.user._id }).select('-messages')
+        // Check for newly-earned badges now that this score is saved
+        const allSessions = await Session.find({
+          userId: socket.user._id,
+        }).select('-messages')
         const newBadges = checkForNewBadges(userForBadgeCheck, allSessions)
         if (newBadges.length > 0) {
           await User.findByIdAndUpdate(socket.user._id, {
@@ -359,7 +400,10 @@ const concepts = session.notes?.extractedConcepts?.length > 0
           // same badge every time this handler runs on the same
           // connection, since it'd always see the stale (pre-award)
           // badges list. Same pattern already used for xp/streak below.
-          socket.user.badges = [...(socket.user.badges || []), ...newBadges.map((b) => b.id)]
+          socket.user.badges = [
+            ...(socket.user.badges || []),
+            ...newBadges.map((b) => b.id),
+          ]
           socket.emit('badges_earned', {
             badges: newBadges.map((b) => ({
               id: b.id,
@@ -378,7 +422,7 @@ const concepts = session.notes?.extractedConcepts?.length > 0
     // END SESSION
     // User ends the session — marks it completed
     // ─────────────────────────────────────────
-   socket.on('end_session', async () => {
+    socket.on('end_session', async () => {
       try {
         if (!socket.sessionId) {
           return socket.emit('error', { message: 'Join a session first' })
@@ -398,10 +442,10 @@ const concepts = session.notes?.extractedConcepts?.length > 0
         session.duration = Math.floor(durationMs / 1000)
         session.status = 'completed'
         // Clear raw text when session ends — keeps the DB lean.
-// Concepts stay permanently for scoring reference.
-if (session.notes) {
-  session.notes.rawText = null
-}
+        // Concepts stay permanently for scoring reference.
+        if (session.notes) {
+          session.notes.rawText = null
+        }
         await session.save()
 
         socket.emit('session_ended', {
@@ -409,11 +453,13 @@ if (session.notes) {
           duration: session.duration,
         })
 
-       // Completing a session can unlock session-count badges
+        // Completing a session can unlock session-count badges
         // (e.g. "First Steps" at 1 completed session) — this was
         // previously only checked after scoring or a streak update,
         // so completing your very first session never triggered it.
-        const allSessions = await Session.find({ userId: socket.user._id }).select('-messages')
+        const allSessions = await Session.find({
+          userId: socket.user._id,
+        }).select('-messages')
         const newBadges = checkForNewBadges(socket.user, allSessions)
         if (newBadges.length > 0) {
           await User.findByIdAndUpdate(socket.user._id, {
@@ -421,7 +467,10 @@ if (session.notes) {
           })
           // Keep the in-memory socket.user in sync — see the same
           // comment in request_score above for why this is required.
-          socket.user.badges = [...(socket.user.badges || []), ...newBadges.map((b) => b.id)]
+          socket.user.badges = [
+            ...(socket.user.badges || []),
+            ...newBadges.map((b) => b.id),
+          ]
           socket.emit('badges_earned', {
             badges: newBadges.map((b) => ({
               id: b.id,
@@ -446,9 +495,7 @@ if (session.notes) {
     // Fires when client disconnects
     // ─────────────────────────────────────────
     socket.on('disconnect', (reason) => {
-      logger.info(
-        `Socket disconnected: ${socket.id} — reason: ${reason}`
-      )
+      logger.info(`Socket disconnected: ${socket.id} — reason: ${reason}`)
       // Session stays active in DB — user can reconnect and continue
     })
   })
