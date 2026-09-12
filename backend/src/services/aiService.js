@@ -1,6 +1,8 @@
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
 import { filterTranscript } from '../utils/transcriptFilter.js'
+import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
+import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
 
 const getStudentSystemPrompt = (topic, concepts = null) => {
   const conceptsSection = concepts && concepts.length > 0
@@ -46,30 +48,6 @@ const isNearDuplicate = (a, b) => {
   return normalize(a) === normalize(b)
 }
 // ─────────────────────────────────────────
-// HELPER — Retry a Gemini call once if it fails
-// with a transient 503 (server overload).
-// Does NOT retry on 429 (quota exhausted) since
-// that won't resolve with a short wait.
-// ─────────────────────────────────────────
-const withRetry503 = async (fn, retries = 1, delayMs = 1500) => {
-  try {
-    return await fn()
-  } catch (err) {
-    const is503 =
-      err.message?.includes('503') ||
-      err.message?.includes('UNAVAILABLE') ||
-      err.code === 503
-
-    if (is503 && retries > 0) {
-      logger.info(`Gemini 503 (high demand) — retrying in ${delayMs}ms...`)
-      await new Promise((r) => setTimeout(r, delayMs))
-      return withRetry503(fn, retries - 1, delayMs)
-    }
-
-    throw err
-  }
-}
-// ─────────────────────────────────────────
 // GET AI STUDENT RESPONSE — NON-STREAMING
 // Used by the REST endpoint POST /api/sessions/:id/message
 // ─────────────────────────────────────────
@@ -84,9 +62,9 @@ export const getAIStudentResponse = async (topic, messages, concepts = null) => 
 
     const lastMessage = messages[messages.length - 1]
 
-    const response = await withRetry503(() =>
+    const response = await withGeminiRetry(() =>
       ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: getGeminiModel(),
         contents: [
           ...history,
           {
@@ -110,7 +88,8 @@ export const getAIStudentResponse = async (topic, messages, concepts = null) => 
     logger.error(`AI service error: ${err.message}`)
     return {
       success: false,
-      error: err.message,
+      error: isQuotaExceeded(err) ? AI_LIMIT_MESSAGE : err.message,
+      quotaExceeded: isQuotaExceeded(err),
     }
   }
 }
@@ -141,9 +120,9 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     const lastAiMessage = previousAiMessages[previousAiMessages.length - 1]?.content || ''
 
     const generateOnce = async (extraInstruction = '') => {
-      return withRetry503(async () => {
+      return withGeminiRetry(async () => {
         const stream = await ai.models.generateContentStream({
-          model: 'gemini-2.5-flash-lite',
+          model: getGeminiModel(),
           contents: [
             ...history,
             {
@@ -189,7 +168,9 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     onComplete(fullResponse)
   } catch (err) {
     logger.error(`AI streaming error: ${err.message}`)
-    onError(err.message)
+    // Second argument tells the caller to show the "limit reached"
+    // message instead of inviting an immediate retry
+    onError(err.message, isQuotaExceeded(err))
   }
 }
 
@@ -205,9 +186,9 @@ export const transcribeAudio = async (audioBase64, mimeType) => {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
-    const response = await withRetry503(() =>
+    const response = await withGeminiRetry(() =>
       ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: getGeminiModel(),
         contents: [
           {
             role: 'user',
@@ -253,7 +234,8 @@ export const transcribeAudio = async (audioBase64, mimeType) => {
     logger.error(`Transcription error: ${err.message}`)
     return {
       success: false,
-      error: err.message,
+      error: isQuotaExceeded(err) ? AI_LIMIT_MESSAGE : err.message,
+      quotaExceeded: isQuotaExceeded(err),
     }
   }
 }
