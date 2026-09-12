@@ -719,6 +719,7 @@ const lastSpokenIdRef = useRef(null)
             isScoreButtonDisabled={isScoreButtonDisabled}
             scoreHint={scoreHint}
             isConnected={isConnected}
+            isSending={isSending}
             onSwitchToText={() => toggleVoiceMode(false)}
             onOpenScore={() => setShowScorePanel(true)}
             onEndSession={() => setShowEndConfirm(true)}
