@@ -93,13 +93,22 @@ app.use(cors({
 // PARSING MIDDLEWARE
 // ─────────────────────────────────────────
 
+// Voice mode sends recordings as base64 JSON, so only the transcribe
+// route gets a large body limit. It MUST be registered before the
+// global parser below: once a body is parsed, later parsers skip it —
+// but if the 1mb parser ran first, it would reject the recording.
+// (PDF uploads use multer, not JSON, and have their own 10MB cap.)
+app.use('/api/sessions/transcribe', express.json({ limit: '10mb' }))
+
 // Parses incoming JSON request bodies
 // Without this: req.body = undefined
 // With this: req.body = { email: "...", password: "..." }
-app.use(express.json({ limit: '10mb' }))
+// 1mb is far above any real message (chat is capped at 2000 chars) —
+// it just stops anyone forcing the server to parse huge bodies
+app.use(express.json({ limit: '1mb' }))
 
 // Parses URL-encoded bodies (standard HTML form submissions)
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 
 // Parses Cookie header and populates req.cookies
 // Needed for reading JWT refresh tokens from httpOnly cookies

@@ -16,6 +16,11 @@ const SCORE_DIMENSIONS = [
 ]
 const SCORE_TOAST_MS = 8000
 
+// Text of a message sent but not yet confirmed saved by the server.
+// If the server rejects it (e.g. rate limited), it's handed back via
+// `unsentMessage` so the page can put it back in the input box.
+let pendingContent = null
+
 const useSessionStore = create((set, get) => ({
   // ─────────────────────────────────────────
   // STATE
@@ -35,6 +40,8 @@ const useSessionStore = create((set, get) => ({
   // from `error` (the page-level banner behind the panel)
   isJoining: false,
   error: null,
+  unsentMessage: null,
+  // text of a message the server rejected — restored to the input box
   notes: null,
   // null = no notes for this session
   // { extractedConcepts: [], fileName: '', uploadedAt: '' } = has notes
@@ -96,7 +103,8 @@ const useSessionStore = create((set, get) => ({
   sendMessage: (content) => {
     const { isStreaming, isSending, connectionStatus } = get()
     if (isStreaming || isSending || connectionStatus !== 'connected') return
-    set({ isSending: true })
+    pendingContent = content
+    set({ isSending: true, unsentMessage: null })
     socketSendMessage(content)
   },
 
@@ -123,6 +131,7 @@ const useSessionStore = create((set, get) => ({
   // ─────────────────────────────────────────
   resetSession: () => {
     socketLeaveSession()
+    pendingContent = null
     set({
       currentSession: null,
       messages: [],
@@ -135,6 +144,7 @@ const useSessionStore = create((set, get) => ({
       scoreError: null,
       isJoining: false,
       error: null,
+      unsentMessage: null,
       notes: null,
       scoreToast: null,
       badgeQueue: [],
@@ -142,6 +152,7 @@ const useSessionStore = create((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+  clearUnsentMessage: () => set({ unsentMessage: null }),
   clearScoreError: () => set({ scoreError: null }),
   clearScoreToast: () => set({ scoreToast: null }),
 
@@ -179,6 +190,7 @@ const useSessionStore = create((set, get) => ({
   },
 
   handleUserMessageSaved: (data) => {
+    pendingContent = null
     set((state) => ({
       messages: [...state.messages, data.message],
       isSending: false,
@@ -269,8 +281,14 @@ const useSessionStore = create((set, get) => ({
     // authorised", "Session not found") leaves the UI stuck on the
     // "Joining session..." loading screen forever, since that check
     // runs before the error-card check in Session.jsx.
+    // If this error rejected a message that was never saved, hand its
+    // text back so the user doesn't have to retype it
+    const unsentMessage = get().isSending ? pendingContent : null
+    pendingContent = null
+
     set((state) => ({
       error: data.message,
+      ...(unsentMessage ? { unsentMessage } : {}),
       isSending: false,
       isStreaming: false,
       isScoring: false,

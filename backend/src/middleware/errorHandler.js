@@ -36,6 +36,16 @@ const errorHandler = (err, req, res, next) => {
     message = `An account with that ${field} already exists`
   }
 
+  // Body larger than the parser's limit (see express.json in app.js).
+  // body-parser sets err.status, not err.statusCode, so without this
+  // it would surface as a generic 500.
+  let isOperational = err.isOperational
+  if (err.type === 'entity.too.large') {
+    statusCode = 413
+    message = 'Request is too large.'
+    isOperational = true
+  }
+
   // Handle JWT errors — we'll use these in the auth middleware later
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401
@@ -49,7 +59,7 @@ const errorHandler = (err, req, res, next) => {
 
   // Log the full error on the server so you can debug
   // But only log stack traces for unexpected errors
-  if (!err.isOperational) {
+  if (!isOperational) {
     logger.error(err.stack)
   } else {
     logger.warn(`${statusCode} — ${message}`)
@@ -60,7 +70,7 @@ const errorHandler = (err, req, res, next) => {
     message:
       // In production, hide internal error details from the client
       // Only show the real message if it's an operational error we created
-      process.env.NODE_ENV === 'production' && !err.isOperational
+      process.env.NODE_ENV === 'production' && !isOperational
         ? 'Something went wrong'
         : message,
   })
