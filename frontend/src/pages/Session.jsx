@@ -124,6 +124,8 @@ const {
     connectionStatus,
     unsentMessage,
     clearUnsentMessage,
+    canRetry,
+    retryResponse,
     badgeQueue,
   } = useSessionStore()
 
@@ -720,6 +722,8 @@ const lastSpokenIdRef = useRef(null)
             scoreHint={scoreHint}
             isConnected={isConnected}
             isSending={isSending}
+            canRetry={canRetry}
+            onRetry={retryResponse}
             onSwitchToText={() => toggleVoiceMode(false)}
             onOpenScore={() => setShowScorePanel(true)}
             onEndSession={() => setShowEndConfirm(true)}
@@ -792,6 +796,27 @@ const lastSpokenIdRef = useRef(null)
                     )}
                   </motion.div>
                 ))}
+
+                {/* The last message got no reply — offer to ask again */}
+                {canRetry && !isAwaitingReply && !isEnded && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center gap-2 py-2"
+                  >
+                    <p className="text-slate-500 text-xs text-center">
+                      The AI student didn't reply to your last message.
+                    </p>
+                    <button
+                      onClick={retryResponse}
+                      disabled={!isConnected}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw size={14} />
+                      Retry
+                    </button>
+                  </motion.div>
+                )}
 
                 {isStreaming && (
                   <motion.div

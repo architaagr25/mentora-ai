@@ -5,6 +5,7 @@ import socket, {
   leaveSession as socketLeaveSession,
   sendMessage as socketSendMessage,
   requestScore as socketRequestScore,
+  retryResponse as socketRetryResponse,
   endSession as socketEndSession,
 } from '../socket/socketClient.js'
 import useAuthStore from './authStore.js'
@@ -38,6 +39,9 @@ const useSessionStore = create((set, get) => ({
   scoreError: null,
   // Scoring problems are shown inside the score panel, separately
   // from `error` (the page-level banner behind the panel)
+  canRetry: false,
+  // true when the last user message got no reply (the AI call failed,
+  // or the connection dropped mid-reply) — the page offers a Retry
   isJoining: false,
   error: null,
   unsentMessage: null,
@@ -109,6 +113,18 @@ const useSessionStore = create((set, get) => ({
   },
 
   // ─────────────────────────────────────────
+  // RETRY THE AI REPLY
+  // The user's message is already saved — this only asks for the
+  // missing reply, so nothing is sent again.
+  // ─────────────────────────────────────────
+  retryResponse: () => {
+    const { isStreaming, isSending, canRetry, connectionStatus } = get()
+    if (isStreaming || isSending || !canRetry || connectionStatus !== 'connected') return
+    set({ isSending: true, canRetry: false, error: null })
+    socketRetryResponse()
+  },
+
+  // ─────────────────────────────────────────
   // REQUEST SCORE
   // ─────────────────────────────────────────
   requestScore: () => {
@@ -142,6 +158,7 @@ const useSessionStore = create((set, get) => ({
       latestScore: null,
       isScoring: false,
       scoreError: null,
+      canRetry: false,
       isJoining: false,
       error: null,
       unsentMessage: null,
@@ -181,6 +198,9 @@ const useSessionStore = create((set, get) => ({
           ? data.scores[data.scores.length - 1]
           : null,
       notes: data.notes || null,
+      // A trailing user message means the reply never arrived (the AI
+      // failed, or the page was closed mid-reply) — offer Retry
+      canRetry: data.messages?.[data.messages.length - 1]?.role === 'user',
       isJoining: false,
       // After a reconnect this is the moment it's safe to send again.
       // The messages above come fresh from the DB, so an AI reply that
@@ -213,7 +233,14 @@ const useSessionStore = create((set, get) => ({
       messages: [...state.messages, data.message],
       streamingMessage: '',
       isStreaming: false,
+      canRetry: false,
     }))
+  },
+
+  // Sent when a retry starts — there's no user message to save this
+  // time, so this is what switches the UI into the "thinking" state
+  handleAIReplyStarted: () => {
+    set({ isSending: false, isStreaming: true, streamingMessage: '' })
   },
 
   handleScoringStarted: () => {
@@ -289,6 +316,9 @@ const useSessionStore = create((set, get) => ({
     set((state) => ({
       error: data.message,
       ...(unsentMessage ? { unsentMessage } : {}),
+      // The server sets canRetry when the message was saved but the
+      // reply failed — the user can ask for the reply again
+      canRetry: Boolean(data.canRetry),
       isSending: false,
       isStreaming: false,
       isScoring: false,
@@ -331,14 +361,17 @@ const useSessionStore = create((set, get) => ({
   // waiting states rather than leaving them stuck forever. Sending
   // stays blocked (via connectionStatus) until we're back.
   handleDisconnect: (reason) => {
-    set({
+    set((state) => ({
       isSending: false,
       isStreaming: false,
       streamingMessage: '',
       isScoring: false,
+      // A reply cut off by the drop leaves the last message unanswered.
+      // The re-join refreshes this from the database either way.
+      canRetry: state.isStreaming || state.isSending || state.canRetry,
       // 'io client disconnect' = we disconnected on purpose (logout)
       connectionStatus: reason === 'io client disconnect' ? 'offline' : 'reconnecting',
-    })
+    }))
   },
 
   handleAuthFailed: () => {
@@ -357,6 +390,7 @@ const setupSocketListeners = () => {
   socket.on('user_message_saved', store.handleUserMessageSaved)
   socket.on('ai_response_chunk', store.handleAIChunk)
   socket.on('ai_response_done', store.handleAIDone)
+  socket.on('ai_reply_started', store.handleAIReplyStarted)
   socket.on('scoring_started', store.handleScoringStarted)
   socket.on('score_result', store.handleScoreResult)
   socket.on('session_ended', store.handleSessionEnded)

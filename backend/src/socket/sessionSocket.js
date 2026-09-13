@@ -51,6 +51,64 @@ const initializeSocket = (io) => {
   })
 
   // ─────────────────────────────────────────
+  // STREAM AN AI REPLY FOR THE LAST USER MESSAGE
+  // Shared by send_message and retry_response, so a retry produces a
+  // reply exactly the way the original send would have.
+  // Callers own the socket.isGenerating flag around this.
+  // ─────────────────────────────────────────
+  const streamAIReply = async (socket, session) => {
+    logger.info(
+      `Sending ${session.messages.length} messages to Gemini. Last 2: ${JSON.stringify(session.messages.slice(-2))}`
+    )
+
+    // Pull concepts from session notes if they exist
+    const concepts =
+      session.notes?.extractedConcepts?.length > 0
+        ? session.notes.extractedConcepts
+        : null
+
+    await getAIStudentResponseStream(
+      session.topic,
+      session.messages,
+      {
+        onChunk: (chunkText) => {
+          // Emit chunk to the client in real time
+          socket.emit('ai_response_chunk', { text: chunkText })
+        },
+
+        onComplete: async (fullText) => {
+          // Save the complete AI response to DB
+          session.messages.push({
+            role: 'assistant',
+            content: fullText,
+          })
+          await session.save()
+
+          const aiMessage = session.messages[session.messages.length - 1]
+
+          // Tell client the AI is done
+          socket.emit('ai_response_done', { message: aiMessage })
+
+          logger.info(`AI response complete for session ${socket.sessionId}`)
+        },
+
+        onError: (errMessage, quotaExceeded) => {
+          // canRetry tells the client to offer a Retry button: the user's
+          // message is saved, only the reply is missing
+          socket.emit('error', {
+            message: quotaExceeded
+              ? AI_LIMIT_MESSAGE
+              : 'AI student is unavailable. Please try again.',
+            canRetry: true,
+          })
+          logger.error(`AI stream error: ${errMessage}`)
+        },
+      },
+      concepts
+    )
+  }
+
+  // ─────────────────────────────────────────
   // CONNECTION EVENT
   // Fires when a client successfully connects
   // ─────────────────────────────────────────
@@ -228,53 +286,7 @@ const initializeSocket = (io) => {
         socket.emit('user_message_saved', { message: userMessage })
 
         // Step 3 — Stream AI response
-        // Emit each chunk as it arrives
-        logger.info(
-          `Sending ${session.messages.length} messages to Gemini. Last 2: ${JSON.stringify(session.messages.slice(-2))}`
-        )
-        // Pull concepts from session notes if they exist
-        const concepts =
-          session.notes?.extractedConcepts?.length > 0
-            ? session.notes.extractedConcepts
-            : null
-        await getAIStudentResponseStream(
-          session.topic,
-          session.messages,
-          {
-            onChunk: (chunkText) => {
-              // Emit chunk to the client in real time
-              socket.emit('ai_response_chunk', { text: chunkText })
-            },
-
-            onComplete: async (fullText) => {
-              // Save the complete AI response to DB
-              session.messages.push({
-                role: 'assistant',
-                content: fullText,
-              })
-              await session.save()
-
-              const aiMessage = session.messages[session.messages.length - 1]
-
-              // Tell client the AI is done
-              socket.emit('ai_response_done', { message: aiMessage })
-
-              logger.info(
-                `AI response complete for session ${socket.sessionId}`
-              )
-            },
-
-            onError: (errMessage, quotaExceeded) => {
-              socket.emit('error', {
-                message: quotaExceeded
-                  ? AI_LIMIT_MESSAGE
-                  : 'AI student is unavailable. Please try again.',
-              })
-              logger.error(`AI stream error: ${errMessage}`)
-            },
-          },
-          concepts
-        )
+        await streamAIReply(socket, session)
       } catch (err) {
         logger.error(`send_message error: ${err.message}`)
         socket.emit('error', { message: 'Failed to send message' })
@@ -282,6 +294,63 @@ const initializeSocket = (io) => {
         // Released however the handler ended — reply sent, validation
         // rejected, or an error thrown — so a send can never be
         // permanently blocked for this connection
+        socket.isGenerating = false
+      }
+    })
+
+    // ─────────────────────────────────────────
+    // RETRY RESPONSE
+    // The user's message was saved but the AI reply failed (Gemini
+    // error, quota, connection dropped mid-reply). Regenerates the
+    // reply for the last user message — nothing is re-saved.
+    // ─────────────────────────────────────────
+    socket.on('retry_response', async () => {
+      try {
+        if (!socket.sessionId) {
+          return socket.emit('error', { message: 'Join a session first' })
+        }
+
+        if (socket.isGenerating) {
+          return socket.emit('error', {
+            message: 'Wait for the AI student to finish replying.',
+          })
+        }
+
+        // Claimed before the first await — same reasoning as send_message
+        socket.isGenerating = true
+
+        const rate = messageRateLimiter(socket.user._id)
+        if (!rate.allowed) {
+          logger.warn(`Retry rate limit hit — user ${socket.user._id}`)
+          return socket.emit('error', {
+            message: `You're sending messages too quickly. Please wait ${rate.retryAfterSeconds} seconds and try again.`,
+          })
+        }
+
+        const session = await Session.findById(socket.sessionId)
+
+        if (!session || session.status !== 'active') {
+          return socket.emit('error', { message: 'Session not found or ended' })
+        }
+
+        // Only valid when the conversation is waiting on a reply
+        const lastMessage = session.messages[session.messages.length - 1]
+        if (!lastMessage || lastMessage.role !== 'user') {
+          return socket.emit('error', { message: 'There is nothing to retry.' })
+        }
+
+        // Tells the client to show the "thinking" state — there's no
+        // user_message_saved event this time, since nothing was sent
+        socket.emit('ai_reply_started')
+
+        await streamAIReply(socket, session)
+      } catch (err) {
+        logger.error(`retry_response error: ${err.message}`)
+        socket.emit('error', {
+          message: 'Could not retry. Please try again.',
+          canRetry: true,
+        })
+      } finally {
         socket.isGenerating = false
       }
     })
