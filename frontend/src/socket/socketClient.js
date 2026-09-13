@@ -135,6 +135,12 @@ export const requestScore = () => {
   socket.emit('request_score')
 }
 
+// Ask the server to generate a reply for the last user message —
+// used when the previous attempt failed
+export const retryResponse = () => {
+  socket.emit('retry_response')
+}
+
 export const endSession = () => {
   socket.emit('end_session')
 }
