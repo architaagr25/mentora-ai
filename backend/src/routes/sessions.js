@@ -12,6 +12,7 @@ import { getXpBreakdown } from '../utils/gamification.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { transcribeLimiter } from '../middleware/rateLimiter.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
+import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -240,7 +241,8 @@ router.post('/:id/message', async (req, res, next) => {
     // Pass full message history so Claude has context
     const aiResult = await getAIStudentResponse(
       session.topic,
-      session.messages
+      session.messages,
+      buildNotesContext(session, STUDENT_NOTES_CHARS)
     )
 
     if (!aiResult.success) {
@@ -316,7 +318,8 @@ router.post('/:id/score', async (req, res, next) => {
     // Call scoring service
     const scoringResult = await scoreSession(
       session.topic,
-      session.messages
+      session.messages,
+      buildNotesContext(session)
     )
 
     if (!scoringResult.success) {
