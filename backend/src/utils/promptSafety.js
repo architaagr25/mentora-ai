@@ -9,9 +9,9 @@
 // and append fake instructions or fake turns after it.
 // ─────────────────────────────────────────
 
-// Matches opening/closing <transcript> and <message> tags, tolerant of
-// case, whitespace and attributes: <transcript>, </ Transcript >,
-// <message role="student">, <MESSAGE/>, etc.
-const RESERVED_TAG_PATTERN = /<\s*\/?\s*(transcript|message)\b[^>]*>/gi
+// Matches opening/closing <transcript>, <message> and <notes> tags,
+// tolerant of case, whitespace and attributes: <transcript>,
+// </ Transcript >, <message role="student">, <NOTES>, etc.
+const RESERVED_TAG_PATTERN = /<\s*\/?\s*(transcript|message|notes)\b[^>]*>/gi
 
 export const stripReservedTags = (text) => String(text ?? '').replace(RESERVED_TAG_PATTERN, '')

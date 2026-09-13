@@ -9,6 +9,7 @@ import { checkForNewBadges } from '../services/badgeService.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { messageRateLimiter, scoreRateLimiter } from './socketRateLimit.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
+import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -61,11 +62,10 @@ const initializeSocket = (io) => {
       `Sending ${session.messages.length} messages to Gemini. Last 2: ${JSON.stringify(session.messages.slice(-2))}`
     )
 
-    // Pull concepts from session notes if they exist
-    const concepts =
-      session.notes?.extractedConcepts?.length > 0
-        ? session.notes.extractedConcepts
-        : null
+    // Concepts + a short extract of the uploaded notes, so the AI
+    // student can spot what's missing rather than only reacting to
+    // what was said. Empty when no notes were uploaded.
+    const notes = buildNotesContext(session, STUDENT_NOTES_CHARS)
 
     await getAIStudentResponseStream(
       session.topic,
@@ -104,7 +104,7 @@ const initializeSocket = (io) => {
           logger.error(`AI stream error: ${errMessage}`)
         },
       },
-      concepts
+      notes
     )
   }
 
@@ -409,9 +409,12 @@ const initializeSocket = (io) => {
         // Tell client scoring has started so they can show a loading state
         socket.emit('scoring_started')
 
+        // Scoring gets the larger notes excerpt — accuracy is judged
+        // against the student's own notes where they cover a point
         const scoringResult = await scoreSession(
           session.topic,
-          session.messages
+          session.messages,
+          buildNotesContext(session)
         )
 
         if (!scoringResult.success) {
