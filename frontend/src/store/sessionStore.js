@@ -49,6 +49,9 @@ const useSessionStore = create((set, get) => ({
   notes: null,
   // null = no notes for this session
   // { extractedConcepts: [], fileName: '', uploadedAt: '' } = has notes
+  coveredConcepts: [],
+  // concepts from the notes the AI judges as already taught — refreshed
+  // by the server every few messages
   scoreToast: null,
   // Shown briefly after every score — explains the XP result and
   // which dimensions changed since the previous score:
@@ -163,6 +166,7 @@ const useSessionStore = create((set, get) => ({
       error: null,
       unsentMessage: null,
       notes: null,
+      coveredConcepts: [],
       scoreToast: null,
       badgeQueue: [],
     })
@@ -198,6 +202,7 @@ const useSessionStore = create((set, get) => ({
           ? data.scores[data.scores.length - 1]
           : null,
       notes: data.notes || null,
+      coveredConcepts: data.coveredConcepts || [],
       // A trailing user message means the reply never arrived (the AI
       // failed, or the page was closed mid-reply) — offer Retry
       canRetry: data.messages?.[data.messages.length - 1]?.role === 'user',
@@ -281,6 +286,10 @@ const useSessionStore = create((set, get) => ({
     setTimeout(() => {
       set((state) => (state.scoreToast?.id === toastId ? { scoreToast: null } : {}))
     }, SCORE_TOAST_MS)
+  },
+
+  handleMemoryUpdated: (data) => {
+    set({ coveredConcepts: data.coveredConcepts || [] })
   },
 
   handleBadgesEarned: (data) => {
@@ -391,6 +400,7 @@ const setupSocketListeners = () => {
   socket.on('ai_response_chunk', store.handleAIChunk)
   socket.on('ai_response_done', store.handleAIDone)
   socket.on('ai_reply_started', store.handleAIReplyStarted)
+  socket.on('memory_updated', store.handleMemoryUpdated)
   socket.on('scoring_started', store.handleScoringStarted)
   socket.on('score_result', store.handleScoreResult)
   socket.on('session_ended', store.handleSessionEnded)

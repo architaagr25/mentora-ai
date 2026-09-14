@@ -15,6 +15,7 @@ import {
   MessageSquare,
   FileText,
   Zap,
+  Check,
   WifiOff,
   RefreshCw,
 } from 'lucide-react'
@@ -126,6 +127,7 @@ const {
     clearUnsentMessage,
     canRetry,
     retryResponse,
+    coveredConcepts,
     badgeQueue,
   } = useSessionStore()
 
@@ -251,6 +253,12 @@ const lastSpokenIdRef = useRef(null)
     }
   }, [showScorePanel, scrollToAttempts])
   
+  // Concepts the AI judges as already taught (from the session memory)
+  const isConceptCovered = (concept) => coveredConcepts.includes(concept)
+  const coveredCount = notes?.extractedConcepts
+    ? notes.extractedConcepts.filter(isConceptCovered).length
+    : 0
+
   const isEnded = currentSession?.status === 'completed'
   const userMessageCount = messages.filter((m) => m.role === 'user').length
   // Waiting on the AI: from the moment a message is sent until the
@@ -437,18 +445,28 @@ const lastSpokenIdRef = useRef(null)
     onClick={() => setShowNotesModal(true)}
     className="bg-[#080D1A] border border-cyan-500/20 rounded-xl p-4 cursor-pointer hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all duration-200"
   >
-    <div className="flex items-center gap-2 mb-2">
-      <FileText size={14} className="text-cyan-400" />
-      <p className="text-cyan-400 text-xs font-medium">
-        Testing from your notes
-      </p>
+    <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex items-center gap-2">
+        <FileText size={14} className="text-cyan-400" />
+        <p className="text-cyan-400 text-xs font-medium">
+          Testing from your notes
+        </p>
+      </div>
+      <span className="text-slate-500 text-xs flex-shrink-0">
+        {coveredCount}/{notes.extractedConcepts.length} covered
+      </span>
     </div>
     <div className="flex flex-wrap gap-1.5">
       {notes.extractedConcepts.slice(0, 6).map((c, i) => (
         <span
           key={i}
-          className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 text-xs border border-cyan-500/20"
+          className={`px-2 py-0.5 rounded-full text-xs border inline-flex items-center gap-1 ${
+            isConceptCovered(c)
+              ? 'bg-green-500/10 text-green-300 border-green-500/20'
+              : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/20'
+          }`}
         >
+          {isConceptCovered(c) && <Check size={10} />}
           {c}
         </span>
       ))}
@@ -1201,18 +1219,35 @@ const lastSpokenIdRef = useRef(null)
             {notes?.extractedConcepts.map((c, i) => (
               <div
                 key={i}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#080D1A] border border-slate-800"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border ${
+                  isConceptCovered(c)
+                    ? 'bg-green-500/5 border-green-500/20'
+                    : 'bg-[#080D1A] border-slate-800'
+                }`}
               >
-                <span className="text-cyan-500 text-xs font-bold w-5 flex-shrink-0">
-                  {i + 1}
+                {isConceptCovered(c) ? (
+                  <Check size={14} className="text-green-400 w-5 flex-shrink-0" />
+                ) : (
+                  <span className="text-cyan-500 text-xs font-bold w-5 flex-shrink-0">
+                    {i + 1}
+                  </span>
+                )}
+                <span
+                  className={`text-sm ${isConceptCovered(c) ? 'text-green-200' : 'text-slate-200'}`}
+                >
+                  {c}
                 </span>
-                <span className="text-slate-200 text-sm">{c}</span>
+                {isConceptCovered(c) && (
+                  <span className="ml-auto text-green-400/70 text-xs flex-shrink-0">covered</span>
+                )}
               </div>
             ))}
           </div>
 
           <p className="text-slate-600 text-xs mt-4 text-center">
-            The AI will quiz you on these concepts during this session
+            {coveredCount > 0
+              ? `${coveredCount} of ${notes?.extractedConcepts.length} covered so far — the AI will keep working through the rest`
+              : 'The AI will quiz you on these concepts during this session'}
           </p>
         </div>
       </motion.div>

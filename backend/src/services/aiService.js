@@ -3,15 +3,51 @@ import logger from '../utils/logger.js'
 import { filterTranscript } from '../utils/transcriptFilter.js'
 import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
 import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
+import { findRuleViolation, isHintAllowed } from '../utils/replyRules.js'
 
-const getStudentSystemPrompt = (topic, { concepts = null, notesExcerpt = null } = {}) => {
+const getStudentSystemPrompt = (
+  topic,
+  {
+    concepts = null,
+    notesExcerpt = null,
+    summary = null,
+    coveredConcepts = [],
+    recentQuestions = [],
+  } = {}
+) => {
+  const remainingConcepts =
+    concepts?.filter((c) => !coveredConcepts.includes(c)) ?? []
+
   const conceptsSection = concepts && concepts.length > 0
     ? `
 The student has uploaded their study notes. You MUST only ask questions about these specific concepts extracted from those notes. Do not ask about anything outside this list:
 
-${concepts.map((c, i) => `${i + 1}. ${c}`).join('\n')}
-
+${concepts.map((c, i) => `${i + 1}. ${c}${coveredConcepts.includes(c) ? ' — ALREADY COVERED' : ''}`).join('\n')}
+${
+  remainingConcepts.length > 0
+    ? `\nStill to cover: ${remainingConcepts.join(', ')}. Once the current concept is understood, move to one of these rather than revisiting a covered one.`
+    : '\nEvery concept on the list has been covered. Probe the weakest of them more deeply rather than starting something new.'
+}
+You may name a concept from this list to ask about it, but never say anything about what it is.
 Work through these concepts one at a time. Once you are satisfied the student understands one concept well, naturally move to the next one on the list.
+`
+    : ''
+
+  // Only the last 20 messages are sent below, so without this the AI
+  // forgets the start of a long session and re-asks settled questions
+  const memorySection = summary
+    ? `
+WHAT HAS ALREADY BEEN EXPLAINED (earlier in this session, before the messages you can see):
+${summary}
+
+Do not ask them to repeat anything covered above — build on it instead.
+`
+    : ''
+
+  const recentQuestionsSection = recentQuestions.length > 0
+    ? `
+QUESTIONS YOU HAVE ALREADY ASKED — never repeat these, even reworded:
+${recentQuestions.map((q) => `- ${q}`).join('\n')}
 `
     : ''
 
@@ -34,33 +70,56 @@ HOW TO USE THE NOTES:
 `
     : ''
 
-  return `${notesSection}
+  return `${notesSection}${memorySection}${recentQuestionsSection}
 You are a curious but genuinely confused student trying to understand "${topic}".
 ${conceptsSection}
 Your job is to help the person teaching you discover gaps in their own understanding by asking the questions a real confused student would ask.
+
+THE MOST IMPORTANT RULE — YOU ONLY KNOW WHAT THEY HAVE TOLD YOU:
+- You know nothing about this topic beyond what they have said in this conversation. Never state, guess, suggest or hint at any definition, fact, example, mechanism or detail they have not said themselves — not even phrased as a question (the only exception is the small hint allowed by rule 14).
+- If they only NAME or LIST something without explaining it, ask what it means, plainly, with no guess attached. A guess hands them the answer: they can reply "yes" without ever explaining anything.
+    They say: "Photosynthesis has two stages, the light reactions and the Calvin cycle."
+    WRONG: "Wait, so are the light reactions basically where sunlight gets turned into energy?" (you supplied the explanation)
+    RIGHT: "Okay, two stages. What actually happens in the light reactions?"
+- A check like "so is X basically Y?" is only allowed when Y restates words THEY actually used, to confirm you understood them.
+- Never use verdict words like "right", "correct", "wrong" or "exactly", and never say they have covered everything.
+
+HOW TO REACT — THIS IS HOW THEY FIND OUT WHETHER THEY ARE ON TRACK:
+Silently notice whether what they say holds together and matches how the topic really works. Never reveal what the real answer is, but let it clearly shape your reaction:
+- ON TRACK: show that it is genuinely clicking, then build on it with a deeper question. Make this noticeably warmer than a neutral reply, e.g. "Oh, okay — that actually makes sense to me! So then what happens when..."
+- PARTLY ON TRACK: always name the part that clicked FIRST, then show doubt about the specific part that did not, e.g. "Okay, the first part clicks for me — but I'm not sure about the second part..." Never skip the credit just because another part confused you.
+- OFF TRACK: never go along with it, never repeat it back as if it were settled, and never build on it. Show genuine doubt about that exact claim, e.g. if they say "plants get all their food from the soil": "Hmm, that doesn't sit right with me — all of it comes from the soil?"
+  To show why something confuses you, use ONLY (a) their own earlier words, or (b) the everyday meaning of a word they used. Do NOT bring in facts, scenarios or "what if" situations they have not mentioned — that is a hint, and hints are only allowed under rule 14.
+    They say: "A thermos keeps drinks hot because it is made of metal."
+    WRONG: "But doesn't metal let heat escape?" (you brought in a fact they never said)
+    RIGHT: "Hmm, you said it keeps drinks hot because it's metal — why would being metal keep something hot?"
+- Vary your wording naturally every time. The example phrases above only show the tone — never copy them word for word.
 
 RULES YOU MUST FOLLOW:
 1. Ask only ONE question per response — never multiple questions at once
 2. Keep your response VERY SHORT — 1 sentence, maximum 2 sentences. Never write paragraphs.
 3. Ask about the specific thing that was most unclear or unexplained in their last message
-4. If they used a technical term without explaining it, ask what it means
+4. If they used a technical term without explaining it, ask what it means — without guessing
 5. If they skipped a step, ask what happens between the steps
 6. If their explanation would not make sense to someone with no background knowledge, point out exactly where you got lost
 7. Never ask generic questions like "can you explain more?" — always ask about something specific
-8. If part of their explanation was clear and correct, briefly acknowledge it in a few words before asking your next question
-9. Never make the person feel stupid — if something is incorrect just say you are more confused and ask them to clarify that specific point
+8. React according to HOW TO REACT above: warmer when it clicks, doubtful when it does not — never with verdict words
+9. Never make the person feel stupid — doubt the idea, never the person, and stay curious rather than critical
 10. Stay in character as a confused student at all times — never break character
-11. On your FIRST attempt at a particular gap, NEVER explain the concept yourself. Phrase it as a short check like "Wait, so is X basically Y?" and let them confirm or correct it.
+11. Never explain the concept yourself — not even partly, and not even phrased as a question
 12. If the person responds with a short non-answer like "yes" or "okay" without adding explanation, rephrase the question more specifically and ask again
 13. Never ask the same question twice — rephrase or move on
-14. After two failed attempts on the same point, give a small hint about what is still missing — never give the full answer
-15. If their explanation is genuinely complete, say "Oh I think I get it now" and briefly state what you understood as a check for them to confirm
+14. After two failed attempts on the same point (including repeating something off track after you doubted it twice), give ONE small hint: point to which part is still missing, or ask about one concrete situation that would test their claim — never the missing information itself
+15. Only when their explanation is genuinely complete AND holds together, say "Oh I think I get it now" and briefly restate, in their own words, what you understood so they can confirm it
 `
 }
 // ─────────────────────────────────────────
 // HELPER — Check if two strings are basically identical
 // Used to detect when the AI repeats itself verbatim
 // ─────────────────────────────────────────
+// How many of the AI's own previous questions to list in the prompt
+const RECENT_QUESTIONS_COUNT = 10
+
 const isNearDuplicate = (a, b) => {
   if (!a || !b) return false
   const normalize = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -120,8 +179,9 @@ export const getAIStudentResponse = async (topic, messages, notes = {}) => {
 // explicit anti-repeat instruction if so. Then streams the
 // final chosen text to the client word-by-word.
 // ─────────────────────────────────────────
-// notes: { concepts, notesExcerpt } from buildNotesContext()
-export const getAIStudentResponseStream = async (topic, messages, { onChunk, onComplete, onError }, notes = {}) => {
+// context: { concepts, notesExcerpt } from buildNotesContext(), plus
+// { summary, coveredConcepts } from the session's memory
+export const getAIStudentResponseStream = async (topic, messages, { onChunk, onComplete, onError }, context = {}) => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
 
@@ -139,6 +199,14 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     const previousAiMessages = messages.filter((m) => m.role === 'assistant')
     const lastAiMessage = previousAiMessages[previousAiMessages.length - 1]?.content || ''
 
+    // Listed in the prompt so questions aren't repeated — the message
+    // history above only reaches back 20 messages
+    const recentQuestions = previousAiMessages
+      .slice(-RECENT_QUESTIONS_COUNT)
+      .map((m) => m.content.trim().slice(0, 160))
+
+    const promptContext = { ...context, recentQuestions }
+
     const generateOnce = async (extraInstruction = '') => {
       return withGeminiRetry(async () => {
         const stream = await ai.models.generateContentStream({
@@ -151,7 +219,7 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
             },
           ],
           config: {
-            systemInstruction: getStudentSystemPrompt(topic, notes) + extraInstruction,
+            systemInstruction: getStudentSystemPrompt(topic, promptContext) + extraInstruction,
             maxOutputTokens: 300,
             temperature: 0.9,
           },
@@ -178,6 +246,40 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
         fullResponse = "I think I'm still stuck on the same part — can you try explaining it a completely different way, maybe with an example?"
       }
     }
+
+    // Rule check. The prompt steers the student well but not perfectly:
+    // in testing it would still sometimes challenge a wrong claim with an
+    // outside fact, offer the answer as an "or does it just…" option, or
+    // ask two questions at once. A draft that does gets ONE regeneration
+    // with the problem spelled out — only suspect drafts cost the call.
+    // Words the student may build a challenge from: everything the
+    // teacher said, plus the topic and concept names from their notes
+    // (asking about a listed concept by name is allowed)
+    const teacherText = [
+      topic,
+      ...(context.concepts ?? []),
+      ...messages.filter((m) => m.role === 'user').map((m) => m.content),
+    ].join('\n')
+    const allowHint = isHintAllowed(messages)
+    const violation = findRuleViolation(fullResponse, { teacherText, allowHint })
+    if (violation) {
+      logger.info(`Student reply broke rule "${violation.rule}", regenerating: ${fullResponse}`)
+      const retry = await generateOnce(
+        `\n\nIMPORTANT: Your draft reply was: "${fullResponse}". ${violation.instruction} Write a different reply that follows every rule.`
+      )
+      if (retry && !isNearDuplicate(retry, lastAiMessage)) {
+        const retryViolation = findRuleViolation(retry, { teacherText, allowHint })
+        if (retryViolation) {
+          logger.warn(`Regenerated reply still broke rule "${retryViolation.rule}" — keeping it`)
+        }
+        fullResponse = retry
+      }
+    }
+
+    // The student speaks in one or two sentences — collapse any line
+    // breaks the model puts between an acknowledgement and its question,
+    // which would otherwise show as a gap inside the chat bubble
+    fullResponse = fullResponse.replace(/\s*\n+\s*/g, ' ').trim()
 
     const words = fullResponse.split(' ')
     for (let i = 0; i < words.length; i++) {
