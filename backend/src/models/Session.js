@@ -85,6 +85,25 @@ const sessionSchema = new mongoose.Schema(
       type: notesSchema,
       default: null,
     },
+    // ─── SESSION MEMORY ───
+    // Only the last 20 messages are sent to the AI student, so long
+    // sessions would lose the earlier explanation entirely. These hold
+    // a rolling summary of everything said so far, refreshed every few
+    // messages (see sessionMemoryService.js).
+    summary: {
+      type: String,
+      default: null,
+    },
+    // Which of notes.extractedConcepts have actually been taught
+    coveredConcepts: {
+      type: [String],
+      default: [],
+    },
+    // messages.length when the summary was last refreshed
+    memoryMessageCount: {
+      type: Number,
+      default: 0,
+    },
     status: {
       type: String,
       enum: ['active', 'completed'],

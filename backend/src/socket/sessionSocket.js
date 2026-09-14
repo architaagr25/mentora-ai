@@ -10,6 +10,7 @@ import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { messageRateLimiter, scoreRateLimiter } from './socketRateLimit.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
+import { shouldRefreshMemory, refreshSessionMemory } from '../services/sessionMemoryService.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -65,7 +66,13 @@ const initializeSocket = (io) => {
     // Concepts + a short extract of the uploaded notes, so the AI
     // student can spot what's missing rather than only reacting to
     // what was said. Empty when no notes were uploaded.
-    const notes = buildNotesContext(session, STUDENT_NOTES_CHARS)
+    // The summary and covered concepts carry what happened earlier in
+    // the session, beyond the 20 messages the model actually sees.
+    const context = {
+      ...buildNotesContext(session, STUDENT_NOTES_CHARS),
+      summary: session.summary,
+      coveredConcepts: session.coveredConcepts ?? [],
+    }
 
     await getAIStudentResponseStream(
       session.topic,
@@ -90,6 +97,22 @@ const initializeSocket = (io) => {
           socket.emit('ai_response_done', { message: aiMessage })
 
           logger.info(`AI response complete for session ${socket.sessionId}`)
+
+          // Refresh the rolling summary every few messages. Deliberately
+          // not awaited: the reply is already delivered, and the user
+          // shouldn't wait on a background AI call. Failures are logged
+          // inside the service and simply leave the old summary in place.
+          if (shouldRefreshMemory(session)) {
+            refreshSessionMemory(session)
+              .then((result) => {
+                if (result) {
+                  socket.emit('memory_updated', {
+                    coveredConcepts: result.coveredConcepts,
+                  })
+                }
+              })
+              .catch((err) => logger.error(`Memory refresh failed: ${err.message}`))
+          }
         },
 
         onError: (errMessage, quotaExceeded) => {
@@ -104,7 +127,7 @@ const initializeSocket = (io) => {
           logger.error(`AI stream error: ${errMessage}`)
         },
       },
-      notes
+      context
     )
   }
 
@@ -171,6 +194,9 @@ const initializeSocket = (io) => {
                 uploadedAt: session.notes.uploadedAt,
               }
             : null,
+          // Which concepts have been taught so far — the notes list
+          // shows these as covered
+          coveredConcepts: session.coveredConcepts ?? [],
         })
       } catch (err) {
         logger.error(`join_session error: ${err.message}`)
