@@ -32,11 +32,20 @@ const cleanGapText = (text) =>
 //    them, so they're resolved. Only the latest score of a session
 //    counts; earlier attempts don't keep gaps alive.
 //
-// seenAt defaults to now; the backfill passes the score's own date.
+// 3. In a practice session (focusGapId set), the focus gap is resolved
+//    when the score averages PRACTICE_RESOLVE_AVERAGE or more and the
+//    gap isn't among the new gaps — see resolvePractisedGap().
+//
+// score is the new score ({ accuracy, clarity, completeness }); it's
+// only needed for step 3. Returns { recorded, resolved, focusGapResolved }.
 // Never throws — a score is already saved by the time this runs, and a
 // gap-tracking failure shouldn't turn it into a scoring error.
 // ─────────────────────────────────────────
-export const recordGapsForScore = async (session, gaps, { seenAt = new Date() } = {}) => {
+export const recordGapsForScore = async (
+  session,
+  gaps,
+  { seenAt = new Date(), score = null } = {}
+) => {
   try {
     const topicKey = normaliseKey(session.topic)
 
@@ -72,22 +81,60 @@ export const recordGapsForScore = async (session, gaps, { seenAt = new Date() } 
     }
 
     // Everything just written has lastSeenAt === seenAt, so "older than
-    // seenAt" is exactly this session's gaps the latest score dropped
+    // seenAt" is exactly this session's gaps the latest score dropped.
+    // A practice session's focus gap is left out: once an earlier score
+    // in this session reported it, it would otherwise be closed here
+    // without the PRACTICE_RESOLVE_AVERAGE check in step 3.
     const { modifiedCount } = await Gap.updateMany(
       {
         userId: session.userId,
         sessionId: session._id,
         status: 'open',
         lastSeenAt: { $lt: seenAt },
+        ...(session.focusGapId ? { _id: { $ne: session.focusGapId } } : {}),
       },
       { $set: { status: 'resolved', resolvedAt: seenAt, resolvedBy: 'rescore' } }
     )
 
-    return { recorded: unique.size, resolved: modifiedCount }
+    const focusGapResolved = await resolvePractisedGap(session, score, {
+      topicKey,
+      newGapKeys: unique,
+      seenAt,
+    })
+
+    return { recorded: unique.size, resolved: modifiedCount, focusGapResolved }
   } catch (err) {
     logger.error(`Recording gaps for session ${session._id} failed: ${err.message}`)
-    return { recorded: 0, resolved: 0 }
+    return { recorded: 0, resolved: 0, focusGapResolved: false }
   }
+}
+
+// A practice session must average at least this (out of 10) for its
+// focus gap to count as fixed
+export const PRACTICE_RESOLVE_AVERAGE = 8
+
+const resolvePractisedGap = async (session, score, { topicKey, newGapKeys, seenAt }) => {
+  if (!session.focusGapId || !score) return false
+
+  const average = (score.accuracy + score.clarity + score.completeness) / 3
+  if (!(average >= PRACTICE_RESOLVE_AVERAGE)) return false
+
+  const gap = await Gap.findOne({
+    _id: session.focusGapId,
+    userId: session.userId,
+    status: 'open',
+  })
+  if (!gap) return false
+
+  // Reported again by this score — the upsert above kept it open
+  if (gap.topicKey === topicKey && newGapKeys.has(gap.textKey)) return false
+
+  gap.status = 'resolved'
+  gap.resolvedAt = seenAt
+  gap.resolvedBy = 'practice'
+  await gap.save()
+  logger.info(`Practice session ${session._id} resolved gap ${gap._id}`)
+  return true
 }
 
 // ─────────────────────────────────────────

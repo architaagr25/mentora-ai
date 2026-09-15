@@ -46,6 +46,9 @@ const useSessionStore = create((set, get) => ({
   error: null,
   unsentMessage: null,
   // text of a message the server rejected — restored to the input box
+  focusGap: null,
+  // { id, text } in a practice session started from a gap, plus
+  // resolved: true once a score in this session closes it
   notes: null,
   // null = no notes for this session
   // { extractedConcepts: [], fileName: '', uploadedAt: '' } = has notes
@@ -166,6 +169,7 @@ const useSessionStore = create((set, get) => ({
       error: null,
       unsentMessage: null,
       notes: null,
+      focusGap: null,
       coveredConcepts: [],
       scoreToast: null,
       badgeQueue: [],
@@ -202,6 +206,7 @@ const useSessionStore = create((set, get) => ({
           ? data.scores[data.scores.length - 1]
           : null,
       notes: data.notes || null,
+      focusGap: data.focusGap || null,
       coveredConcepts: data.coveredConcepts || [],
       // A trailing user message means the reply never arrived (the AI
       // failed, or the page was closed mid-reply) — offer Retry
@@ -274,6 +279,13 @@ const useSessionStore = create((set, get) => ({
         ? { ...data.xp, id: toastId, deltas, isFirstScore: !previous }
         : null,
     })
+
+    // This score closed the practice session's focus gap
+    if (data.focusGapResolved) {
+      set((state) =>
+        state.focusGap ? { focusGap: { ...state.focusGap, resolved: true } } : {}
+      )
+    }
 
     // Keep the XP shown on the Dashboard / Profile in sync without
     // waiting for a reload

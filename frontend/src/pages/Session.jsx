@@ -129,6 +129,7 @@ const {
     retryResponse,
     coveredConcepts,
     badgeQueue,
+    focusGap,
   } = useSessionStore()
 
   const [input, setInput] = useState('')
@@ -439,6 +440,26 @@ const lastSpokenIdRef = useRef(null)
 
         <div className="space-y-3 mb-8">
 
+  {/* Practice focus card — session started from "Practise this gap" */}
+  {focusGap && (
+    <div
+      className={`rounded-xl p-4 border ${
+        focusGap.resolved
+          ? 'bg-emerald-500/5 border-emerald-500/30'
+          : 'bg-[#080D1A] border-violet-500/20'
+      }`}
+    >
+      <p
+        className={`text-xs font-semibold mb-1 ${
+          focusGap.resolved ? 'text-emerald-400' : 'text-violet-300'
+        }`}
+      >
+        {focusGap.resolved ? 'Gap closed ✓' : 'Practising a gap'}
+      </p>
+      <p className="text-slate-400 text-xs leading-relaxed">{focusGap.text}</p>
+    </div>
+  )}
+
   {/* Notes scope card */}
 {hasNotes && (
   <div
@@ -616,6 +637,14 @@ const lastSpokenIdRef = useRef(null)
   <p className="text-slate-500 text-xs">
     {isEnded ? 'Session completed' : 'Active session'}
   </p>
+  {focusGap && (
+    <span
+      title={focusGap.text}
+      className={`text-xs ${focusGap.resolved ? 'text-emerald-400' : 'text-violet-300'}`}
+    >
+      {focusGap.resolved ? 'Gap closed ✓' : 'Practising a gap'}
+    </span>
+  )}
   {hasNotes && (
   <button
     onClick={() => setShowNotesModal(true)}

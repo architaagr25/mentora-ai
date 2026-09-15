@@ -16,6 +16,12 @@ export const createSessionSchema = z.object({
     // If mode is not provided it defaults to 'text'
     // .default() in Zod means the field is optional
     // and falls back to this value if missing
+  // Optional — starts a practice session focused on one open gap.
+  // The session's topic is then taken from the gap.
+  focusGapId: z
+    .string()
+    .regex(/^[a-f\d]{24}$/i, 'Invalid gap id')
+    .optional(),
 })
 
 // ─────────────────────────────────────────

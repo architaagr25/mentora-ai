@@ -64,9 +64,10 @@ const gapSchema = new mongoose.Schema(
     },
     // 'user' — marked resolved on the Concepts page
     // 'rescore' — the session was rescored and the gap was gone
+    // 'practice' — a session focused on this gap scored well without it
     resolvedBy: {
       type: String,
-      enum: ['user', 'rescore', null],
+      enum: ['user', 'rescore', 'practice', null],
       default: null,
     },
   },

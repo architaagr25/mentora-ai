@@ -19,6 +19,7 @@ import {
   Menu,
   ChevronLeft,
   CheckCircle,
+  Play,
 } from 'lucide-react'
 import useAuth from '@/hooks/useAuth'
 import useSessionStore from '@/store/sessionStore'
@@ -96,6 +97,34 @@ const computeFocusAreas = (sessions) => {
     .slice(0, 4)
 }
 
+// When a gap was first found. Backfilled gaps were created later than
+// the score that found them, so the earlier of the two dates is used.
+const gapOpenedAt = (gap) => Math.min(new Date(gap.createdAt), new Date(gap.lastSeenAt))
+
+// Topics with open gaps, the longest-waiting first. Each carries its
+// oldest open gap — the one "Practise" focuses on.
+const computeTopicsToRevisit = (gaps) => {
+  const byTopic = new Map()
+  gaps.forEach((gap) => {
+    const entry = byTopic.get(gap.topicKey)
+    if (!entry) {
+      byTopic.set(gap.topicKey, { topic: gap.topic, count: 1, oldest: gap })
+      return
+    }
+    entry.count += 1
+    if (gapOpenedAt(gap) < gapOpenedAt(entry.oldest)) entry.oldest = gap
+  })
+  return Array.from(byTopic.values())
+    .sort((a, b) => gapOpenedAt(a.oldest) - gapOpenedAt(b.oldest))
+    .slice(0, 4)
+}
+
+const formatOpenFor = (gap) => {
+  const days = Math.floor((Date.now() - gapOpenedAt(gap)) / (24 * 60 * 60 * 1000))
+  if (days <= 0) return 'found today'
+  return `open ${days} day${days !== 1 ? 's' : ''}`
+}
+
 const computeWeekActivity = (sessions) => {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   const counts = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
@@ -148,9 +177,17 @@ const Dashboard = () => {
   const heroRef = useRef(null)
   const historyRef = useRef(null)
   const conceptsRef = useRef(null)
+  const [openGaps, setOpenGaps] = useState([])
+  const [startingGapId, setStartingGapId] = useState(null)
 
   useEffect(() => {
     resetSession()
+    // Open gaps for "Topics to revisit" — the card simply stays hidden
+    // if this fails
+    api
+      .get('/gaps', { params: { status: 'open' } })
+      .then((res) => setOpenGaps(res.data.gaps))
+      .catch(() => {})
     const fetchSessions = async () => {
       try {
         const response = await api.get('/sessions')
@@ -166,6 +203,7 @@ const Dashboard = () => {
   }, [])
 
   const focusAreas = computeFocusAreas(sessions)
+  const topicsToRevisit = computeTopicsToRevisit(openGaps)
   const weekActivity = computeWeekActivity(sessions)
   const totalSessions = sessions.length
   const sessionsThisWeek = weekActivity.reduce((sum, d) => sum + d.count, 0)
@@ -245,6 +283,18 @@ const handleSessionClick = (session, isActive) => {
     setTopic(topic)
     setRestartTopicMessage(topic)
     setShowNewSessionModal(true)
+  }
+
+  // "Practise" on a topic to revisit: a new session focused on that
+  // topic's oldest open gap
+  const handlePractiseGap = async (gap) => {
+    setStartingGapId(gap._id)
+    try {
+      const res = await api.post('/sessions', { topic: gap.topic, focusGapId: gap._id })
+      navigate(`/session/${res.data.session._id}`)
+    } catch {
+      setStartingGapId(null)
+    }
   }
 
  const handleMarkComplete = async (sessionId) => {
@@ -736,6 +786,60 @@ const handleSessionClick = (session, isActive) => {
             </div>
           </div>
         </div>
+
+        {/* ─── TOPICS TO REVISIT ─── */}
+        {topicsToRevisit.length > 0 && (
+          <div className="mb-6 md:mb-8">
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <h2 className="text-lg font-semibold text-white truncate">Topics to Revisit</h2>
+              <button
+                onClick={() => navigate('/concepts')}
+                className="flex-shrink-0 text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors flex items-center gap-1"
+              >
+                All gaps
+                <ChevronRight size={14} />
+              </button>
+            </div>
+            <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6">
+              <p className="text-slate-500 text-sm mb-5">
+                Open gaps, waiting longest first — practise one to close it
+              </p>
+              <div className="space-y-4">
+                {topicsToRevisit.map((entry, i) => (
+                  <motion.div
+                    key={entry.oldest._id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.08 }}
+                    className="flex items-start gap-3 md:gap-4"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-slate-200 text-sm font-medium truncate">
+                        {entry.topic}
+                        <span className="text-slate-500 font-normal">
+                          {' '}· {entry.count} open · {formatOpenFor(entry.oldest)}
+                        </span>
+                      </p>
+                      <p className="text-slate-400 text-xs mt-0.5 line-clamp-2">{entry.oldest.text}</p>
+                    </div>
+                    <button
+                      onClick={() => handlePractiseGap(entry.oldest)}
+                      disabled={startingGapId !== null}
+                      className="flex-shrink-0 flex items-center gap-1 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {startingGapId === entry.oldest._id ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Play size={12} />
+                      )}
+                      Practise
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ─── FOCUS AREAS ─── */}
         <div ref={conceptsRef}>
