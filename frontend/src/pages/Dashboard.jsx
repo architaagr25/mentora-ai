@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -30,6 +30,24 @@ import XpInfo from '@/components/XpInfo'
 // ─────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────
+// Where the dashboard was scrolled to. Kept in module scope so it lives
+// across in-app navigation (Session, History, Concepts and back); a full
+// page reload starts from the top again.
+let savedDashboardScrollY = 0
+
+// The data the dashboard last loaded, for one user. Shown straight away
+// when the user comes back, so the page has its full height on the very
+// first paint and the scroll position is restored before anything is
+// drawn — no flash of the top of the page. Fresh data is still fetched
+// in the background and replaces it.
+const dashboardCache = { userId: null, sessions: null, openGaps: null }
+
+// Near the top of the page the mobile top bar always shows
+const TOP_BAR_ALWAYS_VISIBLE_Y = 60
+// Scroll movement smaller than this doesn't flip the top bar, so tiny
+// finger wobble doesn't make it flicker
+const SCROLL_JITTER_PX = 6
+
 const getUniqueLatestSessions = (sessions) => {
   const byTopic = new Map()
   sessions.forEach((session) => {
@@ -158,8 +176,12 @@ const Dashboard = () => {
   const { user, logout } = useAuth()
   const { resetSession } = useSessionStore()
 
-  const [sessions, setSessions] = useState([])
-  const [isLoadingSessions, setIsLoadingSessions] = useState(true)
+  // Cached data only counts if it belongs to the user logged in now
+  const userKey = user?._id ?? user?.id ?? null
+  const cached = userKey && dashboardCache.userId === userKey ? dashboardCache : null
+
+  const [sessions, setSessions] = useState(cached?.sessions ?? [])
+  const [isLoadingSessions, setIsLoadingSessions] = useState(!cached?.sessions)
   const [showNewSessionModal, setShowNewSessionModal] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -177,8 +199,91 @@ const Dashboard = () => {
   const heroRef = useRef(null)
   const historyRef = useRef(null)
   const conceptsRef = useRef(null)
-  const [openGaps, setOpenGaps] = useState([])
+  const [openGaps, setOpenGaps] = useState(cached?.openGaps ?? [])
   const [startingGapId, setStartingGapId] = useState(null)
+  const [gapsLoaded, setGapsLoaded] = useState(Boolean(cached?.openGaps))
+  const [showTopBar, setShowTopBar] = useState(true)
+  const hasRestoredScroll = useRef(false)
+  const lastScrollY = useRef(0)
+
+  // ─── SCROLL MEMORY + HIDE-ON-SCROLL TOP BAR ───
+  // Other pages come back with navigate('/dashboard'), which renders a
+  // fresh page, so the browser won't restore the scroll position by
+  // itself. It's saved here as the user scrolls, and put back once the
+  // data that decides the page's height has loaded (see below).
+  useEffect(() => {
+    lastScrollY.current = window.scrollY
+    let frame = null
+
+    const onScroll = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = null
+        const y = window.scrollY
+
+        // Not before the restore — the page is still short while loading,
+        // and saving then would overwrite the position being restored
+        if (hasRestoredScroll.current) savedDashboardScrollY = y
+
+        const delta = y - lastScrollY.current
+        if (y < TOP_BAR_ALWAYS_VISIBLE_Y) {
+          setShowTopBar(true)
+          lastScrollY.current = y
+        } else if (Math.abs(delta) > SCROLL_JITTER_PX) {
+          // Down hides it; any real movement up brings it straight back
+          setShowTopBar(delta < 0)
+          lastScrollY.current = y
+        }
+      })
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (frame) cancelAnimationFrame(frame)
+    }
+  }, [])
+
+  // Restore once sessions and open gaps are both in — together they set
+  // how tall the page is. Always restores, even to 0: the window may
+  // still be scrolled from the page the user came from.
+  // A layout effect runs before the browser paints, so with cached data
+  // the page is already at the saved position on its first frame.
+  useLayoutEffect(() => {
+    if (hasRestoredScroll.current || isLoadingSessions || !gapsLoaded) return
+    hasRestoredScroll.current = true
+
+    const target = savedDashboardScrollY
+    let attempts = 0
+    const restore = () => {
+      // 'instant' overrides the site-wide `scroll-behavior: smooth` in
+      // index.css, which would otherwise animate the jump
+      window.scrollTo({ top: target, behavior: 'instant' })
+      // Cards can still be growing for a few frames — retry until the
+      // target is reachable
+      if (Math.abs(window.scrollY - target) > 2 && attempts++ < 30) {
+        requestAnimationFrame(restore)
+        return
+      }
+      // Jumping back down isn't the user scrolling down — the bar
+      // (visible on mount) stays put
+      lastScrollY.current = window.scrollY
+    }
+    restore()
+  }, [isLoadingSessions, gapsLoaded])
+
+  // Keep the cache in step with what's on screen, including local
+  // updates such as "Mark as complete"
+  useEffect(() => {
+    if (!userKey) return
+    if (dashboardCache.userId !== userKey) {
+      dashboardCache.userId = userKey
+      dashboardCache.sessions = null
+      dashboardCache.openGaps = null
+    }
+    if (!isLoadingSessions) dashboardCache.sessions = sessions
+    if (gapsLoaded) dashboardCache.openGaps = openGaps
+  }, [userKey, sessions, isLoadingSessions, openGaps, gapsLoaded])
 
   useEffect(() => {
     resetSession()
@@ -188,6 +293,7 @@ const Dashboard = () => {
       .get('/gaps', { params: { status: 'open' } })
       .then((res) => setOpenGaps(res.data.gaps))
       .catch(() => {})
+      .finally(() => setGapsLoaded(true))
     const fetchSessions = async () => {
       try {
         const response = await api.get('/sessions')
@@ -514,8 +620,15 @@ const handleSessionClick = (session, isActive) => {
       {/* ─── MAIN CONTENT ─── */}
       <main className={`${mainMargin} flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300`}>
 
-        {/* ─── MOBILE TOP BAR ─── */}
-        <div className="lg:hidden flex items-center justify-between mb-6">
+        {/* ─── MOBILE TOP BAR ───
+            Sticky, full-width bar: slides away while scrolling down and
+            back in as soon as the user scrolls up. The negative margins
+            cancel <main>'s padding so it spans the screen edge to edge. */}
+        <div
+          className={`lg:hidden sticky top-0 z-30 -mx-4 -mt-4 md:-mx-6 md:-mt-6 px-4 md:px-6 py-3 mb-6 flex items-center justify-between bg-[#080D1A]/90 backdrop-blur-md border-b border-slate-800/60 transition-transform duration-300 ${
+            showTopBar || showMobileSidebar ? 'translate-y-0' : '-translate-y-full'
+          }`}
+        >
           <button
             onClick={() => setShowMobileSidebar(true)}
             className="p-2 rounded-xl bg-[#0D1426] border border-slate-800 text-slate-400 hover:text-white transition-colors"

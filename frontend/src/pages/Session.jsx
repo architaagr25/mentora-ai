@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -151,6 +151,8 @@ const [voiceMode, setVoiceMode] = useState(() => {
 const lastSpokenIdRef = useRef(null)
 
   const messagesEndRef = useRef(null)
+  // The chat's scrolling box — auto-scroll moves this, not the page
+  const chatScrollRef = useRef(null)
   const textareaRef = useRef(null)
 
   const allAttemptsRef = useRef(null)
@@ -190,9 +192,24 @@ const lastSpokenIdRef = useRef(null)
   }, [unsentMessage, clearUnsentMessage])
 
   // ─── AUTO-SCROLL ───
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamingMessage])
+  // Opening a session jumps straight to the newest message before the
+  // first paint (a layout effect), so the chat never shows its top and
+  // then races down. Only messages arriving after that scroll smoothly.
+  const scrolledSessionIdRef = useRef(null)
+  useLayoutEffect(() => {
+    const container = chatScrollRef.current
+    if (!container || messages.length === 0) return
+    const sessionId = currentSession?._id
+    const isFirstScroll = scrolledSessionIdRef.current !== sessionId
+    // To the box's very bottom (past its padding), so the newest message
+    // sits right above the message box. 'instant' also overrides the
+    // site-wide smooth scrolling in index.css.
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: isFirstScroll ? 'instant' : 'smooth',
+    })
+    scrolledSessionIdRef.current = sessionId
+  }, [messages, streamingMessage, currentSession?._id])
 
   // ─── AUTO-GROW TEXTAREA ───
   useEffect(() => {
@@ -784,7 +801,7 @@ const lastSpokenIdRef = useRef(null)
         ) : (
           <>
             {/* ─── CHAT AREA ─── */}
-            <div className="flex-1 overflow-y-auto">
+            <div ref={chatScrollRef} className="flex-1 overflow-y-auto">
               <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
 
                 {messages.length === 0 && !isStreaming && (
