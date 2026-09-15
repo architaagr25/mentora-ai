@@ -8,7 +8,7 @@ import winston from 'winston'
 // - Can write to files in production
 // - Easy to filter by level
 
-const { combine, timestamp, printf, colorize, errors } = winston.format
+const { combine, timestamp, printf, colorize, errors, uncolorize } = winston.format
 
 // This defines how each log line looks in your terminal
 // Example: [2024-01-15 14:30:22] INFO: Server started on port 5000
@@ -36,14 +36,18 @@ const logger = winston.createLogger({
     }),
 
     // Writes only errors to a file - useful for debugging production issues
+    // File transports need their own final format — without one every
+    // line was written as "undefined"
     new winston.transports.File({
       filename: 'logs/error.log',
       level: 'error',
+      format: combine(uncolorize(), devFormat),
     }),
 
     // Writes all logs to a file
     new winston.transports.File({
       filename: 'logs/combined.log',
+      format: combine(uncolorize(), devFormat),
     }),
   ],
 })

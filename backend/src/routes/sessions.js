@@ -14,6 +14,7 @@ import { transcribeLimiter } from '../middleware/rateLimiter.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 import { ensureKeyPoints } from '../services/keyPointsService.js'
+import { recordGapsForScore } from '../services/gapService.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -341,6 +342,8 @@ router.post('/:id/score', async (req, res, next) => {
       messageCountAtScore: userMessages.length,
     })
     await session.save()
+    // Keep the Concepts page's open/resolved gaps in step with this score
+    await recordGapsForScore(session, scoringResult.scores.gaps)
     let totalXp = req.user.xp
     let userForBadgeCheck = req.user
     if (xpEarned > 0) {
