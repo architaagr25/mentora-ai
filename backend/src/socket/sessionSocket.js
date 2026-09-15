@@ -11,6 +11,7 @@ import { messageRateLimiter, scoreRateLimiter } from './socketRateLimit.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 import { shouldRefreshMemory, refreshSessionMemory } from '../services/sessionMemoryService.js'
+import { ensureKeyPoints } from '../services/keyPointsService.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -437,11 +438,14 @@ const initializeSocket = (io) => {
 
         // Scoring gets the larger notes excerpt — accuracy is judged
         // against the student's own notes where they cover a point
-        const scoringResult = await scoreSession(
-          session.topic,
-          session.messages,
-          buildNotesContext(session)
-        )
+        const notesContext = buildNotesContext(session)
+        // Fixed yardstick for completeness — generated on the first
+        // score, then reused so rescores are comparable
+        const keyPoints = await ensureKeyPoints(session, notesContext)
+        const scoringResult = await scoreSession(session.topic, session.messages, {
+          ...notesContext,
+          keyPoints,
+        })
 
         if (!scoringResult.success) {
           return emitScoreError(
