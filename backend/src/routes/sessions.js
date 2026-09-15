@@ -13,6 +13,7 @@ import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { transcribeLimiter } from '../middleware/rateLimiter.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
+import { ensureKeyPoints } from '../services/keyPointsService.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -316,11 +317,14 @@ router.post('/:id/score', async (req, res, next) => {
     }
 
     // Call scoring service
-    const scoringResult = await scoreSession(
-      session.topic,
-      session.messages,
-      buildNotesContext(session)
-    )
+    const notesContext = buildNotesContext(session)
+    // Fixed yardstick for completeness — generated on the first score,
+    // then reused so rescores are comparable
+    const keyPoints = await ensureKeyPoints(session, notesContext)
+    const scoringResult = await scoreSession(session.topic, session.messages, {
+      ...notesContext,
+      keyPoints,
+    })
 
     if (!scoringResult.success) {
       if (scoringResult.quotaExceeded) throw new AppError(AI_LIMIT_MESSAGE, 429)

@@ -27,6 +27,14 @@ const scoreSnapshotSchema = new mongoose.Schema(
     // Used to block re-scoring until the user has explained more.
     // null on snapshots saved before this field existed.
     messageCountAtScore: { type: Number, default: null },
+    // Which of the session's key points this explanation covered, as
+    // 1-based positions in session.keyPoints. Positions rather than the
+    // text, so score payloads sent to the browser during the session
+    // don't reveal what the key points are.
+    coveredKeyPoints: { type: [Number], default: [] },
+    // How many key points there were — lets the UI say "3 of 7 covered"
+    // without knowing them. null on scores taken without key points.
+    keyPointsTotal: { type: Number, default: null },
     scoredAt: { type: Date, default: Date.now },
   },
   { _id: false }
@@ -99,6 +107,16 @@ const sessionSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // ─── KEY POINTS ───
+    // 5–8 points a complete explanation of this topic should make.
+    // Generated at the first score (from the notes when uploaded), then
+    // fixed for the session, so completeness is measured against the
+    // same yardstick on every rescore. Hidden while the session is
+    // active — see the toJSON transform below.
+    keyPoints: {
+      type: [String],
+      default: [],
+    },
     // messages.length when the summary was last refreshed
     memoryMessageCount: {
       type: Number,
@@ -143,7 +161,15 @@ sessionSchema.virtual('hasNotes').get(function () {
   return !!(this.notes && this.notes.extractedConcepts.length > 0)
 })
 
-sessionSchema.set('toJSON', { virtuals: true })
+sessionSchema.set('toJSON', {
+  virtuals: true,
+  // Key points are the answer key for completeness — never send them
+  // to the browser while the session is still being taught
+  transform: (doc, ret) => {
+    if (ret.status === 'active') delete ret.keyPoints
+    return ret
+  },
+})
 
 const Session = mongoose.model('Session', sessionSchema)
 
