@@ -12,6 +12,7 @@ import connectDB from './config/db.js'
 import sessionRoutes from './routes/sessions.js'
 import usersRoutes from './routes/users.js'
 import badgesRoutes from './routes/badges.js'
+import gapsRoutes from './routes/gaps.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import initializeSocket from './socket/sessionSocket.js'
@@ -160,6 +161,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/sessions', sessionRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/badges', badgesRoutes)
+app.use('/api/gaps', gapsRoutes)
 
 
 // ─────────────────────────────────────────

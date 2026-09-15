@@ -12,6 +12,7 @@ import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 import { shouldRefreshMemory, refreshSessionMemory } from '../services/sessionMemoryService.js'
 import { ensureKeyPoints } from '../services/keyPointsService.js'
+import { recordGapsForScore } from '../services/gapService.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -466,6 +467,9 @@ const initializeSocket = (io) => {
           messageCountAtScore: userMessages.length,
         })
         await session.save()
+        // Keep the Concepts page's open/resolved gaps in step with this
+        // score — awaited so the page is current if opened straight away
+        await recordGapsForScore(session, scoringResult.scores.gaps)
         let userForBadgeCheck = socket.user
         if (xp.xpEarned > 0) {
           const updatedUser = await User.findByIdAndUpdate(
