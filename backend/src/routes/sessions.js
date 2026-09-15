@@ -15,6 +15,7 @@ import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 import { ensureKeyPoints } from '../services/keyPointsService.js'
 import { recordGapsForScore } from '../services/gapService.js'
+import Gap from '../models/Gap.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -131,12 +132,24 @@ router.post('/', async (req, res, next) => {
       })
     }
 
-    const { topic, mode } = result.data
+    const { mode, focusGapId } = result.data
+    let { topic } = result.data
+
+    // Practice session for one gap — it must be this user's gap, and
+    // the session is always on the gap's own topic
+    let focus = {}
+    if (focusGapId) {
+      const gap = await Gap.findOne({ _id: focusGapId, userId: req.user._id })
+      if (!gap) throw new AppError('Gap not found', 404)
+      topic = gap.topic
+      focus = { focusGapId: gap._id, focusGapText: gap.text }
+    }
 
     const session = await Session.create({
       userId: req.user._id,
       topic,
       mode,
+      ...focus,
     })
 
     res.status(201).json({
@@ -241,11 +254,10 @@ router.post('/:id/message', async (req, res, next) => {
 
     // Step 2 — Get AI student response
     // Pass full message history so Claude has context
-    const aiResult = await getAIStudentResponse(
-      session.topic,
-      session.messages,
-      buildNotesContext(session, STUDENT_NOTES_CHARS)
-    )
+    const aiResult = await getAIStudentResponse(session.topic, session.messages, {
+      ...buildNotesContext(session, STUDENT_NOTES_CHARS),
+      focusGap: session.focusGapText,
+    })
 
     if (!aiResult.success) {
       // AI call failed — still return the user message
@@ -343,7 +355,9 @@ router.post('/:id/score', async (req, res, next) => {
     })
     await session.save()
     // Keep the Concepts page's open/resolved gaps in step with this score
-    await recordGapsForScore(session, scoringResult.scores.gaps)
+    const gapResult = await recordGapsForScore(session, scoringResult.scores.gaps, {
+      score: scoringResult.scores,
+    })
     let totalXp = req.user.xp
     let userForBadgeCheck = req.user
     if (xpEarned > 0) {
@@ -375,6 +389,7 @@ router.post('/:id/score', async (req, res, next) => {
       xpEarned,
       totalXp,
       xp: { ...xp, totalXp },
+      focusGapResolved: gapResult.focusGapResolved,
       newBadges: newBadges.map((b) => ({
         id: b.id,
         name: b.name,

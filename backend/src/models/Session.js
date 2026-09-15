@@ -117,6 +117,19 @@ const sessionSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    // ─── FOCUSED PRACTICE ───
+    // Set when the session was started with "Practise this gap". The gap
+    // text is snapshotted so the AI student prompt doesn't need a Gap
+    // lookup on every message, and still works if the gap is reworded.
+    focusGapId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Gap',
+      default: null,
+    },
+    focusGapText: {
+      type: String,
+      default: null,
+    },
     // messages.length when the summary was last refreshed
     memoryMessageCount: {
       type: Number,

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Network, FileText, Loader2, CheckCircle2, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Network, FileText, Loader2, CheckCircle2, RotateCcw, Play } from 'lucide-react'
 import api from '@/api'
 
 const FILTERS = [
@@ -82,10 +82,12 @@ const formatDate = (dateString) => {
 const gapDateLabel = (gap) => {
   if (gap.status === 'open') return formatDate(gap.lastSeenAt)
   const date = formatDate(gap.resolvedAt)
-  return gap.resolvedBy === 'rescore' ? `fixed on rescore · ${date}` : `resolved · ${date}`
+  if (gap.resolvedBy === 'rescore') return `fixed on rescore · ${date}`
+  if (gap.resolvedBy === 'practice') return `fixed in practice · ${date}`
+  return `resolved · ${date}`
 }
 
-const GapRow = ({ gap, onUpdate, isUpdating }) => {
+const GapRow = ({ gap, onUpdate, isUpdating, onPractise, isStarting }) => {
   const isOpen = gap.status === 'open'
 
   return (
@@ -101,29 +103,42 @@ const GapRow = ({ gap, onUpdate, isUpdating }) => {
         </span>
         <span className="text-slate-600 text-xs ml-2 whitespace-nowrap">{gapDateLabel(gap)}</span>
       </div>
-      <button
-        onClick={() => onUpdate(gap._id, isOpen ? 'resolved' : 'open')}
-        disabled={isUpdating}
-        className={`flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-          isOpen
-            ? 'text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10'
-            : 'text-slate-400 border-slate-700 hover:bg-slate-800'
-        }`}
-      >
-        {isUpdating ? (
-          <Loader2 size={12} className="animate-spin" />
-        ) : isOpen ? (
-          <CheckCircle2 size={12} />
-        ) : (
-          <RotateCcw size={12} />
+      <div className="flex-shrink-0 flex flex-col sm:flex-row gap-1.5">
+        {isOpen && (
+          <button
+            onClick={() => onPractise(gap)}
+            disabled={isStarting}
+            title="Start a session that focuses on this gap"
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border text-violet-300 border-violet-500/30 hover:bg-violet-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isStarting ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />}
+            Practise
+          </button>
         )}
-        {isOpen ? 'Mark resolved' : 'Reopen'}
-      </button>
+        <button
+          onClick={() => onUpdate(gap._id, isOpen ? 'resolved' : 'open')}
+          disabled={isUpdating}
+          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+            isOpen
+              ? 'text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/10'
+              : 'text-slate-400 border-slate-700 hover:bg-slate-800'
+          }`}
+        >
+          {isUpdating ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : isOpen ? (
+            <CheckCircle2 size={12} />
+          ) : (
+            <RotateCcw size={12} />
+          )}
+          {isOpen ? 'Mark resolved' : 'Reopen'}
+        </button>
+      </div>
     </div>
   )
 }
 
-const TopicCard = ({ entry, concepts, status, index, onUpdate, updatingId }) => {
+const TopicCard = ({ entry, concepts, status, index, onUpdate, updatingId, onPractise, startingId }) => {
   const [showAll, setShowAll] = useState(false)
 
   const visibleGaps = showAll ? entry.gaps : entry.gaps.slice(0, GAPS_PREVIEW_COUNT)
@@ -177,6 +192,8 @@ const TopicCard = ({ entry, concepts, status, index, onUpdate, updatingId }) => 
             gap={gap}
             onUpdate={onUpdate}
             isUpdating={updatingId === gap._id}
+            onPractise={onPractise}
+            isStarting={startingId === gap._id}
           />
         ))}
       </div>
@@ -239,6 +256,14 @@ const Concepts = () => {
   const handleUpdate = (id, nextStatus) => updateGap.mutate({ id, status: nextStatus })
   const updatingId = updateGap.isPending ? updateGap.variables?.id : null
 
+  // "Practise" — a new session on the gap's topic, focused on that gap
+  const startPractice = useMutation({
+    mutationFn: (gap) => api.post('/sessions', { topic: gap.topic, focusGapId: gap._id }),
+    onSuccess: (res) => navigate(`/session/${res.data.session._id}`),
+  })
+  const startingId =
+    startPractice.isPending || startPractice.isSuccess ? startPractice.variables?._id : null
+
   const counts = data?.counts ?? { open: 0, resolved: 0 }
   const topics = groupByTopic(data?.gaps ?? [])
   const notesConcepts = conceptsByTopic(sessions)
@@ -296,6 +321,9 @@ const Concepts = () => {
         {updateGap.isError && (
           <p className="text-red-400 text-sm mb-4">Couldn't update that gap. Please try again.</p>
         )}
+        {startPractice.isError && (
+          <p className="text-red-400 text-sm mb-4">Couldn't start a practice session. Please try again.</p>
+        )}
 
         {/* ─── CONTENT ─── */}
         {showLoader ? (
@@ -325,6 +353,8 @@ const Concepts = () => {
                 index={i}
                 onUpdate={handleUpdate}
                 updatingId={updatingId}
+                onPractise={(gap) => startPractice.mutate(gap)}
+                startingId={startingId}
               />
             ))}
           </div>

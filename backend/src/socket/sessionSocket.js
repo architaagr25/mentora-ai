@@ -74,6 +74,8 @@ const initializeSocket = (io) => {
       ...buildNotesContext(session, STUDENT_NOTES_CHARS),
       summary: session.summary,
       coveredConcepts: session.coveredConcepts ?? [],
+      // Practice session: the gap the student should steer toward
+      focusGap: session.focusGapText,
     }
 
     await getAIStudentResponseStream(
@@ -187,6 +189,10 @@ const initializeSocket = (io) => {
           messages: session.messages,
           scores: session.scores,
           latestScore: session.latestScore,
+          // Practice session banner — which gap this session focuses on
+          focusGap: session.focusGapText
+            ? { id: session.focusGapId, text: session.focusGapText }
+            : null,
           // Send concepts to frontend so it can show the notes badge.
           // We deliberately exclude rawText — it's large and the frontend doesn't need it.
           notes: session.notes
@@ -469,7 +475,9 @@ const initializeSocket = (io) => {
         await session.save()
         // Keep the Concepts page's open/resolved gaps in step with this
         // score — awaited so the page is current if opened straight away
-        await recordGapsForScore(session, scoringResult.scores.gaps)
+        const gapResult = await recordGapsForScore(session, scoringResult.scores.gaps, {
+          score: scoringResult.scores,
+        })
         let userForBadgeCheck = socket.user
         if (xp.xpEarned > 0) {
           const updatedUser = await User.findByIdAndUpdate(
@@ -489,6 +497,8 @@ const initializeSocket = (io) => {
           totalScores: session.scores.length,
           allScores: session.scores,
           xp: { ...xp, totalXp: socket.user.xp },
+          // True when this score closed the practice session's focus gap
+          focusGapResolved: gapResult.focusGapResolved,
         })
 
         // Check for newly-earned badges now that this score is saved
