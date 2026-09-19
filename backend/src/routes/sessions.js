@@ -16,6 +16,7 @@ import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js
 import { ensureKeyPoints } from '../services/keyPointsService.js'
 import { recordGapsForScore } from '../services/gapService.js'
 import Gap from '../models/Gap.js'
+import { finalizeSession } from '../services/sessionEndService.js'
 import { checkForNewBadges } from '../services/badgeService.js'
 import User from '../models/User.js'
 import multer from 'multer'
@@ -421,11 +422,9 @@ router.post('/:id/end', async (req, res, next) => {
       throw new AppError('This session has already ended', 400)
     }
 
-    const durationMs = Date.now() - session.createdAt.getTime()
-    session.duration = Math.floor(durationMs / 1000)
-    session.status = 'completed'
-
-    await session.save()
+    // Scores anything taught since the last score, then completes the
+    // session (shared with the socket path)
+    const summary = await finalizeSession(session, req.user)
 
     // Completing a session can unlock session-count badges (e.g.
     // "First Steps") — this route is what Dashboard's "Mark as
@@ -442,6 +441,7 @@ router.post('/:id/end', async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       session,
+      summary,
       newBadges: newBadges.map((b) => ({
         id: b.id,
         name: b.name,

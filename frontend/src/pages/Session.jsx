@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import useSessionStore from '@/store/sessionStore'
 import VoiceMode from '@/components/session/VoiceMode'
+import SessionSummary from '@/components/session/SessionSummary'
 import XpInfo from '@/components/XpInfo'
 
 // ─────────────────────────────────────────
@@ -128,14 +129,17 @@ const {
     canRetry,
     retryResponse,
     coveredConcepts,
-    badgeQueue,
     focusGap,
+    sessionSummary,
   } = useSessionStore()
 
   const [input, setInput] = useState('')
   const [showScorePanel, setShowScorePanel] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
+  // Ending is done the moment the wrap-up arrives — derived rather than
+  // set from an effect, so the modals close in the same render
+  const endInFlight = isEnding && !sessionSummary
   const hasNotes = notes && notes.extractedConcepts?.length > 0
   const [showNotesModal, setShowNotesModal] = useState(false)
 const [voiceMode, setVoiceMode] = useState(() => {
@@ -345,15 +349,11 @@ const lastSpokenIdRef = useRef(null)
     setIsEnding(true)
     endSession()
 
-    // Close the end-session confirm modal quickly once the request
-    // is sent, but don't navigate away yet — if ending the session
-    // unlocked a badge, the badge modal needs to actually be seen
-    // and dismissed first. Navigating immediately would yank the
-    // page (and the badge modal with it) out from under the user.
-    setTimeout(() => {
-      setIsEnding(false)
-      setShowEndConfirm(false)
-    }, 1200)
+    // Ending now scores whatever was taught since the last score, so it
+    // can take a few seconds. The confirm modal stays on "Ending..."
+    // until session_ended arrives (see the effect below); this only
+    // unsticks the button if the reply never comes.
+    setTimeout(() => setIsEnding(false), 30000)
   }
 
   // Navigate to Dashboard only once the badge queue is empty AND we
@@ -361,17 +361,6 @@ const lastSpokenIdRef = useRef(null)
   // the confirm modal closes (isEnding flips false) if there's no
   // badge to show, or waits until the last badge is dismissed if
   // there is one.
-  const hasHandledEndRef = useRef(false)
-  useEffect(() => {
-    if (isEnding) {
-      hasHandledEndRef.current = true
-      return
-    }
-    if (hasHandledEndRef.current && badgeQueue.length === 0 && isEnded) {
-      hasHandledEndRef.current = false
-      navigate('/dashboard')
-    }
-  }, [isEnding, badgeQueue.length, isEnded, navigate])
 
   // ─── LOADING STATE ───
   if (isJoining && !currentSession) {
@@ -774,7 +763,16 @@ const lastSpokenIdRef = useRef(null)
         </AnimatePresence>
 
         {/* ─── CHAT AREA / VOICE MODE ─── */}
-        {voiceMode ? (
+        {/* Once the session is ended the wrap-up replaces the chat:
+            final score, gaps, and the key points reveal */}
+        {sessionSummary ? (
+          <SessionSummary
+            summary={sessionSummary}
+            topic={currentSession?.topic}
+            onBackToDashboard={() => navigate('/dashboard')}
+            onViewHistory={() => navigate('/history')}
+          />
+        ) : voiceMode ? (
          <VoiceMode
             messages={messages}
             isStreaming={isStreaming}
@@ -964,7 +962,7 @@ const lastSpokenIdRef = useRef(null)
 
       {/* ─── SCORE PANEL ─── */}
       <AnimatePresence>
-        {showScorePanel && (
+        {showScorePanel && !sessionSummary && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
@@ -1160,13 +1158,13 @@ const lastSpokenIdRef = useRef(null)
 
       {/* ─── END SESSION CONFIRM MODAL ─── */}
       <AnimatePresence>
-        {showEndConfirm && (
+        {showEndConfirm && !sessionSummary && (
           <>
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => !isEnding && setShowEndConfirm(false)}
+              onClick={() => !endInFlight && setShowEndConfirm(false)}
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
             />
             <motion.div
@@ -1184,7 +1182,7 @@ const lastSpokenIdRef = useRef(null)
                     <h2 className="text-lg font-bold text-white">End session?</h2>
                   </div>
                   <button
-                    onClick={() => !isEnding && setShowEndConfirm(false)}
+                    onClick={() => !endInFlight && setShowEndConfirm(false)}
                     className="text-slate-500 hover:text-slate-300 transition-colors"
                   >
                     <X size={18} />
@@ -1198,17 +1196,17 @@ const lastSpokenIdRef = useRef(null)
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setShowEndConfirm(false)}
-                    disabled={isEnding}
+                    disabled={endInFlight}
                     className="flex-1 py-2.5 rounded-xl font-semibold text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleEndSession}
-                    disabled={isEnding || !isConnected}
+                    disabled={endInFlight || !isConnected}
                     className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-red-600 hover:bg-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                   >
-                    {isEnding ? (
+                    {endInFlight ? (
                       <><Loader2 size={15} className="animate-spin" />Ending...</>
                     ) : (
                       <>End session</>

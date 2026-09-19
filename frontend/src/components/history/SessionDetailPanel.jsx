@@ -11,6 +11,7 @@ import {
   BarChart3,
 } from 'lucide-react'
 import api from '@/api'
+import KeyPointsReveal from '@/components/session/KeyPointsReveal'
 
 const getScoreColor = (score) => {
   if (score >= 8) return 'text-green-400'
@@ -196,6 +197,14 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                             ))}
                           </div>
                         </div>
+                      )}
+                      {/* What a complete explanation covers — hidden
+                          during the session, revealed once completed */}
+                      {session?.keyPoints?.length > 0 && (
+                        <KeyPointsReveal
+                          keyPoints={session.keyPoints}
+                          coveredKeyPoints={latestScore.coveredKeyPoints || []}
+                        />
                       )}
 
                       {/* All attempts — only shown if more than one */}

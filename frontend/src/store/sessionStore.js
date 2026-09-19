@@ -46,6 +46,9 @@ const useSessionStore = create((set, get) => ({
   error: null,
   unsentMessage: null,
   // text of a message the server rejected — restored to the input box
+  sessionSummary: null,
+  // End-of-session wrap-up from the server: final score, key points and
+  // which of them were covered. Set when session_ended arrives.
   focusGap: null,
   // { id, text } in a practice session started from a gap, plus
   // resolved: true once a score in this session closes it
@@ -170,6 +173,7 @@ const useSessionStore = create((set, get) => ({
       unsentMessage: null,
       notes: null,
       focusGap: null,
+      sessionSummary: null,
       coveredConcepts: [],
       scoreToast: null,
       badgeQueue: [],
@@ -315,11 +319,20 @@ const useSessionStore = create((set, get) => ({
     window.dispatchEvent(new Event('streak:updated'))
   },
 
-  handleSessionEnded: () => {
+  // data is the wrap-up built by the server (sessionEndService.js):
+  // { sessionId, duration, finalScore, keyPoints, autoScored, xp }.
+  // Stored so the session page can show a summary instead of bouncing
+  // the user to the dashboard.
+  handleSessionEnded: (data) => {
     set((state) => ({
       currentSession: state.currentSession
         ? { ...state.currentSession, status: 'completed' }
         : null,
+      sessionSummary: data ?? null,
+      latestScore: data?.finalScore ?? state.latestScore,
+      scores: data?.finalScore
+        ? [...state.scores.filter((s) => s.scoredAt !== data.finalScore.scoredAt), data.finalScore]
+        : state.scores,
     }))
   },
 

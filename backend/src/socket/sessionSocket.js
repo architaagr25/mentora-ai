@@ -13,6 +13,7 @@ import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js
 import { shouldRefreshMemory, refreshSessionMemory } from '../services/sessionMemoryService.js'
 import { ensureKeyPoints } from '../services/keyPointsService.js'
 import { recordGapsForScore } from '../services/gapService.js'
+import { finalizeSession } from '../services/sessionEndService.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -554,20 +555,21 @@ const initializeSocket = (io) => {
           return socket.emit('error', { message: 'Session already ended' })
         }
 
-        const durationMs = Date.now() - session.createdAt.getTime()
-        session.duration = Math.floor(durationMs / 1000)
-        session.status = 'completed'
-        // Clear raw text when session ends — keeps the DB lean.
-        // Concepts stay permanently for scoring reference.
-        if (session.notes) {
-          session.notes.rawText = null
-        }
-        await session.save()
+        // Scores anything taught since the last score, then completes
+        // the session — the payload is the wrap-up screen the client shows
+        const summary = await finalizeSession(session, socket.user)
 
-        socket.emit('session_ended', {
-          sessionId: socket.sessionId,
-          duration: session.duration,
-        })
+        socket.emit('session_ended', summary)
+
+        // The auto-score may have earned XP — keep the header in step
+        if (summary.xp?.xpEarned > 0) {
+          socket.emit('score_result', {
+            score: summary.finalScore,
+            totalScores: session.scores.length,
+            allScores: session.scores,
+            xp: summary.xp,
+          })
+        }
 
         // Completing a session can unlock session-count badges
         // (e.g. "First Steps" at 1 completed session) — this was
