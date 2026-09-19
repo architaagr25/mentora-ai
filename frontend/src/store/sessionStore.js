@@ -46,6 +46,10 @@ const useSessionStore = create((set, get) => ({
   error: null,
   unsentMessage: null,
   // text of a message the server rejected — restored to the input box
+  studentUnderstood: false,
+  // true once the AI student says it understands (it adds a hidden
+  // marker, stripped server-side). The page then offers to score or
+  // carry on — it never scores on its own.
   sessionSummary: null,
   // End-of-session wrap-up from the server: final score, key points and
   // which of them were covered. Set when session_ended arrives.
@@ -83,11 +87,11 @@ const useSessionStore = create((set, get) => ({
   // ─────────────────────────────────────────
   // CREATE SESSION
   // ─────────────────────────────────────────
-  createSession: async (topic, mode = 'text') => {
+  createSession: async (topic, mode = 'text', audience = 'peer') => {
     try {
       set({ error: null, isJoining: true })
 
-      const response = await api.post('/sessions', { topic, mode })
+      const response = await api.post('/sessions', { topic, mode, audience })
       const session = response.data.session
 
       set({ currentSession: session })
@@ -105,9 +109,10 @@ const useSessionStore = create((set, get) => ({
   // ─────────────────────────────────────────
   // JOIN EXISTING SESSION
   // ─────────────────────────────────────────
-  joinExistingSession: (sessionId) => {
+  // options.focus marks a visit that came from "Practise this gap"
+  joinExistingSession: (sessionId, options) => {
     set({ error: null, isJoining: true })
-    socketJoinSession(sessionId)
+    socketJoinSession(sessionId, options)
   },
 
   // ─────────────────────────────────────────
@@ -117,7 +122,7 @@ const useSessionStore = create((set, get) => ({
     const { isStreaming, isSending, connectionStatus } = get()
     if (isStreaming || isSending || connectionStatus !== 'connected') return
     pendingContent = content
-    set({ isSending: true, unsentMessage: null })
+    set({ isSending: true, unsentMessage: null, studentUnderstood: false })
     socketSendMessage(content)
   },
 
@@ -138,7 +143,7 @@ const useSessionStore = create((set, get) => ({
   // ─────────────────────────────────────────
   requestScore: () => {
     if (get().isScoring || get().connectionStatus !== 'connected') return
-    set({ isScoring: true, scoreError: null })
+    set({ isScoring: true, scoreError: null, studentUnderstood: false })
     socketRequestScore()
   },
 
@@ -174,6 +179,7 @@ const useSessionStore = create((set, get) => ({
       notes: null,
       focusGap: null,
       sessionSummary: null,
+      studentUnderstood: false,
       coveredConcepts: [],
       scoreToast: null,
       badgeQueue: [],
@@ -248,8 +254,11 @@ const useSessionStore = create((set, get) => ({
       streamingMessage: '',
       isStreaming: false,
       canRetry: false,
+      studentUnderstood: Boolean(data.understood),
     }))
   },
+
+  dismissUnderstood: () => set({ studentUnderstood: false }),
 
   // Sent when a retry starts — there's no user message to save this
   // time, so this is what switches the UI into the "thinking" state

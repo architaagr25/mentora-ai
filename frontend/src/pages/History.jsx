@@ -176,7 +176,7 @@ const History = () => {
   // there's nothing to "continue" so a full navigation isn't needed.
   const handleSessionClick = (session, isActive) => {
     if (isActive) {
-      navigate(`/session/${session._id}`)
+      navigate(`/session/${session._id}`, { state: { from: '/history' } })
     } else {
       setSelectedSessionId(session._id)
     }

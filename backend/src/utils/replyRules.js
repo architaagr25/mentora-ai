@@ -62,7 +62,7 @@ const CLAIM_TRIGGERS = [
   // "if / when / because / since …"
   /\b(?:if|when|whenever|once|unless|in case|because|since)\b/gi,
   // "I thought / I heard / isn't it true …"
-  /\bI (?:thought|heard|read|remember|believe|assumed|figured)\b|\bisn'?t it true\b/gi,
+  /\bI (?:(?:have |'ve )?been )?(?:thought|heard|read|remember|believe|assumed|figured|imagined|imagining|pictured|picturing|guessing|assuming)\b|\bisn'?t it true\b/gi,
 ]
 // Where a sub-clause ends
 const CLAUSE_END = /[,;.?!—–]|\s(?:how|what|why|where|which|who)\b/
@@ -85,7 +85,10 @@ const subClauseAfter = (reply, match) => {
 // Returns null when the reply is fine, otherwise { rule, instruction }.
 // teacherText should include the topic and any concept names as well as
 // everything the teacher said — those words are all fair to use.
-export const findRuleViolation = (reply, { teacherText = '', allowHint = false } = {}) => {
+export const findRuleViolation = (
+  reply,
+  { teacherText = '', allowHint = false, allowMisconception = false } = {}
+) => {
   if (!reply) return null
 
   if ((reply.match(/\?/g) || []).length >= 2) {
@@ -116,8 +119,10 @@ export const findRuleViolation = (reply, { teacherText = '', allowHint = false }
     }
   }
 
-  // Rule 14 allows a small "what would happen if…" hint after two doubts
-  if (allowHint) return null
+  // Rule 14 allows a small "what would happen if…" hint after two doubts,
+  // and a misconception turn (rule 16) is a claim the teacher never made
+  // by design — that is the thing they are being asked to correct.
+  if (allowHint || allowMisconception) return null
 
   for (const trigger of CLAIM_TRIGGERS) {
     for (const match of reply.matchAll(trigger)) {
@@ -138,6 +143,18 @@ export const findRuleViolation = (reply, { teacherText = '', allowHint = false }
 
 // Rule 14: once the student has doubted the teacher twice in a row, a
 // small "what would happen if…" hint becomes allowed
+// Rule 16: every Nth reply may float a plausible misconception for the
+// teacher to correct. Decided here rather than left to the model, so it
+// stays occasional — and so the outside-fact check above knows to allow
+// it on exactly those turns.
+export const MISCONCEPTION_EVERY = 4
+
+export const isMisconceptionTurn = (messages) => {
+  if (isHintAllowed(messages)) return false
+  const replyNumber = messages.filter((m) => m.role === 'assistant').length + 1
+  return replyNumber >= MISCONCEPTION_EVERY && replyNumber % MISCONCEPTION_EVERY === 0
+}
+
 export const isHintAllowed = (messages) => {
   const lastTwo = messages.filter((m) => m.role === 'assistant').slice(-2)
   return lastTwo.length === 2 && lastTwo.every((m) => DOUBT.test(m.content))

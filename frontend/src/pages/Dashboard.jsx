@@ -365,7 +365,7 @@ const handleNavClick = (target) => {
 // Completed sessions open the read-only detail panel instead.
 const handleSessionClick = (session, isActive) => {
   if (isActive) {
-    navigate(`/session/${session._id}`)
+    navigate(`/session/${session._id}`, { state: { from: '/dashboard' } })
   } else {
     setSelectedSessionId(session._id)
   }
@@ -382,7 +382,7 @@ const handleSessionClick = (session, isActive) => {
     )
 
     if (activeSession) {
-      navigate(`/session/${activeSession._id}`)
+      navigate(`/session/${activeSession._id}`, { state: { from: '/dashboard' } })
       return
     }
 
@@ -397,7 +397,7 @@ const handleSessionClick = (session, isActive) => {
     setStartingGapId(gap._id)
     try {
       const res = await api.post('/sessions', { topic: gap.topic, focusGapId: gap._id })
-      navigate(`/session/${res.data.session._id}`)
+      navigate(`/session/${res.data.session._id}`, { state: { from: '/dashboard', focus: true } })
     } catch {
       setStartingGapId(null)
     }

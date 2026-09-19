@@ -32,6 +32,9 @@ const socket = io(SOCKET_URL, {
 // We listen for 'connect' and re-join the active session room if we have one.
 // ─────────────────────────────────────────
 let activeSessionId = null
+// true while the current visit came from "Practise this gap" — resent on
+// reconnect so a dropped connection doesn't end the practice focus
+let activeFocus = false
 
 // Consecutive auth-rejected handshakes, reset on every successful
 // connect. Caps the refresh → reconnect loop if the server keeps
@@ -46,7 +49,7 @@ const EXPIRED_TOKEN_ERRORS = new Set(['Invalid token', 'Authentication required'
 socket.on('connect', () => {
   authRetries = 0
   if (activeSessionId) {
-    socket.emit('join_session', { sessionId: activeSessionId })
+    socket.emit('join_session', { sessionId: activeSessionId, focus: activeFocus })
   }
 })
 
@@ -112,20 +115,23 @@ export const disconnectSocket = () => {
     socket.disconnect()
   }
   activeSessionId = null
+  activeFocus = false
 }
 
 // ─────────────────────────────────────────
 // SESSION EVENTS — EMIT
 // ─────────────────────────────────────────
-export const joinSession = (sessionId) => {
+export const joinSession = (sessionId, { focus = false } = {}) => {
   activeSessionId = sessionId
-  socket.emit('join_session', { sessionId })
+  activeFocus = focus
+  socket.emit('join_session', { sessionId, focus })
 }
 
 // Called when leaving the session page — stops a later reconnect
 // (e.g. while on the Dashboard) from re-joining that old session
 export const leaveSession = () => {
   activeSessionId = null
+  activeFocus = false
 }
 export const sendMessage = (content) => {
   socket.emit('send_message', { content })

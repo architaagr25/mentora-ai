@@ -16,6 +16,9 @@ export const createSessionSchema = z.object({
     // If mode is not provided it defaults to 'text'
     // .default() in Zod means the field is optional
     // and falls back to this value if missing
+  // Who the AI student should act like — changes its vocabulary and
+  // question style only
+  audience: z.enum(['child', 'peer', 'interviewer']).default('peer'),
   // Optional — starts a practice session focused on one open gap.
   // The session's topic is then taken from the gap.
   focusGapId: z

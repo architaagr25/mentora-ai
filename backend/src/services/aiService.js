@@ -3,7 +3,38 @@ import logger from '../utils/logger.js'
 import { filterTranscript } from '../utils/transcriptFilter.js'
 import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
 import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
-import { findRuleViolation, isHintAllowed } from '../utils/replyRules.js'
+import { findRuleViolation, isHintAllowed, isMisconceptionTurn } from '../utils/replyRules.js'
+
+// Rule 15 asks the student to add this once it genuinely understands.
+// Stripped before the reply is streamed — the user never sees it; it
+// only tells the client to offer "score now or keep going".
+export const UNDERSTOOD_MARKER = "[UNDERSTOOD]"
+
+// Takes the marker out of a reply and reports whether it was there.
+// Used on both reply paths so the marker can never reach the user.
+export const stripUnderstoodMarker = (text) => {
+  const raw = String(text ?? '')
+  return {
+    understood: raw.includes(UNDERSTOOD_MARKER),
+    text: raw
+      .split(UNDERSTOOD_MARKER)
+      .join(' ')
+      .replace(/\s*\n+\s*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(),
+  }
+}
+
+// Who the student acts like. This changes vocabulary and the kind of
+// question asked — never what the student is allowed to know.
+const AUDIENCE_STYLES = {
+  child:
+    "You are about ten years old. Use short, everyday words. When they use a word you would not know at that age, say so plainly and ask what it means. Ask for everyday comparisons and examples rather than technical detail.",
+  peer:
+    "You are a fellow student at roughly their level, revising the same topic. Speak plainly and normally — not childishly — and ask what a classmate would ask.",
+  interviewer:
+    "You are a friendly interviewer checking whether they really understand this. Stay warm and curious, never harsh or tricky, but press for precision: ask them to be exact about terms, steps, edge cases, and why something works rather than asking them to simplify.",
+}
 
 const getStudentSystemPrompt = (
   topic,
@@ -14,6 +45,8 @@ const getStudentSystemPrompt = (
     coveredConcepts = [],
     recentQuestions = [],
     focusGap = null,
+    audience = 'peer',
+    allowMisconception = false,
   } = {}
 ) => {
   // Practice session started from a gap an earlier score found. The
@@ -89,9 +122,28 @@ HOW TO USE THE NOTES:
 `
     : ''
 
+  const audienceSection = `
+WHO YOU ARE TALKING AS:
+${AUDIENCE_STYLES[audience] ?? AUDIENCE_STYLES.peer}
+This sets your vocabulary and the kind of question you ask. It never changes what you know — every rule below still applies exactly as written.
+`
+
+  // Rule 16. Gated in code (see isMisconceptionTurn) so it stays
+  // occasional, and so the reply rule check knows this turn is allowed
+  // to contain a claim the teacher never made.
+  const misconceptionSection = allowMisconception
+    ? `
+THIS TURN ONLY — TEST A BELIEF INSTEAD OF ASKING A PLAIN QUESTION:
+- Say ONE thing you have come to believe about what they just taught, phrased as your own belief, and ask whether it is right — e.g. "I have been picturing it as ... — is that what you meant?"
+- It must be WRONG or muddled in the way a real beginner would get it wrong, and close enough to what they said that correcting it forces them to explain the real thing.
+- Never present it as a fact you know or say where you got it, and never give the correct version yourself.
+- Still one question, still short. If they correct you, take the correction plainly and build on it. If they agree with your wrong belief, show doubt and ask them to walk through it again.
+`
+    : ''
+
   return `${notesSection}${memorySection}${recentQuestionsSection}
 You are a curious but genuinely confused student trying to understand "${topic}".
-${conceptsSection}${focusSection}
+${conceptsSection}${focusSection}${audienceSection}${misconceptionSection}
 Your job is to help the person teaching you discover gaps in their own understanding by asking the questions a real confused student would ask.
 
 THE MOST IMPORTANT RULE — YOU ONLY KNOW WHAT THEY HAVE TOLD YOU:
@@ -130,6 +182,7 @@ RULES YOU MUST FOLLOW:
 13. Never ask the same question twice — rephrase or move on
 14. After two failed attempts on the same point (including repeating something off track after you doubted it twice), give ONE small hint: point to which part is still missing, or ask about one concrete situation that would test their claim — never the missing information itself
 15. Only when their explanation is genuinely complete AND holds together, say "Oh I think I get it now" and briefly restate, in their own words, what you understood so they can confirm it
+16. When (and only when) you say you get it, end your reply with ${UNDERSTOOD_MARKER} as the very last thing, after the final full stop, with nothing after it. Never write it at any other time.
 `
 }
 // ─────────────────────────────────────────
@@ -177,9 +230,14 @@ export const getAIStudentResponse = async (topic, messages, notes = {}) => {
       })
     )
 
+    const text = response.text ?? ''
+
+    const cleaned = stripUnderstoodMarker(text)
+
     return {
       success: true,
-      content: response.text,
+      content: cleaned.text,
+      understood: cleaned.understood,
     }
   } catch (err) {
     logger.error(`AI service error: ${err.message}`)
@@ -224,7 +282,9 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
       .slice(-RECENT_QUESTIONS_COUNT)
       .map((m) => m.content.trim().slice(0, 160))
 
-    const promptContext = { ...context, recentQuestions }
+    // Every Nth reply may float a misconception for them to correct
+    const allowMisconception = isMisconceptionTurn(messages)
+    const promptContext = { ...context, recentQuestions, allowMisconception }
 
     const generateOnce = async (extraInstruction = '') => {
       return withGeminiRetry(async () => {
@@ -282,14 +342,14 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
       ...messages.filter((m) => m.role === 'user').map((m) => m.content),
     ].join('\n')
     const allowHint = isHintAllowed(messages)
-    const violation = findRuleViolation(fullResponse, { teacherText, allowHint })
+    const violation = findRuleViolation(fullResponse, { teacherText, allowHint, allowMisconception })
     if (violation) {
       logger.info(`Student reply broke rule "${violation.rule}", regenerating: ${fullResponse}`)
       const retry = await generateOnce(
         `\n\nIMPORTANT: Your draft reply was: "${fullResponse}". ${violation.instruction} Write a different reply that follows every rule.`
       )
       if (retry && !isNearDuplicate(retry, lastAiMessage)) {
-        const retryViolation = findRuleViolation(retry, { teacherText, allowHint })
+        const retryViolation = findRuleViolation(retry, { teacherText, allowHint, allowMisconception })
         if (retryViolation) {
           logger.warn(`Regenerated reply still broke rule "${retryViolation.rule}" — keeping it`)
         }
@@ -300,7 +360,14 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     // The student speaks in one or two sentences — collapse any line
     // breaks the model puts between an acknowledgement and its question,
     // which would otherwise show as a gap inside the chat bubble
-    fullResponse = fullResponse.replace(/\s*\n+\s*/g, ' ').trim()
+    // The marker never reaches the user: it is stripped here, before
+    // the reply is streamed, and reported to the caller instead
+    const stripped = stripUnderstoodMarker(fullResponse)
+    const understood = stripped.understood
+
+    // The student speaks in one or two sentences — collapse any line
+    // breaks the model puts between an acknowledgement and its question
+    fullResponse = stripped.text
 
     const words = fullResponse.split(' ')
     for (let i = 0; i < words.length; i++) {
@@ -308,7 +375,7 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
       await new Promise((r) => setTimeout(r, 30))
     }
 
-    onComplete(fullResponse)
+    onComplete(fullResponse, { understood })
   } catch (err) {
     logger.error(`AI streaming error: ${err.message}`)
     // Second argument tells the caller to show the "limit reached"

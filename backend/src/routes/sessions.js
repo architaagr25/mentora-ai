@@ -14,7 +14,7 @@ import { transcribeLimiter } from '../middleware/rateLimiter.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 import { ensureKeyPoints } from '../services/keyPointsService.js'
-import { recordGapsForScore } from '../services/gapService.js'
+import { recordGapsForScore, normaliseKey } from '../services/gapService.js'
 import Gap from '../models/Gap.js'
 import { finalizeSession } from '../services/sessionEndService.js'
 import { checkForNewBadges } from '../services/badgeService.js'
@@ -133,7 +133,7 @@ router.post('/', async (req, res, next) => {
       })
     }
 
-    const { mode, focusGapId } = result.data
+    const { mode, audience, focusGapId } = result.data
     let { topic } = result.data
 
     // Practice session for one gap — it must be this user's gap, and
@@ -143,6 +143,26 @@ router.post('/', async (req, res, next) => {
       const gap = await Gap.findOne({ _id: focusGapId, userId: req.user._id })
       if (!gap) throw new AppError('Gap not found', 404)
       topic = gap.topic
+
+      // Practising a gap continues the session already open on this
+      // topic instead of starting an empty duplicate: what was taught
+      // so far is the context for closing the gap, and History would
+      // otherwise fill up with a new blank session per Practise click.
+      const activeSessions = await Session.find({
+        userId: req.user._id,
+        status: 'active',
+      }).sort({ updatedAt: -1 })
+      const sameTopic = activeSessions.find(
+        (s) => normaliseKey(s.topic) === normaliseKey(gap.topic)
+      )
+
+      if (sameTopic) {
+        sameTopic.focusGapId = gap._id
+        sameTopic.focusGapText = gap.text
+        await sameTopic.save()
+        return res.status(200).json({ status: 'success', session: sameTopic, resumed: true })
+      }
+
       focus = { focusGapId: gap._id, focusGapText: gap.text }
     }
 
@@ -150,6 +170,7 @@ router.post('/', async (req, res, next) => {
       userId: req.user._id,
       topic,
       mode,
+      audience,
       ...focus,
     })
 
@@ -258,6 +279,7 @@ router.post('/:id/message', async (req, res, next) => {
     const aiResult = await getAIStudentResponse(session.topic, session.messages, {
       ...buildNotesContext(session, STUDENT_NOTES_CHARS),
       focusGap: session.focusGapText,
+      audience: session.audience,
     })
 
     if (!aiResult.success) {

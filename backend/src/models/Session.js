@@ -140,6 +140,13 @@ const sessionSchema = new mongoose.Schema(
       enum: ['active', 'completed'],
       default: 'active',
     },
+    // Who the AI student pretends to be. Changes its vocabulary and the
+    // kind of questions it asks, not what it is allowed to know.
+    audience: {
+      type: String,
+      enum: ['child', 'peer', 'interviewer'],
+      default: 'peer',
+    },
     mode: {
       type: String,
       enum: ['text', 'voice'],

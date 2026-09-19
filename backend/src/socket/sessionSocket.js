@@ -14,6 +14,7 @@ import { shouldRefreshMemory, refreshSessionMemory } from '../services/sessionMe
 import { ensureKeyPoints } from '../services/keyPointsService.js'
 import { recordGapsForScore } from '../services/gapService.js'
 import { finalizeSession } from '../services/sessionEndService.js'
+import Gap from '../models/Gap.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
 // Called once from app.js with the io instance
@@ -77,6 +78,8 @@ const initializeSocket = (io) => {
       coveredConcepts: session.coveredConcepts ?? [],
       // Practice session: the gap the student should steer toward
       focusGap: session.focusGapText,
+      // Who the student acts like (child / peer / interviewer)
+      audience: session.audience,
     }
 
     await getAIStudentResponseStream(
@@ -88,7 +91,7 @@ const initializeSocket = (io) => {
           socket.emit('ai_response_chunk', { text: chunkText })
         },
 
-        onComplete: async (fullText) => {
+        onComplete: async (fullText, { understood = false } = {}) => {
           // Save the complete AI response to DB
           session.messages.push({
             role: 'assistant',
@@ -99,7 +102,9 @@ const initializeSocket = (io) => {
           const aiMessage = session.messages[session.messages.length - 1]
 
           // Tell client the AI is done
-          socket.emit('ai_response_done', { message: aiMessage })
+          // understood: the student said it gets it — the client offers
+          // 'score now or keep going' rather than scoring on its own
+          socket.emit('ai_response_done', { message: aiMessage, understood })
 
           logger.info(`AI response complete for session ${socket.sessionId}`)
 
@@ -150,7 +155,7 @@ const initializeSocket = (io) => {
     // ─────────────────────────────────────────
     socket.on('join_session', async (data) => {
       try {
-        const { sessionId } = data
+        const { sessionId, focus = false } = data
 
         if (!sessionId) {
           return socket.emit('error', { message: 'Session ID required' })
@@ -169,6 +174,26 @@ const initializeSocket = (io) => {
 
         if (session.status !== 'active') {
           return socket.emit('error', { message: 'Session has ended' })
+        }
+        // A gap practice visit keeps the focus; opening the same session
+        // any other way (History, Dashboard, a direct link) is a normal
+        // continue, so the focus is dropped instead of following the
+        // session around forever. A focus whose gap is no longer open is
+        // dropped either way.
+        if (session.focusGapId) {
+          const stillPractising =
+            focus &&
+            (await Gap.exists({
+              _id: session.focusGapId,
+              userId: socket.user._id,
+              status: 'open',
+            }))
+
+          if (!stillPractising) {
+            session.focusGapId = null
+            session.focusGapText = null
+            await session.save()
+          }
         }
 
         // Join the Socket.io room for this session

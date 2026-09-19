@@ -259,7 +259,8 @@ const Concepts = () => {
   // "Practise" — a new session on the gap's topic, focused on that gap
   const startPractice = useMutation({
     mutationFn: (gap) => api.post('/sessions', { topic: gap.topic, focusGapId: gap._id }),
-    onSuccess: (res) => navigate(`/session/${res.data.session._id}`),
+    onSuccess: (res) =>
+      navigate(`/session/${res.data.session._id}`, { state: { from: '/concepts', focus: true } }),
   })
   const startingId =
     startPractice.isPending || startPractice.isSuccess ? startPractice.variables?._id : null

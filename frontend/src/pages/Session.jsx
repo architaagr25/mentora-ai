@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft,
@@ -100,6 +100,13 @@ const formatDate = (dateString) => {
 const Session = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  // Back goes to wherever the session was opened from (History,
+  // Concepts, Dashboard). Pages pass it in navigation state; a direct
+  // link or a reload falls back to the dashboard.
+  const backTo = location.state?.from ?? '/dashboard'
+  // Only a visit opened from "Practise this gap" keeps the gap focus
+  const isPracticeVisit = location.state?.focus === true
 
 const {
     currentSession,
@@ -131,6 +138,8 @@ const {
     coveredConcepts,
     focusGap,
     sessionSummary,
+    studentUnderstood,
+    dismissUnderstood,
   } = useSessionStore()
 
   const [input, setInput] = useState('')
@@ -174,7 +183,7 @@ const lastSpokenIdRef = useRef(null)
   // ─── JOIN SESSION ON MOUNT ───
   useEffect(() => {
     if (id) {
-      joinExistingSession(id)
+      joinExistingSession(id, { focus: isPracticeVisit })
     }
     return () => {
       resetSession()
@@ -415,7 +424,7 @@ const lastSpokenIdRef = useRef(null)
       {/* ─── LEFT INFO PANEL (desktop only) ─── */}
       <aside className="hidden lg:flex w-72 flex-shrink-0 border-r border-slate-800 bg-[#0D1426] flex-col p-6 h-screen overflow-y-auto">
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(backTo)}
           className="flex items-center gap-2 text-slate-200 hover:text-white transition-colors text-sm mb-8 w-fit"
         >
           <ArrowLeft size={16} />
@@ -630,7 +639,7 @@ const lastSpokenIdRef = useRef(null)
           <div className="px-4 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate(backTo)}
                 className="text-slate-500 hover:text-white transition-colors flex-shrink-0"
               >
                 <ArrowLeft size={20} />
@@ -789,7 +798,7 @@ const lastSpokenIdRef = useRef(null)
             onSwitchToText={() => toggleVoiceMode(false)}
             onOpenScore={() => setShowScorePanel(true)}
             onEndSession={() => setShowEndConfirm(true)}
-            onNavigateBack={() => navigate('/dashboard')}
+            onNavigateBack={() => navigate(backTo)}
             topic={currentSession?.topic}
             latestScore={latestScore}
             sessionError={error}
@@ -907,6 +916,36 @@ const lastSpokenIdRef = useRef(null)
               </div>
             </div>
 
+            {/* The student said it understands — offer to score or carry
+                on. Never scores by itself: the teacher decides. */}
+            {studentUnderstood && !isEnded && (
+              <div className="flex-shrink-0 border-t border-green-500/20 bg-green-500/5">
+                <div className="max-w-3xl mx-auto px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <p className="text-sm text-slate-300 flex items-center gap-2 flex-1 min-w-0">
+                    <CheckCircle2 size={15} className="text-green-400 flex-shrink-0" />
+                    The AI student says it gets it. Score now, or keep going?
+                  </p>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => {
+                        setShowScorePanel(true)
+                        if (!isScoreButtonDisabled) requestScore()
+                        dismissUnderstood()
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all"
+                    >
+                      Score now
+                    </button>
+                    <button
+                      onClick={dismissUnderstood}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-colors"
+                    >
+                      Keep going
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* ─── INPUT BAR ─── */}
             <div className="flex-shrink-0 border-t border-slate-800 bg-[#0D1426]">
               <div className="max-w-3xl mx-auto px-4 py-3">

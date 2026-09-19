@@ -13,6 +13,14 @@ import { useNavigate } from 'react-router-dom'
 import useSessionStore from '@/store/sessionStore'
 import api from '@/api'
 
+// Who the AI student acts like. This changes its vocabulary and the
+// kind of questions it asks — not what it is allowed to know.
+const AUDIENCES = [
+  { value: 'child', label: 'A curious child', hint: 'Simple words, asks for everyday examples' },
+  { value: 'peer', label: 'A fellow student', hint: 'Your level — the default' },
+  { value: 'interviewer', label: 'An interviewer', hint: 'Friendly, but presses for precision' },
+]
+
 const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) => {
   const navigate = useNavigate()
   const { createSession } = useSessionStore()
@@ -20,6 +28,7 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
   // ─── Topic state ───
   const [topic, setTopic] = useState(initialTopic)
   const [topicError, setTopicError] = useState('')
+  const [audience, setAudience] = useState('peer')
 
   // ─── PDF state ───
   const [pdfFile, setPdfFile] = useState(null)
@@ -91,7 +100,7 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
     setTopicError('')
 
     // Step 1: Create the session
-    const session = await createSession(topic.trim())
+    const session = await createSession(topic.trim(), 'text', audience)
     if (!session) {
       setIsCreating(false)
       setTopicError('Failed to create session. Please try again.')
@@ -198,6 +207,40 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
             </p>
           </div>
 
+          {/* Who the AI student acts like */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Teach it to{' '}
+              <span className="text-slate-500 font-normal">(changes how it asks)</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {AUDIENCES.map((option) => {
+                const isSelected = audience === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAudience(option.value)}
+                    aria-pressed={isSelected}
+                    className={`text-left px-3 py-2.5 rounded-xl border transition-colors ${
+                      isSelected
+                        ? 'border-violet-500/50 bg-violet-600/15'
+                        : 'border-slate-700 bg-[#080D1A] hover:border-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`block text-sm font-medium ${
+                        isSelected ? 'text-violet-200' : 'text-slate-300'
+                      }`}
+                    >
+                      {option.label}
+                    </span>
+                    <span className="block text-xs text-slate-500 mt-0.5">{option.hint}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           {/* PDF upload */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-slate-300 mb-2">
