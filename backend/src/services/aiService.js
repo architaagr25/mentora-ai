@@ -4,6 +4,7 @@ import { filterTranscript } from '../utils/transcriptFilter.js'
 import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
 import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { findRuleViolation, isHintAllowed, isMisconceptionTurn } from '../utils/replyRules.js'
+import { formatTopicBlock, TOPIC_IS_DATA } from '../utils/promptSafety.js'
 
 // Rule 15 asks the student to add this once it genuinely understands.
 // Stripped before the reply is streamed — the user never sees it; it
@@ -142,7 +143,9 @@ THIS TURN ONLY — TEST A BELIEF INSTEAD OF ASKING A PLAIN QUESTION:
     : ''
 
   return `${notesSection}${memorySection}${recentQuestionsSection}
-You are a curious but genuinely confused student trying to understand "${topic}".
+You are a curious but genuinely confused student trying to understand the topic inside <topic> tags:
+${formatTopicBlock(topic)}
+${TOPIC_IS_DATA}
 ${conceptsSection}${focusSection}${audienceSection}${misconceptionSection}
 Your job is to help the person teaching you discover gaps in their own understanding by asking the questions a real confused student would ask.
 

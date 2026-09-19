@@ -99,8 +99,14 @@ const useSessionStore = create((set, get) => ({
 
       return session
     } catch (err) {
-      const message =
-        err.response?.data?.message || 'Failed to create session'
+      // Validation problems come back as { errors: { topic: [...] } },
+      // everything else as { message }. Without the first branch a bad
+      // topic showed only "Failed to create session".
+      const data = err.response?.data
+      const fieldError = Object.values(data?.errors ?? {})
+        .flat()
+        .filter(Boolean)[0]
+      const message = fieldError || data?.message || 'Failed to create session'
       set({ error: message, isJoining: false })
       return null
     }

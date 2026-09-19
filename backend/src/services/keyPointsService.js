@@ -4,6 +4,7 @@ import logger from '../utils/logger.js'
 import { withGeminiRetry } from '../utils/geminiRetry.js'
 import { getGeminiModel } from '../config/ai.js'
 import { formatNotesBlock } from '../utils/notesContext.js'
+import { formatTopicBlock, sanitiseTopic, TOPIC_IS_DATA } from '../utils/promptSafety.js'
 import Session from '../models/Session.js'
 
 // ─────────────────────────────────────────
@@ -22,7 +23,9 @@ export const MAX_KEY_POINTS = 8
 const MIN_USABLE_KEY_POINTS = 3
 
 const buildPrompt = (topic, concepts, hasNotes) => `
-You are an expert educator preparing to assess a student's explanation of "${topic}".
+You are an expert educator preparing to assess a student's explanation of the topic inside <topic> tags:
+${formatTopicBlock(topic)}
+${TOPIC_IS_DATA}
 
 List the ${MIN_KEY_POINTS} to ${MAX_KEY_POINTS} key points that a complete, beginner-friendly explanation of this topic must make.
 ${
@@ -51,7 +54,7 @@ export const generateKeyPoints = async (topic, { concepts = null, notesExcerpt =
       () =>
         ai.models.generateContent({
           model: getGeminiModel(),
-          contents: `${formatNotesBlock(notesExcerpt)}List the key points for "${topic}" as JSON.`,
+          contents: `${formatNotesBlock(notesExcerpt)}List the key points for the topic "${sanitiseTopic(topic)}" as JSON.`,
           config: {
             systemInstruction: buildPrompt(topic, concepts, Boolean(notesExcerpt)),
             maxOutputTokens: 500,

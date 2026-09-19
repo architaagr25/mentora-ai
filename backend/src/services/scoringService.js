@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
-import { stripReservedTags } from '../utils/promptSafety.js'
+import { stripReservedTags, formatTopicBlock, TOPIC_IS_DATA } from '../utils/promptSafety.js'
 import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
 import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { formatNotesBlock } from '../utils/notesContext.js'
@@ -46,7 +46,9 @@ const getScoringSystemPrompt = (
   topic,
   { concepts = null, hasNotesText = false, keyPoints = [] } = {}
 ) => `
-You are an expert educator evaluating a student's explanation of "${topic}".
+You are an expert educator evaluating a student's explanation of the topic inside <topic> tags:
+${formatTopicBlock(topic)}
+${TOPIC_IS_DATA}
 
 You will be given a conversation, inside <transcript> tags, where a student was teaching this topic to a confused student.${getNotesSection(concepts, hasNotesText)}
 Each turn is a <message> tag:

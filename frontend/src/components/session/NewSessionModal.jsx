@@ -103,7 +103,11 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
     const session = await createSession(topic.trim(), 'text', audience)
     if (!session) {
       setIsCreating(false)
-      setTopicError('Failed to create session. Please try again.')
+      // Show why it failed (e.g. "Topic must contain a word") rather
+      // than a blanket message
+      setTopicError(
+        useSessionStore.getState().error || 'Failed to create session. Please try again.'
+      )
       return
     }
 

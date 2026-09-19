@@ -1,6 +1,7 @@
 import pdf from 'pdf-parse/lib/pdf-parse.js'
 import { GoogleGenAI } from '@google/genai'
 import logger from '../utils/logger.js'
+import { formatTopicBlock, TOPIC_IS_DATA } from '../utils/promptSafety.js'
 import { withGeminiRetry, isQuotaExceeded } from '../utils/geminiRetry.js'
 import { getGeminiModel, AI_LIMIT_MESSAGE } from '../config/ai.js'
 
@@ -53,7 +54,9 @@ const splitIntoChunks = (text) => {
 // ─────────────────────────────────────────
 const extractConceptsFromChunk = async (ai, topic, chunkText, chunkIndex, totalChunks) => {
   const systemPrompt = `
-You are an expert educator. A student has uploaded their study notes about "${topic}".
+You are an expert educator. A student has uploaded their study notes about the topic inside <topic> tags:
+${formatTopicBlock(topic)}
+${TOPIC_IS_DATA}
 ${totalChunks > 1 ? `You are reading part ${chunkIndex + 1} of ${totalChunks} of their notes.` : ''}
 
 Extract a focused list of concepts, facts, and ideas from this text that the student should be able to explain clearly. These will be used to guide a teaching session.

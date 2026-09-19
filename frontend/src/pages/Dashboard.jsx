@@ -396,7 +396,7 @@ const handleSessionClick = (session, isActive) => {
   const handlePractiseGap = async (gap) => {
     setStartingGapId(gap._id)
     try {
-      const res = await api.post('/sessions', { topic: gap.topic, focusGapId: gap._id })
+      const res = await api.post('/sessions', { focusGapId: gap._id })
       navigate(`/session/${res.data.session._id}`, { state: { from: '/dashboard', focus: true } })
     } catch {
       setStartingGapId(null)
