@@ -372,11 +372,11 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     // breaks the model puts between an acknowledgement and its question
     fullResponse = stripped.text
 
-    const words = fullResponse.split(' ')
-    for (let i = 0; i < words.length; i++) {
-      onChunk(words[i] + (i < words.length - 1 ? ' ' : ''))
-      await new Promise((r) => setTimeout(r, 30))
-    }
+    // Sent in one piece. The reply has to be complete before it can go
+    // out anyway (the duplicate check, the rule check and the marker
+    // strip all need the whole draft), so the old word-by-word loop was
+    // a typing animation that delayed every reply by 30ms per word.
+    onChunk(fullResponse)
 
     onComplete(fullResponse, { understood })
   } catch (err) {

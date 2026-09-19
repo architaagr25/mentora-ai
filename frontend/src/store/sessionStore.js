@@ -22,6 +22,33 @@ const SCORE_TOAST_MS = 8000
 // `unsentMessage` so the page can put it back in the input box.
 let pendingContent = null
 
+// ─────────────────────────────────────────
+// TYPING EFFECT
+// The server sends the finished reply in one piece — it has to, since
+// the duplicate check, the reply-rule check and the [UNDERSTOOD] strip
+// all need the whole draft before any of it is safe to show. The
+// typing itself is done here instead, so it costs nothing: the text is
+// already in the browser, this only decides how fast it appears.
+// ─────────────────────────────────────────
+const TYPE_TICK_MS = 16
+const TYPE_CHARS_PER_SECOND = 190
+// However long the reply, the typing never drags past this
+const TYPE_MAX_SECONDS = 2.5
+
+let typeTimer = null
+let typeBuffer = ''
+let typeShown = 0
+// ai_response_done that arrived while the text was still appearing
+let pendingDone = null
+
+const stopTypewriter = () => {
+  if (typeTimer) clearInterval(typeTimer)
+  typeTimer = null
+  typeBuffer = ''
+  typeShown = 0
+  pendingDone = null
+}
+
 const useSessionStore = create((set, get) => ({
   // ─────────────────────────────────────────
   // STATE
@@ -167,6 +194,7 @@ const useSessionStore = create((set, get) => ({
   // ─────────────────────────────────────────
   resetSession: () => {
     socketLeaveSession()
+    stopTypewriter()
     pendingContent = null
     set({
       currentSession: null,
@@ -249,12 +277,36 @@ const useSessionStore = create((set, get) => ({
   },
 
   handleAIChunk: (data) => {
-    set((state) => ({
-      streamingMessage: state.streamingMessage + data.text,
-    }))
+    typeBuffer += data.text
+    if (typeTimer) return
+
+    typeTimer = setInterval(() => {
+      const total = typeBuffer.length
+      // Steady pace, but quicker for a long reply so it still lands
+      // within TYPE_MAX_SECONDS
+      const perTick = Math.max(
+        Math.ceil((TYPE_CHARS_PER_SECOND * TYPE_TICK_MS) / 1000),
+        Math.ceil(total / ((TYPE_MAX_SECONDS * 1000) / TYPE_TICK_MS))
+      )
+      typeShown = Math.min(total, typeShown + perTick)
+      set({ streamingMessage: typeBuffer.slice(0, typeShown) })
+
+      if (typeShown < total) return
+
+      // Caught up: either finish the reply, or idle until more arrives
+      if (pendingDone) {
+        const done = pendingDone
+        stopTypewriter()
+        get().commitAIMessage(done)
+        return
+      }
+      clearInterval(typeTimer)
+      typeTimer = null
+    }, TYPE_TICK_MS)
   },
 
-  handleAIDone: (data) => {
+  // Swaps the animated bubble for the saved message
+  commitAIMessage: (data) => {
     set((state) => ({
       messages: [...state.messages, data.message],
       streamingMessage: '',
@@ -264,11 +316,23 @@ const useSessionStore = create((set, get) => ({
     }))
   },
 
+  handleAIDone: (data) => {
+    // If the text is still appearing, let it finish first — otherwise
+    // the bubble would jump to the full reply mid-sentence
+    if (typeTimer && typeShown < typeBuffer.length) {
+      pendingDone = data
+      return
+    }
+    stopTypewriter()
+    get().commitAIMessage(data)
+  },
+
   dismissUnderstood: () => set({ studentUnderstood: false }),
 
   // Sent when a retry starts — there's no user message to save this
   // time, so this is what switches the UI into the "thinking" state
   handleAIReplyStarted: () => {
+    stopTypewriter()
     set({ isSending: false, isStreaming: true, streamingMessage: '' })
   },
 
@@ -410,6 +474,8 @@ const useSessionStore = create((set, get) => ({
   // waiting states rather than leaving them stuck forever. Sending
   // stays blocked (via connectionStatus) until we're back.
   handleDisconnect: (reason) => {
+    // A dropped connection ends the reply — stop mid-animation
+    stopTypewriter()
     set((state) => ({
       isSending: false,
       isStreaming: false,

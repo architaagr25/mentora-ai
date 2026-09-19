@@ -12,6 +12,7 @@ import { z } from 'zod'
 import { sendEmail } from '../services/emailService.js'
 import { resetPasswordTemplate, welcomeTemplate } from '../utils/emailTemplates.js'
 import logger from '../utils/logger.js'
+import { disconnectUserSockets } from '../socket/userSockets.js'
 
 const router = express.Router()
 
@@ -209,10 +210,14 @@ router.post('/logout', async (req, res, next) => {
     if (refreshToken) {
       // Remove this specific refresh token from the DB
       // $pull removes elements from an array that match the condition
-      await User.updateOne(
+      const owner = await User.findOneAndUpdate(
         { refreshTokens: refreshToken },
         { $pull: { refreshTokens: refreshToken } }
       )
+
+      // An open socket was authenticated when it connected, so it would
+      // otherwise keep working after this logout
+      if (owner) disconnectUserSockets(owner._id)
     }
 
     // Clear the cookie regardless of whether we found a token
@@ -346,6 +351,10 @@ router.post('/reset-password', passwordResetLimiter, async (req, res, next) => {
     user.refreshTokens = []
 
     await user.save()
+
+    // Same reasoning: any socket still open belongs to a session that
+    // should no longer be trusted
+    disconnectUserSockets(user._id)
 
     res.status(200).json({
       status: 'success',

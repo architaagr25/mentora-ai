@@ -217,9 +217,12 @@ const lastSpokenIdRef = useRef(null)
     // To the box's very bottom (past its padding), so the newest message
     // sits right above the message box. 'instant' also overrides the
     // site-wide smooth scrolling in index.css.
+    // While the reply is still appearing the text grows every frame, so
+    // smooth scrolling would queue dozens of animations against itself
+    const isTyping = streamingMessage.length > 0
     container.scrollTo({
       top: container.scrollHeight,
-      behavior: isFirstScroll ? 'instant' : 'smooth',
+      behavior: isFirstScroll || isTyping ? 'instant' : 'smooth',
     })
     scrolledSessionIdRef.current = sessionId
   }, [messages, streamingMessage, currentSession?._id])

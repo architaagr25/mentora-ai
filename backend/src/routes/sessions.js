@@ -2,23 +2,18 @@ import express from 'express'
 import Session from '../models/Session.js'
 import auth from '../middleware/auth.js'
 import { AppError } from '../middleware/errorHandler.js'
-import {
-  createSessionSchema,
-  sendMessageSchema,
-} from '../validators/sessionValidator.js'
-import { getAIStudentResponse, transcribeAudio } from '../services/aiService.js'
-import { scoreSession } from '../services/scoringService.js'
-import { getXpBreakdown } from '../utils/gamification.js'
+import { createSessionSchema } from '../validators/sessionValidator.js'
+import { transcribeAudio } from '../services/aiService.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { transcribeLimiter } from '../middleware/rateLimiter.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
-import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
-import { ensureKeyPoints } from '../services/keyPointsService.js'
-import { recordGapsForScore, normaliseKey } from '../services/gapService.js'
+import { normaliseKey } from '../services/gapService.js'
 import Gap from '../models/Gap.js'
-import { finalizeSession } from '../services/sessionEndService.js'
-import { checkForNewBadges } from '../services/badgeService.js'
-import User from '../models/User.js'
+import {
+  scoreSessionAndAward,
+  endSessionAndAward,
+  SCORE_BLOCKED,
+} from '../services/sessionService.js'
 import multer from 'multer'
 import { extractTextFromPdf, extractConceptsFromText } from '../services/notesService.js'
 
@@ -237,86 +232,6 @@ router.get('/:id', async (req, res, next) => {
 })
 
 // ─────────────────────────────────────────
-// POST /api/sessions/:id/message
-// User sends a message → AI student responds
-// Both messages saved to DB
-// ─────────────────────────────────────────
-router.post('/:id/message', async (req, res, next) => {
-  try {
-    const result = sendMessageSchema.safeParse(req.body)
-    if (!result.success) {
-      return res.status(400).json({
-        status: 'error',
-        errors: result.error.flatten().fieldErrors,
-      })
-    }
-
-    const { content } = result.data
-
-    const session = await Session.findById(req.params.id)
-
-    if (!session) {
-      throw new AppError('Session not found', 404)
-    }
-
-    if (session.userId.toString() !== req.user._id.toString()) {
-      throw new AppError('Not authorised to access this session', 403)
-    }
-
-    if (session.status !== 'active') {
-      throw new AppError(
-        'This session has ended. Start a new session to continue learning this topic.',
-        400
-      )
-    }
-
-    // Step 1 — Save the user message
-    session.messages.push({ role: 'user', content })
-    await session.save()
-
-    // Step 2 — Get AI student response
-    // Pass full message history so Claude has context
-    const aiResult = await getAIStudentResponse(session.topic, session.messages, {
-      ...buildNotesContext(session, STUDENT_NOTES_CHARS),
-      focusGap: session.focusGapText,
-      audience: session.audience,
-    })
-
-    if (!aiResult.success) {
-      // AI call failed — still return the user message
-      // so it's not lost, but flag the AI error
-      return res.status(200).json({
-        status: 'partial',
-        userMessage: session.messages[session.messages.length - 1],
-        aiError: aiResult.quotaExceeded
-          ? AI_LIMIT_MESSAGE
-          : 'AI student is unavailable right now. Please try again.',
-      })
-    }
-
-    // Step 3 — Save the AI response
-    session.messages.push({
-      role: 'assistant',
-      content: aiResult.content,
-    })
-    await session.save()
-
-    // Step 4 — Return both messages
-    const messages = session.messages
-    const userMessage = messages[messages.length - 2]
-    const aiMessage = messages[messages.length - 1]
-
-    res.status(201).json({
-      status: 'success',
-      userMessage,
-      aiMessage,
-    })
-  } catch (err) {
-    next(err)
-  }
-})
-
-// ─────────────────────────────────────────
 // POST /api/sessions/:id/score
 // Request a real score for the current session
 // Session stays active after scoring
@@ -337,93 +252,39 @@ router.post('/:id/score', async (req, res, next) => {
       throw new AppError('Cannot score a completed session', 400)
     }
 
-    const userMessages = session.messages.filter(
-      (msg) => msg.role === 'user'
-    )
+    // Scoring, XP, gaps and badges all live in the service, shared with
+    // the socket path
+    const result = await scoreSessionAndAward(session, req.user)
 
-    if (userMessages.length < MIN_USER_MESSAGES_TO_SCORE) {
-      throw new AppError(
-        `Send at least ${MIN_USER_MESSAGES_TO_SCORE} messages before requesting a score.`,
-        400
-      )
-    }
-
-    if (!session.hasNewMessagesSinceLastScore()) {
-      throw new AppError('Explain a bit more before requesting a new score.', 400)
-    }
-
-    // Call scoring service
-    const notesContext = buildNotesContext(session)
-    // Fixed yardstick for completeness — generated on the first score,
-    // then reused so rescores are comparable
-    const keyPoints = await ensureKeyPoints(session, notesContext)
-    const scoringResult = await scoreSession(session.topic, session.messages, {
-      ...notesContext,
-      keyPoints,
-    })
-
-    if (!scoringResult.success) {
-      if (scoringResult.quotaExceeded) throw new AppError(AI_LIMIT_MESSAGE, 429)
+    if (!result.ok) {
+      if (result.reason === SCORE_BLOCKED.TOO_FEW_MESSAGES) {
+        throw new AppError(
+          `Send at least ${MIN_USER_MESSAGES_TO_SCORE} messages before requesting a score.`,
+          400
+        )
+      }
+      if (result.reason === SCORE_BLOCKED.NO_NEW_MESSAGES) {
+        throw new AppError('Explain a bit more before requesting a new score.', 400)
+      }
+      if (result.quotaExceeded) throw new AppError(AI_LIMIT_MESSAGE, 429)
       throw new AppError('Scoring failed. Please try again.', 500)
-    }
-
-    // Only XP above this session's previous best is awarded
-    const xp = getXpBreakdown(scoringResult.scores, session.scores)
-    const { xpEarned } = xp
-
-    // Save score snapshot to session
-    session.scores.push({
-      ...scoringResult.scores,
-      messageCountAtScore: userMessages.length,
-    })
-    await session.save()
-    // Keep the Concepts page's open/resolved gaps in step with this score
-    const gapResult = await recordGapsForScore(session, scoringResult.scores.gaps, {
-      score: scoringResult.scores,
-    })
-    let totalXp = req.user.xp
-    let userForBadgeCheck = req.user
-    if (xpEarned > 0) {
-      const updatedUser = await User.findByIdAndUpdate(
-        req.user._id,
-        { $inc: { xp: xpEarned } },
-        { new: true }
-      )
-      totalXp = updatedUser.xp
-      userForBadgeCheck = updatedUser
-    }
-
-    // Check for newly-earned badges now that this score (and any XP
-    // it awarded) has been saved. Fetches all of this user's sessions
-    // fresh — see badgeService.js for why this isn't cached/incremental.
-    const allSessions = await Session.find({ userId: req.user._id }).select('-messages')
-    const newBadges = checkForNewBadges(userForBadgeCheck, allSessions)
-    if (newBadges.length > 0) {
-      await User.findByIdAndUpdate(req.user._id, {
-        $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
-      })
     }
 
     res.status(200).json({
       status: 'success',
-      score: session.scores[session.scores.length - 1],
-      totalScores: session.scores.length,
-      allScores: session.scores,
-      xpEarned,
-      totalXp,
-      xp: { ...xp, totalXp },
-      focusGapResolved: gapResult.focusGapResolved,
-      newBadges: newBadges.map((b) => ({
-        id: b.id,
-        name: b.name,
-        description: b.description,
-      })),
+      score: result.score,
+      totalScores: result.totalScores,
+      allScores: result.allScores,
+      xpEarned: result.xp.xpEarned,
+      totalXp: result.xp.totalXp,
+      xp: result.xp,
+      focusGapResolved: result.focusGapResolved,
+      newBadges: result.newBadges,
     })
   } catch (err) {
     next(err)
   }
 })
-
 // ─────────────────────────────────────────
 // POST /api/sessions/:id/end
 // End a session — marks it completed and locks it
@@ -444,31 +305,15 @@ router.post('/:id/end', async (req, res, next) => {
       throw new AppError('This session has already ended', 400)
     }
 
-    // Scores anything taught since the last score, then completes the
-    // session (shared with the socket path)
-    const summary = await finalizeSession(session, req.user)
-
-    // Completing a session can unlock session-count badges (e.g.
-    // "First Steps") — this route is what Dashboard's "Mark as
-    // Complete" button actually calls, so badge-checking needs to
-    // happen here too, not just after scoring.
-    const allSessions = await Session.find({ userId: req.user._id }).select('-messages')
-    const newBadges = checkForNewBadges(req.user, allSessions)
-    if (newBadges.length > 0) {
-      await User.findByIdAndUpdate(req.user._id, {
-        $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
-      })
-    }
+    // Scores anything taught since the last score, completes the
+    // session and awards what it earned (shared with the socket path)
+    const { summary, newBadges } = await endSessionAndAward(session, req.user)
 
     res.status(200).json({
       status: 'success',
       session,
       summary,
-      newBadges: newBadges.map((b) => ({
-        id: b.id,
-        name: b.name,
-        description: b.description,
-      })),
+      newBadges,
     })
   } catch (err) {
     next(err)

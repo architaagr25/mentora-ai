@@ -2,18 +2,21 @@ import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
 import Session from '../models/Session.js'
 import { getAIStudentResponseStream } from '../services/aiService.js'
-import { scoreSession } from '../services/scoringService.js'
 import logger from '../utils/logger.js'
-import { calculateStreakUpdate, getXpBreakdown } from '../utils/gamification.js'
-import { checkForNewBadges } from '../services/badgeService.js'
+import { calculateStreakUpdate } from '../utils/gamification.js'
+import {
+  scoreSessionAndAward,
+  endSessionAndAward,
+  awardNewBadges,
+  checkCanScore,
+  SCORE_BLOCKED,
+} from '../services/sessionService.js'
 import { MIN_USER_MESSAGES_TO_SCORE } from '../constants/scoring.js'
 import { messageRateLimiter, scoreRateLimiter } from './socketRateLimit.js'
+import { registerIo } from './userSockets.js'
 import { AI_LIMIT_MESSAGE } from '../config/ai.js'
 import { buildNotesContext, STUDENT_NOTES_CHARS } from '../utils/notesContext.js'
 import { shouldRefreshMemory, refreshSessionMemory } from '../services/sessionMemoryService.js'
-import { ensureKeyPoints } from '../services/keyPointsService.js'
-import { recordGapsForScore } from '../services/gapService.js'
-import { finalizeSession } from '../services/sessionEndService.js'
 import Gap from '../models/Gap.js'
 // ─────────────────────────────────────────
 // INITIALIZE SOCKET
@@ -21,6 +24,10 @@ import Gap from '../models/Gap.js'
 // Sets up authentication middleware and event handlers
 // ─────────────────────────────────────────
 const initializeSocket = (io) => {
+  // Lets the auth routes disconnect a user everywhere after a logout
+  // or a password change
+  registerIo(io)
+
   // ─────────────────────────────────────────
   // SOCKET AUTHENTICATION MIDDLEWARE
   // Runs before any connection is established
@@ -147,6 +154,11 @@ const initializeSocket = (io) => {
   // ─────────────────────────────────────────
   io.on('connection', (socket) => {
     logger.info(`Socket connected: ${socket.id} — user: ${socket.user.email}`)
+
+    // Every connection for this user joins one room, so the server can
+    // reach all of their open tabs at once — used to cut them off after
+    // a logout or a password change (see userSockets.js).
+    socket.join(`user:${socket.user._id}`)
 
     // ─────────────────────────────────────────
     // JOIN SESSION
@@ -316,27 +328,9 @@ const initializeSocket = (io) => {
           // Streak just changed — check for streak-based badges.
           // Only runs on an actual streak change (not every message),
           // avoiding an extra Sessions query on every single send.
-          const allSessions = await Session.find({
-            userId: socket.user._id,
-          }).select('-messages')
-          const newBadges = checkForNewBadges(socket.user, allSessions)
+          const newBadges = await awardNewBadges(socket.user)
           if (newBadges.length > 0) {
-            await User.findByIdAndUpdate(socket.user._id, {
-              $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
-            })
-            // Keep the in-memory socket.user in sync — see the same
-            // comment in request_score above for why this is required.
-            socket.user.badges = [
-              ...(socket.user.badges || []),
-              ...newBadges.map((b) => b.id),
-            ]
-            socket.emit('badges_earned', {
-              badges: newBadges.map((b) => ({
-                id: b.id,
-                name: b.name,
-                description: b.description,
-              })),
-            })
+            socket.emit('badges_earned', { badges: newBadges })
           }
         }
 
@@ -429,6 +423,17 @@ const initializeSocket = (io) => {
           latestScore: session?.scores?.[session.scores.length - 1] ?? null,
         })
 
+      // The service reports why it could not score; the wording lives here
+      const blockedMessage = (result) => {
+        if (result.reason === SCORE_BLOCKED.TOO_FEW_MESSAGES) {
+          return `Send at least ${MIN_USER_MESSAGES_TO_SCORE} messages before requesting a score.`
+        }
+        if (result.reason === SCORE_BLOCKED.NO_NEW_MESSAGES) {
+          return 'Explain a bit more before requesting a new score.'
+        }
+        return result.quotaExceeded ? AI_LIMIT_MESSAGE : 'Scoring failed. Please try again.'
+      }
+
       try {
         if (!socket.sessionId) {
           return emitScoreError('Join a session first')
@@ -448,118 +453,34 @@ const initializeSocket = (io) => {
           return emitScoreError('Session not found or ended')
         }
 
-        const userMessages = session.messages.filter(
-          (msg) => msg.role === 'user'
-        )
-
-        if (userMessages.length < MIN_USER_MESSAGES_TO_SCORE) {
-          return emitScoreError(
-            `Send at least ${MIN_USER_MESSAGES_TO_SCORE} messages before requesting a score.`,
-            session
-          )
-        }
-
-        if (!session.hasNewMessagesSinceLastScore()) {
-          return emitScoreError(
-            'Explain a bit more before requesting a new score.',
-            session
-          )
-        }
+        // Checked before the loading state goes up, so a blocked score
+        // never shows a spinner first
+        const gate = checkCanScore(session)
+        if (!gate.ok) return emitScoreError(blockedMessage(gate), session)
 
         // Tell client scoring has started so they can show a loading state
         socket.emit('scoring_started')
 
-        // Scoring gets the larger notes excerpt — accuracy is judged
-        // against the student's own notes where they cover a point
-        const notesContext = buildNotesContext(session)
-        // Fixed yardstick for completeness — generated on the first
-        // score, then reused so rescores are comparable
-        const keyPoints = await ensureKeyPoints(session, notesContext)
-        const scoringResult = await scoreSession(session.topic, session.messages, {
-          ...notesContext,
-          keyPoints,
-        })
+        const result = await scoreSessionAndAward(session, socket.user)
+        if (!result.ok) return emitScoreError(blockedMessage(result), session)
 
-        if (!scoringResult.success) {
-          return emitScoreError(
-            scoringResult.quotaExceeded
-              ? AI_LIMIT_MESSAGE
-              : 'Scoring failed. Please try again.',
-            session
-          )
-        }
-
-        // Only XP above this session's previous best is awarded —
-        // the breakdown also carries the "why" for the client toast
-        const xp = getXpBreakdown(scoringResult.scores, session.scores)
-
-        // Save score snapshot
-        session.scores.push({
-          ...scoringResult.scores,
-          messageCountAtScore: userMessages.length,
-        })
-        await session.save()
-        // Keep the Concepts page's open/resolved gaps in step with this
-        // score — awaited so the page is current if opened straight away
-        const gapResult = await recordGapsForScore(session, scoringResult.scores.gaps, {
-          score: scoringResult.scores,
-        })
-        let userForBadgeCheck = socket.user
-        if (xp.xpEarned > 0) {
-          const updatedUser = await User.findByIdAndUpdate(
-            socket.user._id,
-            { $inc: { xp: xp.xpEarned } },
-            { new: true }
-          )
-          socket.user.xp = updatedUser.xp
-          userForBadgeCheck = updatedUser
-        }
-
-        // Send score result to client
-        // Send the saved snapshot (not the raw scoring result) so the
-        // client gets messageCountAtScore for its rescore guard
         socket.emit('score_result', {
-          score: session.scores[session.scores.length - 1],
-          totalScores: session.scores.length,
-          allScores: session.scores,
-          xp: { ...xp, totalXp: socket.user.xp },
-          // True when this score closed the practice session's focus gap
-          focusGapResolved: gapResult.focusGapResolved,
+          score: result.score,
+          totalScores: result.totalScores,
+          allScores: result.allScores,
+          xp: result.xp,
+          // True when this score closed the practice session focus gap
+          focusGapResolved: result.focusGapResolved,
         })
 
-        // Check for newly-earned badges now that this score is saved
-        const allSessions = await Session.find({
-          userId: socket.user._id,
-        }).select('-messages')
-        const newBadges = checkForNewBadges(userForBadgeCheck, allSessions)
-        if (newBadges.length > 0) {
-          await User.findByIdAndUpdate(socket.user._id, {
-            $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
-          })
-          // socket.user is cached in memory for the lifetime of this
-          // socket connection — the DB write above doesn't refresh it.
-          // Without this, checkForNewBadges would keep re-awarding the
-          // same badge every time this handler runs on the same
-          // connection, since it'd always see the stale (pre-award)
-          // badges list. Same pattern already used for xp/streak below.
-          socket.user.badges = [
-            ...(socket.user.badges || []),
-            ...newBadges.map((b) => b.id),
-          ]
-          socket.emit('badges_earned', {
-            badges: newBadges.map((b) => ({
-              id: b.id,
-              name: b.name,
-              description: b.description,
-            })),
-          })
+        if (result.newBadges.length > 0) {
+          socket.emit('badges_earned', { badges: result.newBadges })
         }
       } catch (err) {
         logger.error(`request_score error: ${err.message}`)
         emitScoreError('Scoring failed. Please try again.')
       }
     })
-
     // ─────────────────────────────────────────
     // END SESSION
     // User ends the session — marks it completed
@@ -580,9 +501,9 @@ const initializeSocket = (io) => {
           return socket.emit('error', { message: 'Session already ended' })
         }
 
-        // Scores anything taught since the last score, then completes
-        // the session — the payload is the wrap-up screen the client shows
-        const summary = await finalizeSession(session, socket.user)
+        // Scores anything taught since the last score, completes the
+        // session and awards whatever that earned
+        const { summary, newBadges } = await endSessionAndAward(session, socket.user)
 
         socket.emit('session_ended', summary)
 
@@ -596,31 +517,8 @@ const initializeSocket = (io) => {
           })
         }
 
-        // Completing a session can unlock session-count badges
-        // (e.g. "First Steps" at 1 completed session) — this was
-        // previously only checked after scoring or a streak update,
-        // so completing your very first session never triggered it.
-        const allSessions = await Session.find({
-          userId: socket.user._id,
-        }).select('-messages')
-        const newBadges = checkForNewBadges(socket.user, allSessions)
         if (newBadges.length > 0) {
-          await User.findByIdAndUpdate(socket.user._id, {
-            $addToSet: { badges: { $each: newBadges.map((b) => b.id) } },
-          })
-          // Keep the in-memory socket.user in sync — see the same
-          // comment in request_score above for why this is required.
-          socket.user.badges = [
-            ...(socket.user.badges || []),
-            ...newBadges.map((b) => b.id),
-          ]
-          socket.emit('badges_earned', {
-            badges: newBadges.map((b) => ({
-              id: b.id,
-              name: b.name,
-              description: b.description,
-            })),
-          })
+          socket.emit('badges_earned', { badges: newBadges })
         }
 
         // Leave the room
@@ -632,7 +530,6 @@ const initializeSocket = (io) => {
         socket.emit('error', { message: 'Failed to end session' })
       }
     })
-
     // ─────────────────────────────────────────
     // DISCONNECT
     // Fires when client disconnects

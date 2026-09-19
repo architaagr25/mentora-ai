@@ -3,6 +3,7 @@ import express from 'express'
 import User from '../models/User.js'
 import auth from '../middleware/auth.js'
 import { AppError } from '../middleware/errorHandler.js'
+import { disconnectUserSockets } from '../socket/userSockets.js'
 import { updateProfileSchema, changePasswordSchema } from '../validators/userValidator.js'
 import { sendEmail } from '../services/emailService.js'
 import { passwordChangedTemplate } from '../utils/emailTemplates.js'
@@ -99,6 +100,10 @@ router.post('/change-password', async (req, res, next) => {
     user.refreshTokens = []
 
     await user.save()
+
+    // Drop any live socket as well — a changed password should end
+    // sessions on other devices, not just stop them refreshing
+    disconnectUserSockets(user._id)
 
     // Notify the account owner regardless of who made this change —
     // the important case is when it *wasn't* them (compromised
