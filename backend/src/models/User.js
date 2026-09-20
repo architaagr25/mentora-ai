@@ -67,6 +67,30 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    // Email change, held in escrow. The address on the account is
+    // not touched until someone proves they can read the NEW inbox:
+    // a typo would otherwise lock the account out of its own
+    // password resets, and an attacker with a borrowed session could
+    // move the account to an address they control. Same hashed-token
+    // reasoning as resetPasswordToken above.
+    pendingEmail: {
+      type: String,
+      default: null,
+      lowercase: true,
+      trim: true,
+      // Deliberately NOT select: false — the owner should be able to
+      // see "waiting on confirmation at ..." on their profile
+    },
+    emailChangeToken: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    emailChangeExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically
@@ -89,6 +113,8 @@ userSchema.methods.toJSON = function () {
   delete obj.refreshTokens
   delete obj.resetPasswordToken
   delete obj.resetPasswordExpires
+  delete obj.emailChangeToken
+  delete obj.emailChangeExpires
   return obj
 }
 const User = mongoose.model('User', userSchema)

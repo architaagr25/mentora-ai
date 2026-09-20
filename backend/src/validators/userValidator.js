@@ -21,6 +21,12 @@ export const updateProfileSchema = z
       .email('Please enter a valid email')
       .toLowerCase()
       .optional(),
+
+    // Only needed when the email actually changes, which the route
+    // decides — the form sends the email field on every save, even
+    // when only the name was edited, so demanding a password here
+    // would ask for one on a plain rename.
+    currentPassword: z.string().optional(),
   })
   .refine((data) => data.name !== undefined || data.email !== undefined, {
     message: 'Provide at least a name or email to update',

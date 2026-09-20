@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import {
@@ -37,6 +37,9 @@ const profileEditSchema = z.object({
   email: z
     .string()
     .email('Please enter a valid email'),
+  // Only asked for once the email field differs from the current
+  // one — see the emailChanged check in AccountInfoCard
+  currentPassword: z.string().optional(),
 })
 
 const passwordChangeSchema = z
@@ -180,28 +183,59 @@ const AccountInfoCard = ({ user }) => {
   const updateUser = useAuthStore((state) => state.updateUser)
   const [isEditing, setIsEditing] = useState(false)
   const [serverError, setServerError] = useState(null)
+  // Set after a successful save that started an email change — the
+  // address on screen has NOT changed yet at that point, so without
+  // this the save would look like it silently did nothing
+  const [notice, setNotice] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(profileEditSchema),
     defaultValues: { name: user?.name || '', email: user?.email || '' },
   })
 
+  // Changing an email needs the account password; renaming does not.
+  // The field only appears once the two addresses differ, so the
+  // common case (fixing a typo in a name) stays a one-field edit.
+  // useWatch rather than watch(): watch() hands back a function the
+  // React Compiler cannot memoize, which makes it skip this whole
+  // component
+  const emailField = useWatch({ control, name: 'email' })
+  const emailChanged = (emailField || '').trim().toLowerCase() !== (user?.email || '')
+
   const startEditing = () => {
-    reset({ name: user?.name || '', email: user?.email || '' })
+    reset({ name: user?.name || '', email: user?.email || '', currentPassword: '' })
     setServerError(null)
+    setNotice(null)
     setIsEditing(true)
   }
 
   const onSubmit = async (data) => {
     setServerError(null)
+
+    if (emailChanged && !data.currentPassword) {
+      setError('currentPassword', {
+        message: 'Enter your current password to change your email',
+      })
+      return
+    }
+
     try {
-      const updated = await updateProfile(data)
+      const { user: updated, pendingEmail, message } = await updateProfile({
+        name: data.name,
+        email: data.email,
+        // Never sent on a plain rename
+        ...(emailChanged ? { currentPassword: data.currentPassword } : {}),
+      })
       updateUser(updated)
+      setNotice(pendingEmail ? message : null)
       setIsEditing(false)
     } catch (err) {
       const message =
@@ -227,6 +261,12 @@ const AccountInfoCard = ({ user }) => {
 
      {!isEditing ? (
         <div className="space-y-4 mt-4">
+          {(notice || user?.pendingEmail) && (
+            <div className="px-3.5 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs leading-relaxed">
+              {notice ||
+                `Waiting on confirmation at ${user.pendingEmail}. Your email stays the same until that link is opened.`}
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
               <User size={16} className="text-orange-400" />
@@ -294,6 +334,39 @@ const AccountInfoCard = ({ user }) => {
               <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
             )}
           </div>
+
+          {emailChanged && (
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                Current password
+              </label>
+              <div className="relative">
+                <input
+                  {...register('currentPassword')}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  className={`w-full px-3.5 py-2.5 pr-11 rounded-xl bg-[#080D1A] border text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
+                    errors.currentPassword ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+              {errors.currentPassword ? (
+                <p className="mt-1 text-xs text-red-400">{errors.currentPassword.message}</p>
+              ) : (
+                <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">
+                  Changing your email needs your password. We will send a link to the new
+                  address — your email only changes once you open it.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-2 pt-1">
             <button

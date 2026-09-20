@@ -179,3 +179,96 @@ Start your first session: ${dashboardUrl}
 — Mentora AI`,
   }
 }
+
+// ─────────────────────────────────────────
+// EMAIL CHANGE — sent to the NEW address
+// Nothing has changed on the account yet when this goes out; the
+// link is the only thing that makes the change real.
+// ─────────────────────────────────────────
+export const emailChangeConfirmTemplate = (confirmUrl) => ({
+  html: `
+<div style="${EMAIL_WRAPPER_STYLE}">
+  <div style="${CARD_STYLE}">
+    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+      Mentora AI
+    </p>
+
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+      Confirm your new email address
+    </h1>
+
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+      Someone asked to move a Mentora AI account to this address. Click below to confirm it — until you do, the account keeps its old email. This link expires in 1 hour.
+    </p>
+
+    <a href="${confirmUrl}" style="${BUTTON_STYLE}">
+      Confirm This Address
+    </a>
+
+    <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
+      If the button doesn't work, copy and paste this link into your browser:<br />
+      <a href="${confirmUrl}" style="color: #22D3EE; word-break: break-all;">${confirmUrl}</a>
+    </p>
+
+   <hr style="border: none; border-top: 1px solid #1e293b; margin: 28px 0;" />
+
+    <p style="color: #475569; font-size: 12px; line-height: 1.6; margin: 0;">
+      If you weren't expecting this, you can ignore this email — nothing will change, and this address will not be added to any account.
+    </p>
+    ${SPAM_NOTICE}
+  </div>
+</div>
+`,
+  text: `Confirm your new Mentora AI email address
+
+Someone asked to move a Mentora AI account to this address. Open the link below to confirm it — until you do, the account keeps its old email. This link expires in 1 hour.
+
+${confirmUrl}
+
+If you weren't expecting this, you can ignore this email — nothing will change, and this address will not be added to any account.
+
+— Mentora AI`,
+})
+
+// ─────────────────────────────────────────
+// EMAIL CHANGE — sent to the OLD address
+// The whole point of this one: if the request wasn't the owner's,
+// this is the only message that still reaches them.
+// ─────────────────────────────────────────
+export const emailChangeNoticeTemplate = (newEmail) => {
+  const safeEmail = escapeHtml(newEmail)
+
+  return {
+    html: `
+<div style="${EMAIL_WRAPPER_STYLE}">
+  <div style="${CARD_STYLE}">
+    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+      Mentora AI
+    </p>
+
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+      Someone asked to change your email
+    </h1>
+
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+      A request was made to move your Mentora AI account to <strong style="color: #ffffff;">${safeEmail}</strong>. Your account still uses this address, and will keep doing so unless that request is confirmed from the new inbox within the hour.
+    </p>
+
+   <hr style="border: none; border-top: 1px solid #1e293b; margin: 0 0 28px;" />
+
+    <p style="color: #f87171; font-size: 13px; line-height: 1.6; margin: 0;">
+      If this wasn't you, change your password now using the "Forgot password?" link on the login page — that cancels the pending change and signs out every other device.
+    </p>
+    ${SPAM_NOTICE}
+  </div>
+</div>
+`,
+    text: `Someone asked to change your Mentora AI email
+
+A request was made to move your Mentora AI account to ${newEmail}. Your account still uses this address, and will keep doing so unless that request is confirmed from the new inbox within the hour.
+
+If this wasn't you, change your password now using the "Forgot password?" link on the login page — that cancels the pending change and signs out every other device.
+
+— Mentora AI`,
+  }
+}

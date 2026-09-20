@@ -352,6 +352,13 @@ router.post('/reset-password', passwordResetLimiter, async (req, res, next) => {
     user.resetPasswordToken = null
     user.resetPasswordExpires = null
 
+    // Cancels any pending email change too. The notice sent to the
+    // old address says a password reset stops the move — someone who
+    // got at a session should not still own the account afterwards.
+    user.pendingEmail = null
+    user.emailChangeToken = null
+    user.emailChangeExpires = null
+
     // Same security pattern as the change-password flow — invalidate
     // every existing session, since a password reset is exactly the
     // kind of event (account recovery, possibly after a compromise)
@@ -377,6 +384,70 @@ router.post('/reset-password', passwordResetLimiter, async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       message: 'Password reset successfully. Please log in with your new password.',
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ─────────────────────────────────────────
+// POST /api/auth/confirm-email-change
+// Deliberately public, like reset-password: the link is opened
+// from the NEW inbox, which may well be a different browser with
+// nobody logged in. The token is the proof, not the session.
+// ─────────────────────────────────────────
+const confirmEmailChangeSchema = z.object({
+  token: z
+    .string({ required_error: 'Token is required' })
+    .min(1, 'Token is required'),
+})
+
+router.post('/confirm-email-change', async (req, res, next) => {
+  try {
+    const result = confirmEmailChangeSchema.safeParse(req.body)
+    if (!result.success) {
+      return res.status(400).json({
+        status: 'error',
+        errors: result.error.flatten().fieldErrors,
+      })
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(result.data.token).digest('hex')
+
+    const user = await User.findOne({
+      emailChangeToken: hashedToken,
+      emailChangeExpires: { $gt: new Date() },
+    }).select('+emailChangeToken +emailChangeExpires')
+
+    if (!user || !user.pendingEmail) {
+      throw new AppError(
+        'This confirmation link is invalid or has expired. Try changing your email again.',
+        400
+      )
+    }
+
+    // Checked again here, not just when the change was requested —
+    // the link may have been sitting in an inbox for an hour, and
+    // someone else could have registered that address since.
+    const taken = await User.findOne({ email: user.pendingEmail, _id: { $ne: user._id } })
+    if (taken) {
+      user.pendingEmail = null
+      user.emailChangeToken = null
+      user.emailChangeExpires = null
+      await user.save()
+      throw new AppError('An account with that email already exists', 409)
+    }
+
+    user.email = user.pendingEmail
+    user.pendingEmail = null
+    user.emailChangeToken = null
+    user.emailChangeExpires = null
+    await user.save()
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Email confirmed. Your account now uses this address.',
+      email: user.email,
     })
   } catch (err) {
     next(err)
