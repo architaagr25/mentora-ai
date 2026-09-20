@@ -10,7 +10,12 @@ import { generateAccessToken, generateRefreshToken } from '../utils/generateToke
 import crypto from 'crypto'
 import { z } from 'zod'
 import { sendEmail } from '../services/emailService.js'
-import { resetPasswordTemplate, welcomeTemplate } from '../utils/emailTemplates.js'
+import {
+  passwordChangedTemplate,
+  resetPasswordTemplate,
+  welcomeTemplate,
+} from '../utils/emailTemplates.js'
+import { getAppUrl } from '../utils/appUrl.js'
 import logger from '../utils/logger.js'
 import { disconnectUserSockets } from '../socket/userSockets.js'
 
@@ -81,7 +86,7 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     sendEmail({
       to: user.email,
       subject: 'Welcome to Mentora AI',
-      html: welcomeTemplate(user.name),
+      ...welcomeTemplate(user.name),
     })
 
     // Step 7: Send response
@@ -276,21 +281,24 @@ router.post('/forgot-password', passwordResetLimiter, async (req, res, next) => 
     user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
     await user.save()
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${rawToken}`
+    const resetUrl = `${getAppUrl()}/reset-password/${rawToken}`
 
-    const emailResult = await sendEmail({
+    // Deliberately not awaited. The generic response above is only
+    // generic if it also takes the same time: waiting for Brevo on
+    // the "account exists" path made that reply about a second
+    // slower than the "no such account" one, which is enough to
+    // tell the two apart and so read off whether an address is
+    // registered. Failures are logged, never shown — saying "email
+    // failed to send" would confirm the account just as plainly.
+    sendEmail({
       to: user.email,
       subject: 'Reset your Mentora AI password',
-      html: resetPasswordTemplate(resetUrl),
+      ...resetPasswordTemplate(resetUrl),
+    }).then((emailResult) => {
+      if (!emailResult.success) {
+        logger.error(`Failed to send reset email to ${user.email}: ${emailResult.error}`)
+      }
     })
-
-    if (!emailResult.success) {
-      // Log for debugging, but still return the generic success
-      // message — telling the user "email failed to send" would
-      // itself confirm the account exists, defeating the point of
-      // the generic response above.
-      logger.error(`Failed to send reset email to ${user.email}: ${emailResult.error}`)
-    }
 
     res.status(200).json({ status: 'success', message: genericMessage })
   } catch (err) {
@@ -355,6 +363,16 @@ router.post('/reset-password', passwordResetLimiter, async (req, res, next) => {
     // Same reasoning: any socket still open belongs to a session that
     // should no longer be trusted
     disconnectUserSockets(user._id)
+
+    // Same notification the change-password flow sends. It matters
+    // more here, not less: a reset is what someone who got into the
+    // mailbox would use, so the owner should hear about it.
+    // Fire-and-forget — the password has already been reset.
+    sendEmail({
+      to: user.email,
+      subject: 'Your Mentora AI password was changed',
+      ...passwordChangedTemplate(),
+    })
 
     res.status(200).json({
       status: 'success',

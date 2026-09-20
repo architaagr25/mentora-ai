@@ -1,14 +1,34 @@
 // backend/src/utils/emailTemplates.js
+import { getAppUrl } from './appUrl.js'
 
 // ─────────────────────────────────────────
 // EMAIL TEMPLATES
 // Plain inline-styled HTML (no external CSS/Tailwind) since email
 // clients have inconsistent CSS support — inline styles are the only
 // reliably-rendered option across Gmail, Outlook, Apple Mail, etc.
-// Kept simple: one accent color, one button, a plain-text fallback
-// link, matching the app's actual violet/cyan brand rather than a
-// generic auto-generated look.
+//
+// Every template returns { html, text }. The plain-text version is
+// not decoration: a mail with no text/plain part scores worse with
+// spam filters, and it is what a watch, a screen reader or a
+// text-only client actually shows. Callers spread it straight into
+// sendEmail: sendEmail({ to, subject, ...welcomeTemplate(name) }).
 // ─────────────────────────────────────────
+
+// ─────────────────────────────────────────
+// ESCAPING
+// Anything that came from a user (so far: their name) is interpolated
+// into HTML that gets sent from our verified sender address. A name
+// like `<a href="http://evil">Click here</a>` would otherwise arrive
+// as a live link in an email that looks like it came from us.
+// ─────────────────────────────────────────
+export const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
 const SPAM_NOTICE = `
   <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
     Don't see this in your inbox? Check your spam or junk folder.
@@ -40,7 +60,8 @@ const BUTTON_STYLE = `
   font-size: 14px;
 `
 
-export const resetPasswordTemplate = (resetUrl) => `
+export const resetPasswordTemplate = (resetUrl) => ({
+  html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
     <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
@@ -72,9 +93,20 @@ export const resetPasswordTemplate = (resetUrl) => `
     ${SPAM_NOTICE}
   </div>
 </div>
-`
+`,
+  text: `Reset your Mentora AI password
 
-export const passwordChangedTemplate = () => `
+We received a request to reset your Mentora AI password. Open the link below to choose a new one. This link expires in 1 hour.
+
+${resetUrl}
+
+If you didn't request a password reset, you can safely ignore this email — your password will not be changed.
+
+— Mentora AI`,
+})
+
+export const passwordChangedTemplate = () => ({
+  html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
     <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
@@ -97,9 +129,24 @@ export const passwordChangedTemplate = () => `
     ${SPAM_NOTICE}
   </div>
 </div>
-`
+`,
+  text: `Your Mentora AI password was changed
 
-export const welcomeTemplate = (name) => `
+This is a confirmation that your Mentora AI account password was just changed. You've been signed out of all devices as a precaution — you'll need to log in again with your new password.
+
+If you didn't make this change, your account may be compromised — reset your password immediately using the "Forgot password?" link on the login page.
+
+— Mentora AI`,
+})
+
+export const welcomeTemplate = (name) => {
+  // getAppUrl() is read here, not at module load, so it sees the
+  // environment dotenv put in place rather than an empty process.env
+  const dashboardUrl = `${getAppUrl()}/dashboard`
+  const safeName = escapeHtml(name)
+
+  return {
+    html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
     <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
@@ -107,17 +154,28 @@ export const welcomeTemplate = (name) => `
     </p>
 
     <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
-      Welcome, ${name} 👋
+      Welcome, ${safeName} 👋
     </h1>
 
     <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
       Your Mentora AI account is ready. Pick any concept you think you understand, and start explaining it — the AI will ask exactly the questions that expose where your understanding breaks down.
     </p>
 
-    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard" style="${BUTTON_STYLE}">
+    <a href="${dashboardUrl}" style="${BUTTON_STYLE}">
       Start Your First Session
     </a>
     ${SPAM_NOTICE}
   </div>
 </div>
-`
+`,
+    // The name is plain text here, so it needs no escaping — it only
+    // had to be escaped where it landed inside HTML
+    text: `Welcome, ${name}
+
+Your Mentora AI account is ready. Pick any concept you think you understand, and start explaining it — the AI will ask exactly the questions that expose where your understanding breaks down.
+
+Start your first session: ${dashboardUrl}
+
+— Mentora AI`,
+  }
+}

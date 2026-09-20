@@ -92,6 +92,14 @@ router.post('/change-password', async (req, res, next) => {
 
   user.passwordHash = await bcrypt.hash(newPassword, 12)
 
+    // Any outstanding reset link is now stale. Left in place, a link
+    // requested before this change would still work for the rest of
+    // its hour — so someone who had asked for a reset (or who had
+    // reached the mailbox) could undo the change that was made to
+    // lock them out.
+    user.resetPasswordToken = null
+    user.resetPasswordExpires = null
+
     // Changing your password invalidates all existing refresh tokens —
     // forces re-login everywhere else you're signed in. This is a
     // deliberate security choice (in case the password change was
@@ -113,7 +121,7 @@ router.post('/change-password', async (req, res, next) => {
     sendEmail({
       to: user.email,
       subject: 'Your Mentora AI password was changed',
-      html: passwordChangedTemplate(),
+      ...passwordChangedTemplate(),
     })
 
     res.status(200).json({

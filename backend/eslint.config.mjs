@@ -19,6 +19,9 @@ export default [
         // Node 20+ has fetch() built in globally — used by
         // emailService.js to call Brevo's REST API directly.
         fetch: 'readonly',
+        // Same generation of Node built-ins — the send timeout uses
+        // AbortSignal.timeout()
+        AbortSignal: 'readonly',
       },
     },
     rules: {

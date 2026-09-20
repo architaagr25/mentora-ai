@@ -16,6 +16,7 @@ import gapsRoutes from './routes/gaps.js'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import initializeSocket from './socket/sessionSocket.js'
+import { checkEmailConfig } from './services/emailService.js'
 // dotenv.config() must be the FIRST thing that runs
 // It loads your .env file into process.env
 // Any code before this cannot access environment variables
@@ -201,6 +202,11 @@ initializeSocket(io)
 const startServer = async () => {
   try {
     await connectDB()
+
+    // Sending is fire-and-forget everywhere, so a missing key would
+    // otherwise only surface as mail that silently never arrives
+    checkEmailConfig()
+
     httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`)
       logger.info(`Health check → http://localhost:${PORT}/api/health`)
