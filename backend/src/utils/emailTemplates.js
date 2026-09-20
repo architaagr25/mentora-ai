@@ -272,3 +272,58 @@ If this wasn't you, change your password now using the "Forgot password?" link o
 — Mentora AI`,
   }
 }
+
+// ─────────────────────────────────────────
+// VERIFY EMAIL — sent at registration
+// The welcome email deliberately waits until this one is acted on:
+// two emails landing at once is noise, and "welcome" reads oddly
+// before the address is even confirmed.
+// ─────────────────────────────────────────
+export const verifyEmailTemplate = (name, verifyUrl) => {
+  const safeName = escapeHtml(name)
+
+  return {
+    html: `
+<div style="${EMAIL_WRAPPER_STYLE}">
+  <div style="${CARD_STYLE}">
+    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+      Mentora AI
+    </p>
+
+    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+      Confirm your email, ${safeName}
+    </h1>
+
+    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+      One click and your Mentora AI account is ready to use. Confirming also means we can actually reach you if you ever need to reset your password. This link expires in 24 hours.
+    </p>
+
+    <a href="${verifyUrl}" style="${BUTTON_STYLE}">
+      Confirm My Email
+    </a>
+
+    <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
+      If the button doesn't work, copy and paste this link into your browser:<br />
+      <a href="${verifyUrl}" style="color: #22D3EE; word-break: break-all;">${verifyUrl}</a>
+    </p>
+
+   <hr style="border: none; border-top: 1px solid #1e293b; margin: 28px 0;" />
+
+    <p style="color: #475569; font-size: 12px; line-height: 1.6; margin: 0;">
+      If you didn't sign up for Mentora AI, you can ignore this email — the account cannot be used until this address is confirmed.
+    </p>
+    ${SPAM_NOTICE}
+  </div>
+</div>
+`,
+    text: `Confirm your email, ${name}
+
+One click and your Mentora AI account is ready to use. Confirming also means we can actually reach you if you ever need to reset your password. This link expires in 24 hours.
+
+${verifyUrl}
+
+If you didn't sign up for Mentora AI, you can ignore this email — the account cannot be used until this address is confirmed.
+
+— Mentora AI`,
+  }
+}

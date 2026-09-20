@@ -120,6 +120,17 @@ router.post('/:id/notes', uploadPdf.single('pdf'), async (req, res, next) => {
 // ─────────────────────────────────────────
 router.post('/', async (req, res, next) => {
   try {
+    // Everything else stays readable while unverified — the dashboard,
+    // history, past sessions. Only starting a new one is held back,
+    // which is also what keeps the AI quota out of reach of signups
+    // on addresses nobody owns.
+    if (!req.user.emailVerified) {
+      throw new AppError(
+        'Confirm your email before starting a session. Check your inbox for the link.',
+        403
+      )
+    }
+
     const result = createSessionSchema.safeParse(req.body)
     if (!result.success) {
       return res.status(400).json({

@@ -29,6 +29,27 @@ export const confirmEmailChange = async (token) => {
 }
 
 // ─────────────────────────────────────────
+// VERIFY AN EMAIL ADDRESS
+// Public for the same reason: the link is opened from the inbox,
+// often on a phone with no session. Returns the updated user, so a
+// signed-in caller can drop the banner without another round-trip.
+// ─────────────────────────────────────────
+export const verifyEmail = async (token) => {
+  const response = await api.post('/auth/verify-email', { token })
+  return response.data
+}
+
+// ─────────────────────────────────────────
+// RESEND THE VERIFICATION EMAIL
+// Goes to the address on the logged-in account — the caller cannot
+// choose one. Rate-limited to 3 an hour per IP on the server.
+// ─────────────────────────────────────────
+export const resendVerification = async () => {
+  const response = await api.post('/auth/resend-verification')
+  return response.data.message
+}
+
+// ─────────────────────────────────────────
 // CHANGE PASSWORD
 // Note: on success, the backend clears all refresh tokens
 // (including the current session's) — the caller is responsible

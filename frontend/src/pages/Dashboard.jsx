@@ -27,6 +27,7 @@ import api from '@/api'
 import NewSessionModal from '@/components/session/NewSessionModal'
 import SessionDetailPanel from '@/components/history/SessionDetailPanel'
 import XpInfo from '@/components/XpInfo'
+import VerifyEmailBanner from '@/components/VerifyEmailBanner'
 // ─────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────
@@ -650,6 +651,9 @@ const handleSessionClick = (session, isActive) => {
             </span>
           </div>
         </div>
+
+        {/* Renders nothing once the address is confirmed */}
+        <VerifyEmailBanner />
 
         {/* ─── HEADER ─── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">

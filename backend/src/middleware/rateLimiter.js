@@ -91,6 +91,24 @@ export const transcribeLimiter = rateLimit({
 })
 
 // ─────────────────────────────────────────
+// VERIFICATION EMAIL LIMITER
+// The resend button sits in a banner the user sees on every page,
+// so it is one stray click away from being pressed repeatedly.
+// Each press is a real email against a 300/day allowance.
+// 3 per hour per IP is enough for "it went to spam, try again".
+// ─────────────────────────────────────────
+export const resendVerificationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: {
+    status: 'error',
+    message: 'Too many verification emails requested. Please try again in an hour.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+// ─────────────────────────────────────────
 // PASSWORD RESET LIMITER
 // Shared by both /forgot-password and /reset-password.
 // Without this, someone could spam a target's inbox with reset

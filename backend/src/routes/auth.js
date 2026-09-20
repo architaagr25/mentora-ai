@@ -3,7 +3,13 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
 import auth from '../middleware/auth.js'
-import { loginLimiter, registerLimiter, refreshLimiter, passwordResetLimiter } from '../middleware/rateLimiter.js'
+import {
+  loginLimiter,
+  registerLimiter,
+  refreshLimiter,
+  passwordResetLimiter,
+  resendVerificationLimiter,
+} from '../middleware/rateLimiter.js'
 import { registerSchema, loginSchema } from '../validators/authValidator.js'
 import { AppError } from '../middleware/errorHandler.js'
 import { generateAccessToken, generateRefreshToken } from '../utils/generateTokens.js'
@@ -13,6 +19,7 @@ import { sendEmail } from '../services/emailService.js'
 import {
   passwordChangedTemplate,
   resetPasswordTemplate,
+  verifyEmailTemplate,
   welcomeTemplate,
 } from '../utils/emailTemplates.js'
 import { getAppUrl } from '../utils/appUrl.js'
@@ -80,13 +87,23 @@ router.post('/register', registerLimiter, async (req, res, next) => {
    // Step 6: Send refresh token as httpOnly cookie
     res.cookie('refreshToken', refreshToken, COOKIE_OPTIONS)
 
-    // Fire-and-forget welcome email — same reasoning as the
-    // password-changed email: registration has already succeeded,
-    // no reason to make the user wait on an email round-trip.
+    // Nothing yet proves this address belongs to whoever typed it,
+    // so the account starts unverified and this link is what settles
+    // it. The welcome email waits until then — see /verify-email.
+    const verifyToken = crypto.randomBytes(32).toString('hex')
+    user.emailVerificationToken = crypto.createHash('sha256').update(verifyToken).digest('hex')
+    // 24 hours, not the 1 hour a password reset gets: nobody is
+    // waiting at the keyboard for this one, and an expired link on
+    // day one is the fastest way to lose a new user.
+    user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    await user.save()
+
+    // Fire-and-forget — registration has already succeeded, and no
+    // reason to make the user wait on an email round-trip.
     sendEmail({
       to: user.email,
-      subject: 'Welcome to Mentora AI',
-      ...welcomeTemplate(user.name),
+      subject: 'Confirm your Mentora AI email',
+      ...verifyEmailTemplate(user.name, `${getAppUrl()}/verify-email/${verifyToken}`),
     })
 
     // Step 7: Send response
@@ -448,6 +465,113 @@ router.post('/confirm-email-change', async (req, res, next) => {
       status: 'success',
       message: 'Email confirmed. Your account now uses this address.',
       email: user.email,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ─────────────────────────────────────────
+// POST /api/auth/verify-email
+// Public, like the other token routes: the link is opened from an
+// inbox, which may be a browser with nobody logged in.
+// ─────────────────────────────────────────
+const verifyEmailSchema = z.object({
+  token: z.string({ required_error: 'Token is required' }).min(1, 'Token is required'),
+})
+
+router.post('/verify-email', async (req, res, next) => {
+  try {
+    const result = verifyEmailSchema.safeParse(req.body)
+    if (!result.success) {
+      return res.status(400).json({
+        status: 'error',
+        errors: result.error.flatten().fieldErrors,
+      })
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(result.data.token).digest('hex')
+
+    const user = await User.findOne({
+      emailVerificationToken: hashedToken,
+      emailVerificationExpires: { $gt: new Date() },
+    }).select('+emailVerificationToken +emailVerificationExpires')
+
+    if (!user) {
+      // A spent token looks the same as a made-up one, so the message
+      // has to cover both. The resend button is how either is fixed.
+      throw new AppError(
+        'This link is invalid or has expired. Log in and ask for a new one.',
+        400
+      )
+    }
+
+    user.emailVerified = true
+    user.emailVerificationToken = null
+    user.emailVerificationExpires = null
+    await user.save()
+
+    // Now it means something: the address is real and reachable
+    sendEmail({
+      to: user.email,
+      subject: 'Welcome to Mentora AI',
+      ...welcomeTemplate(user.name),
+    })
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Email confirmed. Your account is ready.',
+      user: user.toJSON(),
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// ─────────────────────────────────────────
+// POST /api/auth/resend-verification
+// Behind auth: it resends to the address on the logged-in account,
+// never to one supplied in the request — otherwise this endpoint
+// would be a way to send mail to any address on demand.
+// ─────────────────────────────────────────
+router.post('/resend-verification', resendVerificationLimiter, auth, async (req, res, next) => {
+  try {
+    if (req.user.emailVerified) {
+      return res.status(200).json({
+        status: 'success',
+        message: 'Your email is already confirmed.',
+      })
+    }
+
+    // A fresh token, so the previous link stops working — a resend
+    // usually means the first mail went astray, and two live links
+    // to the same account is one more than anyone needs.
+    const verifyToken = crypto.randomBytes(32).toString('hex')
+    req.user.emailVerificationToken = crypto.createHash('sha256').update(verifyToken).digest('hex')
+    req.user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    await req.user.save()
+
+    const emailResult = await sendEmail({
+      to: req.user.email,
+      subject: 'Confirm your Mentora AI email',
+      ...verifyEmailTemplate(req.user.name, `${getAppUrl()}/verify-email/${verifyToken}`),
+    })
+
+    // Awaited here, unlike the others: the user pressed a button and
+    // is watching for an answer, and "sent" would be a lie if it
+    // wasn't. There is no address-disclosure problem — they are
+    // logged in as the owner of it.
+    if (!emailResult.success) {
+      logger.error(`Failed to resend verification to ${req.user.email}: ${emailResult.error}`)
+      throw new AppError(
+        'We could not send the email just now. Please try again in a few minutes.',
+        502
+      )
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: `Confirmation sent to ${req.user.email}.`,
     })
   } catch (err) {
     next(err)

@@ -67,6 +67,29 @@ const userSchema = new mongoose.Schema(
       default: null,
       select: false,
     },
+    // Whether the address above has been proved to belong to whoever
+    // registered it. Until it is, nothing guarantees a password reset
+    // can ever reach them — a typo at signup would otherwise only
+    // surface on the day they need to recover the account.
+    //
+    // Accounts that existed before this was added were backfilled to
+    // true: there was no way for them to have confirmed anything, and
+    // locking them out of a feature they never had would be a poor
+    // trade for a stricter default.
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: {
+      type: String,
+      default: null,
+      select: false,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     // Email change, held in escrow. The address on the account is
     // not touched until someone proves they can read the NEW inbox:
     // a typo would otherwise lock the account out of its own
@@ -115,6 +138,8 @@ userSchema.methods.toJSON = function () {
   delete obj.resetPasswordExpires
   delete obj.emailChangeToken
   delete obj.emailChangeExpires
+  delete obj.emailVerificationToken
+  delete obj.emailVerificationExpires
   return obj
 }
 const User = mongoose.model('User', userSchema)

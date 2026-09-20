@@ -9,6 +9,7 @@ import Register from '@/pages/Register'
 import ForgotPassword from '@/pages/ForgotPassword'
 import ResetPassword from '@/pages/ResetPassword'
 import ConfirmEmailChange from '@/pages/ConfirmEmailChange'
+import VerifyEmail from '@/pages/VerifyEmail'
 import Dashboard from '@/pages/Dashboard'
 import Session from '@/pages/Session'
 import History from '@/pages/History'
@@ -39,6 +40,7 @@ function App() {
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         {/* Opened from the new inbox — must work logged out */}
         <Route path="/confirm-email/:token" element={<ConfirmEmailChange />} />
+        <Route path="/verify-email/:token" element={<VerifyEmail />} />
 
         {/* Protected routes — wrapped in ProtectedRoute */}
         <Route
