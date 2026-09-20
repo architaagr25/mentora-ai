@@ -9,7 +9,12 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
-.env.example
+
+# .env.example files are the opposite: they hold no secrets and exist
+# to be committed, so setup instructions have something to copy.
+# They were being ignored here, which is why frontend/.env.example
+# was missing while the README told you to copy it.
+!.env.example
 
 # Build outputs - generated files, not source code
 dist/
