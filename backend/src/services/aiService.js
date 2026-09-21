@@ -252,6 +252,13 @@ export const getAIStudentResponse = async (topic, messages, notes = {}) => {
   }
 }
 
+// Pause between words when releasing a reply to the client. The client
+// reveals at most ~375 chars/sec (see TYPE_* in the session store), so
+// 10ms per word keeps the socket comfortably ahead of what the browser
+// can draw: delivery stays word-by-word without the server ever becoming
+// the thing the reader is waiting on.
+const WORD_DELAY_MS = 10
+
 // ─────────────────────────────────────────
 // GET AI STUDENT RESPONSE — STREAMING VERSION
 // Generates the response, checks if it's a near-duplicate
@@ -372,11 +379,16 @@ export const getAIStudentResponseStream = async (topic, messages, { onChunk, onC
     // breaks the model puts between an acknowledgement and its question
     fullResponse = stripped.text
 
-    // Sent in one piece. The reply has to be complete before it can go
-    // out anyway (the duplicate check, the rule check and the marker
-    // strip all need the whole draft), so the old word-by-word loop was
-    // a typing animation that delayed every reply by 30ms per word.
-    onChunk(fullResponse)
+    // Released a word at a time. The whole draft already exists by now —
+    // the duplicate check, the rule check and the marker strip each need
+    // it complete — so this is a deliberate typing effect, not transport:
+    // a confused ten-year-old thinking aloud reads better than a wall of
+    // text appearing at once.
+    const words = fullResponse.split(' ')
+    for (let i = 0; i < words.length; i++) {
+      onChunk(words[i] + (i < words.length - 1 ? ' ' : ''))
+      await new Promise((r) => setTimeout(r, WORD_DELAY_MS))
+    }
 
     onComplete(fullResponse, { understood })
   } catch (err) {
