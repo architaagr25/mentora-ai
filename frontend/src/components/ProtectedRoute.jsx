@@ -9,12 +9,15 @@ const ProtectedRoute = ({ children }) => {
   // Show a loading screen instead of redirecting prematurely
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#080D1A] flex items-center justify-center">
+      <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center animate-pulse">
-            <Brain size={24} className="text-white" />
+          {/* A ring that turns, not a logo that pulses: a pulse is reserved
+              for things that are genuinely live, and this is just waiting. */}
+          <div className="relative w-12 h-12 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-2 border-line border-t-accent animate-spin" />
+            <Brain size={20} className="text-accent" />
           </div>
-          <p className="text-slate-500 text-sm">Loading...</p>
+          <p className="text-muted text-sm">Loading...</p>
         </div>
       </div>
     )

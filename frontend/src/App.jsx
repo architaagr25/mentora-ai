@@ -107,7 +107,9 @@ function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[70] flex items-center justify-center px-4"
+            // A neutral scrim, not a token: ink is near-black in the light
+            // theme and cream in the dark one, so it cannot dim both.
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center px-4"
           >
             <motion.div
               key={badgeQueue[0].id}
@@ -115,40 +117,38 @@ function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 10 }}
               transition={{ type: 'spring', damping: 20, stiffness: 250 }}
-              className="bg-[#0D1426] border border-violet-500/30 rounded-3xl p-8 w-full max-w-sm text-center shadow-2xl shadow-violet-500/20"
+              className="bg-surface border border-line rounded-lg p-8 w-full max-w-sm text-center shadow-xl"
             >
-              <p className="text-violet-400 text-xs font-semibold tracking-widest uppercase mb-6">
+              <p className="text-highlight text-xs font-semibold tracking-widest uppercase mb-6">
                 Badge Unlocked
               </p>
 
+              {/* Badges are the highlight colour everywhere in the app, not
+                  the accent — an earned thing should not look like a button. */}
               <motion.div
                 initial={{ rotate: 0, scale: 0.5 }}
                 animate={{ rotate: 360, scale: 1 }}
                 transition={{ duration: 0.8, ease: 'easeOut' }}
-                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-violet-500/40"
+                className="w-20 h-20 rounded-lg bg-highlight-soft border border-highlight/30 flex items-center justify-center mx-auto mb-5"
               >
-                <Award size={36} className="text-white" />
+                <Award size={36} className="text-highlight" />
               </motion.div>
 
-              <h2 className="text-white font-bold text-xl mb-2">{badgeQueue[0].name}</h2>
-              <p className="text-slate-400 text-sm mb-7 leading-relaxed">
+              <h2 className="text-ink font-semibold text-xl mb-2">{badgeQueue[0].name}</h2>
+              <p className="text-muted text-sm mb-7 leading-relaxed">
                 {badgeQueue[0].description}
               </p>
 
               {badgeQueue.length > 1 && (
-                <p className="text-slate-600 text-xs mb-4">
+                <p className="text-muted text-xs mb-4">
                   {badgeQueue.length - 1} more badge{badgeQueue.length - 1 !== 1 ? 's' : ''} to see
                 </p>
               )}
 
-              <button
-                onClick={dismissCurrentBadge}
-                className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all text-sm"
-              >
+              <button onClick={dismissCurrentBadge} className="btn-primary w-full text-sm">
                 {badgeQueue.length > 1 ? 'Next' : 'Close'}
               </button>
-            </motion.div>
-          </motion.div>
+            </motion.div>          </motion.div>
         )}
       </AnimatePresence>
     </>

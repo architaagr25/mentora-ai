@@ -1,64 +1,70 @@
 import { Brain } from 'lucide-react'
 
+// Columns kept as data so the markup stays one loop rather than four
+// near-identical blocks.
+const COLUMNS = [
+  { heading: 'Product', links: ['Features', 'Docs', 'Changelog'] },
+  { heading: 'Company', links: ['Blog', 'About', 'Careers', 'Contact'] },
+  { heading: 'Legal', links: ['Privacy', 'Terms', 'Security', 'Cookies'] },
+]
+
 const Footer = () => {
   return (
-    <footer style={{borderTop:'1px solid #1e293b',background:'#080D1A'}}>
-      <div style={{maxWidth:'1152px',margin:'0 auto',padding:'4rem 1.5rem'}}>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'3rem'}}>
-
-          <div>
-            <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'1rem'}}>
-              <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'linear-gradient(135deg,#7C3AED,#06B6D4)',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <Brain size={16} color="white" />
+    // This was written with inline styles and hard-coded hex, which meant it
+    // could not follow the theme and was fixed at four columns on a phone.
+    // Both are fixed by moving it onto the tokens and Tailwind's breakpoints.
+    <footer className="border-t border-line bg-bg">
+      <div className="max-w-6xl mx-auto px-6 py-16">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 md:gap-12">
+          <div className="col-span-2 md:col-span-1">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+                <Brain size={16} className="text-on-accent" />
               </div>
-              <span style={{color:'white',fontWeight:'600',fontSize:'18px'}}>
-                Mentora <span style={{color:'#22D3EE'}}>AI</span>
+              <span className="text-ink font-serif font-semibold text-lg">
+                Mentora <span className="text-accent">AI</span>
               </span>
             </div>
-            <p style={{color:'#64748b',fontSize:'14px',lineHeight:'1.6',marginBottom:'1.5rem'}}>
+            <p className="text-muted text-sm leading-relaxed mb-6">
               Learn by teaching, not by re-reading.
             </p>
-            <div style={{display:'flex',gap:'12px'}}>
-              {['T','G','L'].map((letter) => (
-                <a key={letter} href="#" style={{width:'36px',height:'36px',borderRadius:'8px',border:'1px solid #334155',display:'flex',alignItems:'center',justifyContent:'center',color:'#64748b',textDecoration:'none',fontSize:'13px',fontWeight:'600'}}>
+            <div className="flex gap-3">
+              {['T', 'G', 'L'].map((letter) => (
+                <a
+                  key={letter}
+                  href="#"
+                  className="w-9 h-9 rounded-lg border border-line flex items-center justify-center
+                             text-muted hover:text-accent hover:border-accent text-xs font-semibold
+                             transition-colors duration-200"
+                >
                   {letter}
                 </a>
               ))}
             </div>
           </div>
 
-          <div>
-            <h4 style={{color:'white',fontWeight:'600',fontSize:'14px',marginBottom:'1rem'}}>Product</h4>
-            {['Features','Docs','Changelog'].map((item) => (
-              <div key={item} style={{marginBottom:'12px'}}>
-                <a href="#" style={{color:'#64748b',fontSize:'14px',textDecoration:'none'}}>{item}</a>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <h4 style={{color:'white',fontWeight:'600',fontSize:'14px',marginBottom:'1rem'}}>Company</h4>
-            {['Blog','About','Careers','Contact'].map((item) => (
-              <div key={item} style={{marginBottom:'12px'}}>
-                <a href="#" style={{color:'#64748b',fontSize:'14px',textDecoration:'none'}}>{item}</a>
-              </div>
-            ))}
-          </div>
-
-          <div>
-            <h4 style={{color:'white',fontWeight:'600',fontSize:'14px',marginBottom:'1rem'}}>Legal</h4>
-            {['Privacy','Terms','Security','Cookies'].map((item) => (
-              <div key={item} style={{marginBottom:'12px'}}>
-                <a href="#" style={{color:'#64748b',fontSize:'14px',textDecoration:'none'}}>{item}</a>
-              </div>
-            ))}
-          </div>
-
+          {COLUMNS.map(({ heading, links }) => (
+            <div key={heading}>
+              <h4 className="text-ink font-semibold text-sm mb-4">{heading}</h4>
+              <ul className="space-y-3">
+                {links.map((item) => (
+                  <li key={item}>
+                    <a
+                      href="#"
+                      className="text-muted hover:text-accent text-sm transition-colors duration-200"
+                    >
+                      {item}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
 
-        <div style={{marginTop:'3rem',paddingTop:'2rem',borderTop:'1px solid #1e293b',display:'flex',justifyContent:'space-between'}}>
-          <p style={{color:'#475569',fontSize:'14px'}}>2026 Mentora AI. All rights reserved.</p>
-          <p style={{color:'#475569',fontSize:'14px'}}>Built for the curious.</p>
+        <div className="mt-12 pt-8 border-t border-line flex flex-col sm:flex-row gap-2 sm:justify-between">
+          <p className="text-muted text-sm">2026 Mentora AI. All rights reserved.</p>
+          <p className="text-muted text-sm">Built for the curious.</p>
         </div>
       </div>
     </footer>

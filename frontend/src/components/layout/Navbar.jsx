@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, X, Brain } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import ThemeToggle from './ThemeToggle'
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -24,19 +25,22 @@ const Navbar = () => {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className={`w-full max-w-6xl flex items-center justify-between px-6 py-3 rounded-2xl border transition-all duration-300 ${
+        // Scrolling only firms the bar up — a border and a shadow appear so it
+        // separates from the content passing under it. The surface stays
+        // translucent either way so the page still reads as continuous.
+        className={`w-full max-w-6xl flex items-center justify-between px-6 py-3 rounded-lg border transition-all duration-300 ${
           isScrolled
-            ? 'bg-[#0D1426]/95 backdrop-blur-md border-slate-700/60 shadow-xl'
-            : 'bg-[#0D1426]/80 backdrop-blur-sm border-slate-700/40'
+            ? 'bg-surface/95 backdrop-blur-md border-line shadow-md'
+            : 'bg-surface/80 backdrop-blur-sm border-line/60'
         }`}
       >
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center">
-            <Brain size={16} className="text-white" />
+          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+            <Brain size={16} className="text-on-accent" />
           </div>
-          <span className="text-white font-semibold text-lg">
-            Mentora <span className="text-cyan-400">AI</span>
+          <span className="text-ink font-serif font-semibold text-lg">
+            Mentora <span className="text-accent">AI</span>
           </span>
         </Link>
 
@@ -46,7 +50,7 @@ const Navbar = () => {
             <button
               key={item}
               onClick={() => scrollTo(item)}
-              className="text-slate-400 hover:text-white text-sm font-medium capitalize transition-colors duration-200"
+              className="text-muted hover:text-ink text-sm font-medium capitalize transition-colors duration-200"
             >
               {item === 'how-it-works' ? 'How it works' : item.charAt(0).toUpperCase() + item.slice(1)}
             </button>
@@ -54,28 +58,34 @@ const Navbar = () => {
         </div>
 
         {/* Desktop CTA */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-3">
+          <ThemeToggle />
           <Link
             to="/login"
-            className="text-slate-400 hover:text-white text-sm font-medium transition-colors duration-200"
+            className="text-muted hover:text-ink text-sm font-medium transition-colors duration-200"
           >
             Sign in
           </Link>
           <Link
             to="/register"
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all duration-200 hover:shadow-lg hover:shadow-violet-500/25"
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-on-accent bg-accent hover:bg-accent-hover transition-colors duration-200"
           >
             Get started
           </Link>
         </div>
 
         {/* Mobile Menu Toggle */}
-        <button
-          className="md:hidden text-slate-400 hover:text-white transition-colors"
-          onClick={() => setIsMobileOpen(!isMobileOpen)}
-        >
-          {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <div className="md:hidden flex items-center gap-1">
+          <ThemeToggle />
+          <button
+            className="p-2 text-muted hover:text-ink transition-colors"
+            aria-label={isMobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMobileOpen}
+            onClick={() => setIsMobileOpen(!isMobileOpen)}
+          >
+            {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
       </motion.div>
 
       {/* Mobile Menu */}
@@ -85,22 +95,22 @@ const Navbar = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-20 left-4 right-4 bg-[#0D1426]/98 backdrop-blur-md border border-slate-700/60 rounded-2xl p-6 flex flex-col gap-4"
+            className="absolute top-20 left-4 right-4 bg-surface border border-line rounded-lg p-6 flex flex-col gap-4 shadow-lg"
           >
             {['features', 'how-it-works', 'demo'].map((item) => (
               <button
                 key={item}
                 onClick={() => scrollTo(item)}
-                className="text-slate-300 hover:text-white text-sm font-medium text-left capitalize transition-colors"
+                className="text-ink hover:text-accent text-sm font-medium text-left capitalize transition-colors"
               >
                 {item === 'how-it-works' ? 'How it works' : item.charAt(0).toUpperCase() + item.slice(1)}
               </button>
             ))}
-            <hr className="border-slate-700" />
-            <Link to="/login" className="text-slate-300 text-sm font-medium">Sign in</Link>
+            <hr className="border-line" />
+            <Link to="/login" className="text-ink text-sm font-medium">Sign in</Link>
             <Link
               to="/register"
-              className="px-4 py-2 rounded-xl text-sm font-semibold text-white text-center bg-gradient-to-r from-violet-600 to-cyan-500"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-on-accent text-center bg-accent hover:bg-accent-hover transition-colors"
             >
               Get started
             </Link>
