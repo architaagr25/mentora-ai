@@ -8,27 +8,42 @@ export default {
   ],
   theme: {
     extend: {
-      // Custom colours for Mentora AI brand
+      // Every colour is a CSS variable defined in src/index.css, which is what
+      // lets one set of class names serve both themes: bg-surface is a white
+      // card in the light theme and a warm dark one in the dark theme, with no
+      // dark: variant anywhere in the components.
+      //
+      // The rgb(... / <alpha-value>) form is what keeps opacity modifiers
+      // working — bg-accent/10 compiles to rgb(var(--accent) / 0.1). A plain
+      // var(--accent) would silently break every /NN in the codebase.
       colors: {
-        navy: {
-          900: '#0A0F1E',   // darkest background
-          800: '#0D1426',   // card backgrounds
-          700: '#111827',   // slightly lighter cards
-          600: '#1E293B',   // borders
-        },
-        purple: {
-          600: '#7C3AED',   // primary accent
-          500: '#8B5CF6',   // hover state
-          400: '#A78BFA',   // lighter purple
-        },
-        cyan: {
-          500: '#06B6D4',   // secondary accent
-          400: '#22D3EE',   // hover state
-        }
+        bg: 'rgb(var(--bg) / <alpha-value>)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-2': 'rgb(var(--surface-2) / <alpha-value>)',
+
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
+        'accent-soft': 'rgb(var(--accent-soft) / <alpha-value>)',
+        'on-accent': 'rgb(var(--on-accent) / <alpha-value>)',
+
+        highlight: 'rgb(var(--highlight) / <alpha-value>)',
+        'highlight-soft': 'rgb(var(--highlight-soft) / <alpha-value>)',
+
+        danger: 'rgb(var(--danger) / <alpha-value>)',
+        'danger-soft': 'rgb(var(--danger-soft) / <alpha-value>)',
+
+        success: 'rgb(var(--success) / <alpha-value>)',
+        'success-soft': 'rgb(var(--success-soft) / <alpha-value>)',
       },
-      // Custom fonts
+      // Custom fonts. The serif carries headings only; Inter stays for
+      // everything a person actually reads at length.
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['"Source Serif 4"', 'Georgia', 'serif'],
       },
       // Custom animations
       animation: {

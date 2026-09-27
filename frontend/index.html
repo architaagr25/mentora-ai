@@ -14,12 +14,31 @@
     <meta property="og:description" content="Expose your real knowledge gaps before your exam does." />
     <meta property="og:type" content="website" />
 
-    <!-- Google Fonts - Inter is clean and professional -->
+    <!-- Inter for body text, Source Serif 4 for headings. The serif is loaded
+         at a variable weight range so headings can be 600 without a second file. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400..700&display=swap" rel="stylesheet" />
 
     <title>Mentora AI — Learn by Teaching</title>
+
+    <!-- Theme, applied before first paint.
+         This has to be an inline, blocking script: if React set the theme
+         after mounting, a dark-theme visitor would see a white page flash
+         first. Wrapped in try/catch because localStorage throws outright in
+         some private-browsing modes, and a broken theme must not stop the
+         page from rendering. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("mentora-theme")
+          var dark =
+            stored === "dark" ||
+            (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)
+          if (dark) document.documentElement.dataset.theme = "dark"
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <!-- React mounts your entire app into this div -->

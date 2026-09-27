@@ -4,6 +4,77 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens.
+   Every colour in the app comes from one of these — no raw hex in components.
+   Values are space-separated RGB channels rather than hex so Tailwind's
+   opacity modifiers still work: bg-accent/10 becomes rgb(var(--accent)/0.1).
+
+   Light is the default. Dark is not a dimmed copy of it: the backgrounds are
+   warm rather than blue-grey, and the accent is lightened so it stays legible
+   on a dark surface instead of sinking into it. The hue is the same in both,
+   so switching theme does not feel like switching product. */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    --bg: 250 248 243;          /* #FAF8F3 paper */
+    --surface: 255 255 255;     /* #FFFFFF cards, panels */
+    --surface-2: 243 239 231;   /* #F3EFE7 sidebar, hovered rows, own chat bubbles */
+
+    --ink: 31 35 40;            /* #1F2328 main text */
+    --muted: 99 103 110;        /* #63676E secondary text */
+    --line: 230 225 214;        /* #E6E1D6 borders */
+
+    --accent: 156 74 47;        /* #9C4A2F rust — buttons, links, active nav */
+    --accent-hover: 132 62 39;  /* #843E27 */
+    --accent-soft: 246 234 228; /* #F6EAE4 tint behind a selected state */
+    --on-accent: 255 255 255;   /* #FFFFFF label on an accent button */
+
+    --highlight: 138 100 16;    /* #8A6410 XP, streaks, badges */
+    --highlight-soft: 250 241 221; /* #FAF1DD badge chips */
+
+    --danger: 158 27 67;        /* #9E1B43 wine, not red — see note below */
+    --danger-soft: 251 233 238; /* #FBE9EE error banners */
+
+    --success: 51 104 74;       /* #33684A good scores, resolved gaps */
+    --success-soft: 232 241 234; /* #E8F1EA success banners */
+  }
+
+  /* Set by the inline script in index.html before first paint, so a
+     dark-theme visitor never sees a flash of the light one. */
+  [data-theme='dark'] {
+    color-scheme: dark;
+
+    --bg: 22 21 15;             /* #16150F warm near-black */
+    --surface: 30 28 21;        /* #1E1C15 */
+    --surface-2: 38 35 25;      /* #262319 */
+
+    --ink: 242 237 225;         /* #F2EDE1 cream, not pure white */
+    --muted: 163 155 136;       /* #A39B88 */
+    --line: 51 47 36;           /* #332F24 */
+
+    --accent: 224 122 79;       /* #E07A4F the same rust, lightened */
+    --accent-hover: 201 106 66; /* #C96A42 */
+    --accent-soft: 46 35 24;    /* #2E2318 */
+    --on-accent: 26 24 16;      /* #1A1810 dark label on a light accent */
+
+    --highlight: 224 182 94;    /* #E0B65E */
+    --highlight-soft: 44 38 23; /* #2C2617 */
+
+    --danger: 226 120 143;      /* #E2788F */
+    --danger-soft: 46 28 32;    /* #2E1C20 */
+
+    --success: 143 180 116;     /* #8FB474 */
+    --success-soft: 31 38 24;   /* #1F2618 */
+  }
+
+  /* Why danger is wine and not red: the obvious red sits ~17° from the rust
+     accent in hue, so a filled "End session" and a filled "Start session"
+     would read as the same colour. Destructive actions are also never filled
+     buttons — outline plus danger text plus an icon — because colour alone is
+     no defence for anyone colour-blind. */
+}
+
 /* Global base styles */
 @layer base {
   /* Makes all elements use border-box sizing */
@@ -14,11 +85,17 @@
 
   /* Default body styles */
   body {
-    @apply bg-navy-900 text-white font-sans;
+    @apply bg-bg text-ink font-sans;
     /* Smooth scrolling for anchor links */
     scroll-behavior: smooth;
     /* Prevents horizontal scroll on mobile */
     overflow-x: hidden;
+  }
+
+  /* Headings are the serif. Set here rather than on every heading, so a
+     component only overrides it when it deliberately wants the sans. */
+  h1, h2, h3, h4 {
+    @apply font-serif;
   }
 
   /* Remove default link styles */
@@ -26,49 +103,65 @@
     @apply text-inherit no-underline;
   }
 
-  /* Scrollbar styling - makes it match the dark theme */
+  /* Scrollbar - follows the theme, since the tokens do */
   ::-webkit-scrollbar {
     width: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-navy-900;
+    @apply bg-bg;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-navy-600 rounded-full;
+    @apply bg-line rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-purple-600;
+    @apply bg-muted;
+  }
+
+  /* Firefox has no pseudo-elements for this, only these two properties */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--line)) rgb(var(--bg));
   }
 }
 
 /* Reusable component classes */
 @layer components {
-  /* Primary button used across the whole app */
+  /* Primary button used across the whole app.
+     No gradient and no coloured glow: a flat accent with a plain hover is
+     quieter and reads as a real control rather than decoration. */
   .btn-primary {
-    @apply bg-purple-600 hover:bg-purple-500 text-white font-semibold 
-           px-6 py-3 rounded-lg transition-all duration-200 
-           hover:shadow-lg hover:shadow-purple-600/25 
-           active:scale-95 cursor-pointer;
+    @apply bg-accent hover:bg-accent-hover text-on-accent font-semibold
+           px-6 py-3 rounded-lg transition-colors duration-200
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-accent
+           disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer;
   }
 
   /* Secondary/outlined button */
   .btn-secondary {
-    @apply border border-navy-600 hover:border-purple-600 text-slate-300 
-           hover:text-white font-semibold px-6 py-3 rounded-lg 
-           transition-all duration-200 cursor-pointer;
+    @apply border border-line hover:border-accent bg-transparent text-ink
+           hover:text-accent font-semibold px-6 py-3 rounded-lg
+           transition-colors duration-200
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-accent
+           disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer;
+  }
+
+  /* Destructive button. Deliberately never filled — see the note above. */
+  .btn-danger {
+    @apply border border-danger bg-transparent text-danger
+           hover:bg-danger-soft font-semibold px-6 py-3 rounded-lg
+           transition-colors duration-200
+           focus-visible:outline focus-visible:outline-2
+           focus-visible:outline-offset-2 focus-visible:outline-danger
+           disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer;
   }
 
   /* Card component */
   .card {
-    @apply bg-navy-700 border border-navy-600 rounded-xl p-6;
-  }
-
-  /* Gradient text effect - used for headings */
-  .gradient-text {
-    @apply bg-gradient-to-r from-purple-400 to-cyan-400 
-           bg-clip-text text-transparent;
+    @apply bg-surface border border-line rounded-lg p-6;
   }
 }
