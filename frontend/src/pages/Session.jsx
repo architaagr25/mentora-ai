@@ -23,6 +23,7 @@ import useSessionStore from '@/store/sessionStore'
 import VoiceMode from '@/components/session/VoiceMode'
 import SessionSummary from '@/components/session/SessionSummary'
 import XpInfo from '@/components/XpInfo'
+import ThemeToggle from '@/components/layout/ThemeToggle'
 
 // ─────────────────────────────────────────
 // HELPERS
@@ -429,16 +430,19 @@ const lastSpokenIdRef = useRef(null)
 
       {/* ─── LEFT INFO PANEL (desktop only) ─── */}
       <aside className="hidden lg:flex w-72 flex-shrink-0 border-r border-line bg-surface flex-col p-6 h-screen overflow-y-auto">
-        <button
-          onClick={() => navigate(backTo)}
-          className="flex items-center gap-2 text-ink hover:text-ink transition-colors text-sm mb-8 w-fit"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </button>
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={() => navigate(backTo)}
+            className="flex items-center gap-2 text-ink hover:text-accent transition-colors text-sm w-fit"
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </button>
+          <ThemeToggle />
+        </div>
 
         <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center mb-4">
-          <GraduationCap size={22} className="text-ink" />
+          <GraduationCap size={22} className="text-on-accent" />
         </div>
 
         <h1 className="text-ink font-semibold text-lg leading-snug mb-2">
@@ -692,6 +696,8 @@ const lastSpokenIdRef = useRef(null)
                 {voiceMode ? <MessageSquare size={16} /> : <Mic size={16} />}
               </button>
 
+              <ThemeToggle />
+
               <button
                 onClick={() => setShowScorePanel(true)}
                 disabled={isScoreButtonDisabled}
@@ -845,7 +851,7 @@ const lastSpokenIdRef = useRef(null)
                   >
                     {msg.role === 'assistant' && (
                       <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                        <GraduationCap size={14} className="text-ink" />
+                        <GraduationCap size={14} className="text-on-accent" />
                       </div>
                     )}
                     <div className="flex flex-col gap-1 max-w-[85%] sm:max-w-md">
@@ -902,7 +908,7 @@ const lastSpokenIdRef = useRef(null)
                     className="flex items-start gap-3 justify-start"
                   >
                     <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                      <GraduationCap size={14} className="text-ink" />
+                      <GraduationCap size={14} className="text-on-accent" />
                     </div>
                     {streamingMessage ? (
                       <div className="max-w-[85%] sm:max-w-md px-4 py-3 rounded-lg text-sm leading-relaxed whitespace-pre-wrap break-words bg-surface-2/80 text-ink border border-line/40">

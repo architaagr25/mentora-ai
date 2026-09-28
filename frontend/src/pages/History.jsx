@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { BookOpen, ChevronRight, Loader2, CheckCircle, Clock, History as HistoryIcon, ArrowLeft } from 'lucide-react'
 import api from '@/api'
+import ThemeToggle from '@/components/layout/ThemeToggle'
 import SessionDetailPanel from '@/components/history/SessionDetailPanel'
 
 const getScoreColor = (score) => {
@@ -187,13 +188,16 @@ const History = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
 
         {/* ─── BACK TO DASHBOARD ─── */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-6"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </button>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </button>
+          <ThemeToggle />
+        </div>
 
         {/* ─── PAGE HEADER ─── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 md:mb-10">

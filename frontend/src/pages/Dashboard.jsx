@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Brain,
@@ -28,6 +28,7 @@ import NewSessionModal from '@/components/session/NewSessionModal'
 import SessionDetailPanel from '@/components/history/SessionDetailPanel'
 import XpInfo from '@/components/XpInfo'
 import VerifyEmailBanner from '@/components/VerifyEmailBanner'
+import ThemeToggle from '@/components/layout/ThemeToggle'
 // ─────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────
@@ -449,9 +450,11 @@ const handleSessionClick = (session, isActive) => {
       >
        {/* Logo + collapse/expand button */}
 <div className="px-3 py-5 border-b border-line flex flex-col items-center gap-3 overflow-hidden">
-  <div className="w-full flex items-center justify-center gap-2">
+  {/* The logo is the way back to the public site — once signed in there was
+      no route to it at all. */}
+  <Link to="/" title="Back to the Mentora AI home page" className="w-full flex items-center justify-center gap-2">
     <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-      <Brain size={16} className="text-ink" />
+      <Brain size={16} className="text-on-accent" />
     </div>
     <span
       className={`text-ink font-semibold text-lg whitespace-nowrap transition-all duration-300 overflow-hidden ${
@@ -460,7 +463,7 @@ const handleSessionClick = (session, isActive) => {
     >
       Mentora <span className="text-accent">AI</span>
     </span>
-  </div>
+  </Link>
 
   <button
     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -507,7 +510,7 @@ const handleSessionClick = (session, isActive) => {
   <div className="px-4 py-4 border-t border-line">
     <div className="flex items-center gap-3 mb-3">
       <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-        <span className="text-ink text-sm font-semibold">
+        <span className="text-on-accent text-sm font-semibold">
           {user?.name?.charAt(0).toUpperCase()}
         </span>
       </div>
@@ -517,12 +520,15 @@ const handleSessionClick = (session, isActive) => {
       </div>
     </div>
     <hr className="border-line mb-3" />
-    <button
-      onClick={logout}
-      className="w-full text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
-    >
-      Sign out
-    </button>
+    <div className="flex items-center justify-between">
+      <button
+        onClick={logout}
+        className="text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
+      >
+        Sign out
+      </button>
+      <ThemeToggle />
+    </div>
   </div>
 )}
 
@@ -562,14 +568,14 @@ const handleSessionClick = (session, isActive) => {
             >
               {/* Mobile sidebar header */}
               <div className="px-6 py-5 border-b border-line flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <Link to="/" onClick={() => setShowMobileSidebar(false)} className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-                    <Brain size={16} className="text-ink" />
+                    <Brain size={16} className="text-on-accent" />
                   </div>
                   <span className="text-ink font-semibold text-lg">
                     Mentora <span className="text-accent">AI</span>
                   </span>
-                </div>
+                </Link>
                 <button
                   onClick={() => setShowMobileSidebar(false)}
                   className="text-muted hover:text-ink transition-colors"
@@ -596,7 +602,7 @@ const handleSessionClick = (session, isActive) => {
 <div className="px-4 py-4 border-t border-line">
   <div className="flex items-center gap-3 mb-3">
     <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-      <span className="text-ink text-sm font-semibold">
+      <span className="text-on-accent text-sm font-semibold">
         {user?.name?.charAt(0).toUpperCase()}
       </span>
     </div>
@@ -606,12 +612,15 @@ const handleSessionClick = (session, isActive) => {
     </div>
   </div>
   <hr className="border-line mb-3" />
-  <button
-    onClick={logout}
-    className="w-full text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
-  >
-    Sign out
-  </button>
+  <div className="flex items-center justify-between">
+    <button
+      onClick={logout}
+      className="text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
+    >
+      Sign out
+    </button>
+    <ThemeToggle />
+  </div>
 </div>
             </motion.aside>
           </>
@@ -638,17 +647,20 @@ const handleSessionClick = (session, isActive) => {
           </button>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
-              <Brain size={14} className="text-ink" />
+              <Brain size={14} className="text-on-accent" />
             </div>
             <span className="text-ink font-semibold">
               Mentora <span className="text-accent">AI</span>
             </span>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-highlight-soft border border-highlight/30">
-            <Flame size={12} className="text-highlight" />
-            <span className="text-highlight text-xs font-semibold">
-              {user?.streak || 0}
-            </span>
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-highlight-soft border border-highlight/30">
+              <Flame size={12} className="text-highlight" />
+              <span className="text-highlight text-xs font-semibold">
+                {user?.streak || 0}
+              </span>
+            </div>
+            <ThemeToggle />
           </div>
         </div>
 

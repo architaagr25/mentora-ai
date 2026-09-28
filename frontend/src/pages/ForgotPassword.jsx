@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Brain, Loader2, Mail, ArrowLeft } from 'lucide-react'
 import api from '@/api'
+import ThemeToggle from '@/components/layout/ThemeToggle'
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -44,6 +45,7 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4">
+      <ThemeToggle className="fixed top-4 right-4 z-50" />
 
       <div className="relative w-full max-w-md">
         {/* Logo */}

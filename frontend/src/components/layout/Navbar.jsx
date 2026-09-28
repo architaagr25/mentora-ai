@@ -1,18 +1,22 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Menu, X, Brain } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ThemeToggle from './ThemeToggle'
+import useHideOnScroll from '@/hooks/useHideOnScroll'
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  // The bar gets out of the way going down and comes back the moment you
+  // move up, so the nav is always one small gesture away.
+  const { visible } = useHideOnScroll({
+    onScroll: (y) => setIsScrolled(y > 20),
+  })
+
+  // An open menu must not scroll away with the bar that owns it.
+  const isHidden = !visible && !isMobileOpen
 
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -20,7 +24,12 @@ const Navbar = () => {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4">
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 px-4
+                  transition-transform duration-300 ${
+                    isHidden ? '-translate-y-[130%]' : 'translate-y-0'
+                  }`}
+    >
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

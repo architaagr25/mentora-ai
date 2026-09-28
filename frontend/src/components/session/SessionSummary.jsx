@@ -17,9 +17,9 @@ const SCORE_ROWS = [
 ]
 
 const barColor = (score) => {
-  if (score >= 8) return 'from-green-500 to-cyan-500'
-  if (score >= 6) return 'from-yellow-500 to-orange-500'
-  return 'from-orange-500 to-red-500'
+  if (score >= 8) return 'bg-success'
+  if (score >= 6) return 'bg-highlight'
+  return 'bg-danger'
 }
 
 const formatDuration = (seconds) => {
@@ -47,13 +47,13 @@ const SessionSummary = ({ summary, topic, onBackToDashboard, onViewHistory }) =>
       >
         {/* ─── HEADER ─── */}
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-green-500/15 flex items-center justify-center mx-auto mb-3">
-            <CheckCircle2 size={26} className="text-green-400" />
+          <div className="w-14 h-14 rounded-lg bg-success-soft flex items-center justify-center mx-auto mb-3">
+            <CheckCircle2 size={26} className="text-success" />
           </div>
-          <h1 className="text-white font-bold text-xl md:text-2xl">Session complete</h1>
-          <p className="text-slate-400 text-sm mt-1">{topic}</p>
+          <h1 className="text-ink font-semibold text-xl md:text-2xl">Session complete</h1>
+          <p className="text-muted text-sm mt-1">{topic}</p>
 
-          <div className="flex items-center justify-center gap-3 mt-3 text-xs text-slate-500">
+          <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted">
             {duration && (
               <span className="flex items-center gap-1">
                 <Clock size={12} />
@@ -61,7 +61,7 @@ const SessionSummary = ({ summary, topic, onBackToDashboard, onViewHistory }) =>
               </span>
             )}
             {xpEarned > 0 && (
-              <span className="flex items-center gap-1 text-yellow-400">
+              <span className="flex items-center gap-1 text-highlight">
                 <Zap size={12} />+{xpEarned} XP
               </span>
             )}
@@ -70,35 +70,35 @@ const SessionSummary = ({ summary, topic, onBackToDashboard, onViewHistory }) =>
 
         {/* ─── FINAL SCORE ─── */}
         {score ? (
-          <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6">
+          <div className="bg-surface border border-line rounded-lg p-5 md:p-6">
             <div className="flex items-center justify-between gap-3 mb-5">
               <div>
-                <h2 className="text-white font-semibold">Final score</h2>
+                <h2 className="text-ink font-semibold">Final score</h2>
                 {summary?.autoScored && (
-                  <p className="text-slate-500 text-xs mt-0.5">
+                  <p className="text-muted text-xs mt-0.5">
                     Scored automatically when you ended the session
                   </p>
                 )}
               </div>
-              <span className="flex-shrink-0 text-2xl font-bold text-white">
+              <span className="flex-shrink-0 text-2xl font-semibold text-ink">
                 {average}
-                <span className="text-slate-500 text-base font-normal">/10</span>
+                <span className="text-muted text-base font-normal">/10</span>
               </span>
             </div>
 
             <div className="space-y-3">
               {SCORE_ROWS.map(({ key, label }) => (
                 <div key={key} className="flex items-center gap-3">
-                  <span className="text-slate-400 text-sm w-24 flex-shrink-0">{label}</span>
-                  <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                  <span className="text-muted text-sm w-24 flex-shrink-0">{label}</span>
+                  <div className="flex-1 h-2 bg-surface-2 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${(score[key] ?? 0) * 10}%` }}
                       transition={{ duration: 0.6 }}
-                      className={`h-full rounded-full bg-gradient-to-r ${barColor(score[key] ?? 0)}`}
+                      className={`h-full rounded-full ${barColor(score[key] ?? 0)}`}
                     />
                   </div>
-                  <span className="text-white text-sm font-semibold w-8 text-right flex-shrink-0">
+                  <span className="text-ink text-sm font-semibold w-8 text-right flex-shrink-0">
                     {score[key] ?? '—'}
                   </span>
                 </div>
@@ -106,12 +106,12 @@ const SessionSummary = ({ summary, topic, onBackToDashboard, onViewHistory }) =>
             </div>
 
             {score.feedback && (
-              <p className="text-slate-300 text-sm mt-5 leading-relaxed">{score.feedback}</p>
+              <p className="text-ink text-sm mt-5 leading-relaxed">{score.feedback}</p>
             )}
           </div>
         ) : (
-          <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-6 text-center">
-            <p className="text-slate-400 text-sm">
+          <div className="bg-surface border border-line rounded-lg p-6 text-center">
+            <p className="text-muted text-sm">
               This session ended without a score — there wasn't enough teaching to judge.
             </p>
           </div>
@@ -119,19 +119,19 @@ const SessionSummary = ({ summary, topic, onBackToDashboard, onViewHistory }) =>
 
         {/* ─── GAPS ─── */}
         {score?.gaps?.length > 0 && (
-          <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6">
-            <h3 className="text-white font-semibold text-sm mb-1 flex items-center gap-2">
-              <AlertCircle size={14} className="text-orange-400" />
+          <div className="bg-surface border border-line rounded-lg p-5 md:p-6">
+            <h3 className="text-ink font-semibold text-sm mb-1 flex items-center gap-2">
+              <AlertCircle size={14} className="text-highlight" />
               Gaps to close
             </h3>
-            <p className="text-slate-500 text-xs mb-3">
+            <p className="text-muted text-xs mb-3">
               These are waiting on your Concepts page — practise one to close it
             </p>
             <ul className="space-y-2">
               {score.gaps.map((gap, i) => (
                 <li key={i} className="flex items-start gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
-                  <span className="text-slate-300 text-sm">{gap}</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-highlight mt-1.5 flex-shrink-0" />
+                  <span className="text-ink text-sm">{gap}</span>
                 </li>
               ))}
             </ul>
@@ -140,7 +140,7 @@ const SessionSummary = ({ summary, topic, onBackToDashboard, onViewHistory }) =>
 
         {/* ─── KEY POINTS REVEAL ─── */}
         {summary?.keyPoints?.length > 0 && (
-          <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6">
+          <div className="bg-surface border border-line rounded-lg p-5 md:p-6">
             <KeyPointsReveal
               keyPoints={summary.keyPoints}
               coveredKeyPoints={score?.coveredKeyPoints ?? []}
@@ -152,14 +152,14 @@ const SessionSummary = ({ summary, topic, onBackToDashboard, onViewHistory }) =>
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onBackToDashboard}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all text-sm"
+            className="btn-primary flex-1 flex items-center justify-center gap-2 py-3 text-sm"
           >
             <LayoutDashboard size={16} />
             Back to Dashboard
           </button>
           <button
             onClick={onViewHistory}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium text-slate-300 bg-[#0D1426] border border-slate-700 hover:border-slate-600 hover:text-white transition-colors text-sm"
+            className="btn-secondary flex-1 flex items-center justify-center gap-2 py-3 text-sm"
           >
             <History size={16} />
             View in History

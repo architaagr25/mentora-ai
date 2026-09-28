@@ -24,6 +24,7 @@ import {
   Award,
 } from 'lucide-react'
 import useAuth from '@/hooks/useAuth'
+import ThemeToggle from '@/components/layout/ThemeToggle'
 import useAuthStore from '@/store/authStore'
 import api from '@/api'
 import { updateProfile, changePassword } from '@/api/users'
@@ -544,13 +545,16 @@ const Profile = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
 
         {/* ─── BACK TO DASHBOARD ─── */}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-6"
-        >
-          <ArrowLeft size={16} />
-          Back to Dashboard
-        </button>
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
+          </button>
+          <ThemeToggle />
+        </div>
 
         {/* ─── HEADER ─── */}
         <motion.div

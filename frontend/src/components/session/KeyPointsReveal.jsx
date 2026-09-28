@@ -19,14 +19,14 @@ const KeyPointsReveal = ({ keyPoints = [], coveredKeyPoints = [], className = ''
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-2 mb-1">
-        <h4 className="text-white font-semibold text-sm">
+        <h4 className="text-ink font-semibold text-sm">
           What a complete explanation covers
         </h4>
-        <span className="flex-shrink-0 text-xs text-slate-400">
+        <span className="flex-shrink-0 text-xs text-muted">
           {covered.size} of {keyPoints.length}
         </span>
       </div>
-      <p className="text-slate-500 text-xs mb-3">
+      <p className="text-muted text-xs mb-3">
         Hidden while you were teaching, so it couldn't be used as a checklist
       </p>
 
@@ -37,19 +37,19 @@ const KeyPointsReveal = ({ keyPoints = [], coveredKeyPoints = [], className = ''
             <li key={i} className="flex items-start gap-2.5">
               <span
                 className={`flex-shrink-0 mt-0.5 w-4 h-4 rounded-full flex items-center justify-center ${
-                  isCovered ? 'bg-green-500/20' : 'bg-slate-800'
+                  isCovered ? 'bg-success-soft' : 'bg-surface-2'
                 }`}
               >
                 {isCovered ? (
-                  <Check size={10} className="text-green-400" />
+                  <Check size={10} className="text-success" />
                 ) : (
-                  <Circle size={6} className="text-slate-500" />
+                  <Circle size={6} className="text-muted" />
                 )}
               </span>
-              <span className={`text-sm ${isCovered ? 'text-slate-300' : 'text-slate-500'}`}>
+              <span className={`text-sm ${isCovered ? 'text-ink' : 'text-muted'}`}>
                 {point}
                 {!isCovered && (
-                  <span className="ml-2 text-xs text-orange-400/80">not covered</span>
+                  <span className="ml-2 text-xs text-highlight">not covered</span>
                 )}
               </span>
             </li>

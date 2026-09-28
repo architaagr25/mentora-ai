@@ -156,15 +156,15 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="fixed inset-0 z-50 flex items-center justify-center px-4"
       >
-        <div className="bg-[#0D1426] border border-slate-700 rounded-2xl p-6 md:p-8 w-full max-w-md shadow-2xl">
+        <div className="bg-surface border border-line rounded-lg p-6 md:p-8 w-full max-w-md shadow-2xl">
 
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white">New Teaching Session</h2>
+            <h2 className="text-xl font-semibold text-ink">New Teaching Session</h2>
             <button
               onClick={onClose}
               disabled={isProcessing}
-              className="text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-40"
+              className="text-muted hover:text-ink transition-colors disabled:opacity-40"
             >
               <X size={20} />
             </button>
@@ -174,14 +174,14 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
               whose previous session(s) are all completed, explaining why
               a new session is starting instead of resuming the old one. */}
           {restartNotice && (
-            <div className="mb-5 px-4 py-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs leading-relaxed">
+            <div className="alert alert-info mb-5 text-xs leading-relaxed">
               Your previous session on <span className="font-semibold">"{restartNotice}"</span> is complete.
               Start a new session to keep practicing this topic.
             </div>
           )}
           {/* Topic input */}
           <div className="mb-5">
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-ink mb-2">
               What do you want to teach?
             </label>
             <input
@@ -197,25 +197,25 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
               placeholder="e.g. TCP Handshake, Binary Search Trees..."
               autoFocus
               disabled={isProcessing}
-              className={`w-full px-4 py-3 rounded-xl bg-[#080D1A] border text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all disabled:opacity-50 ${
+              className={`input ${
                 topicError
-                  ? 'border-red-500/60'
-                  : 'border-slate-700 hover:border-slate-600'
+                  ? 'input-invalid'
+                  : 'border-line hover:border-accent'
               }`}
             />
             {topicError && (
-              <p className="mt-1.5 text-xs text-red-400">{topicError}</p>
+              <p className="field-error">{topicError}</p>
             )}
-            <p className="mt-2 text-xs text-slate-600">
+            <p className="mt-2 text-xs text-muted">
               Be specific — "TCP Handshake" works better than "Networking"
             </p>
           </div>
 
           {/* Who the AI student acts like */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-ink mb-2">
               Teach it to{' '}
-              <span className="text-slate-500 font-normal">(changes how it asks)</span>
+              <span className="text-muted font-normal">(changes how it asks)</span>
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {AUDIENCES.map((option) => {
@@ -226,20 +226,20 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
                     type="button"
                     onClick={() => setAudience(option.value)}
                     aria-pressed={isSelected}
-                    className={`text-left px-3 py-2.5 rounded-xl border transition-colors ${
+                    className={`text-left px-3 py-2.5 rounded-lg border transition-colors ${
                       isSelected
-                        ? 'border-violet-500/50 bg-violet-600/15'
-                        : 'border-slate-700 bg-[#080D1A] hover:border-slate-600'
+                        ? 'border-accent bg-accent-soft'
+                        : 'border-line bg-bg hover:border-accent'
                     }`}
                   >
                     <span
                       className={`block text-sm font-medium ${
-                        isSelected ? 'text-violet-200' : 'text-slate-300'
+                        isSelected ? 'text-accent' : 'text-ink'
                       }`}
                     >
                       {option.label}
                     </span>
-                    <span className="block text-xs text-slate-500 mt-0.5">{option.hint}</span>
+                    <span className="block text-xs text-muted mt-0.5">{option.hint}</span>
                   </button>
                 )
               })}
@@ -247,9 +247,9 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
           </div>
           {/* PDF upload */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-ink mb-2">
               Upload notes{' '}
-              <span className="text-slate-500 font-normal">(optional)</span>
+              <span className="text-muted font-normal">(optional)</span>
             </label>
 
             {!pdfFile ? (
@@ -258,31 +258,31 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessing}
-                className="w-full flex flex-col items-center justify-center gap-2 px-4 py-5 rounded-xl border-2 border-dashed border-slate-700 hover:border-violet-500/60 hover:bg-violet-500/5 text-slate-500 hover:text-slate-300 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full flex flex-col items-center justify-center gap-2 px-4 py-5 rounded-lg border-2 border-dashed border-line hover:border-accent hover:bg-accent-soft text-muted hover:text-accent transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Upload size={20} />
                 <span className="text-sm">Click to upload a PDF</span>
-                <span className="text-xs text-slate-600">Max 10MB · PDF only · Max 75 pages</span>
+                <span className="text-xs text-muted">Max 10MB · PDF only · Max 75 pages</span>
               </button>
             ) : (
               // File preview — shown when a file is selected
-              <div className="rounded-xl border border-slate-700 bg-[#080D1A] px-4 py-3">
+              <div className="rounded-lg border border-line bg-bg px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-violet-600/20 flex items-center justify-center flex-shrink-0">
-                    <FileText size={16} className="text-violet-400" />
+                  <div className="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center flex-shrink-0">
+                    <FileText size={16} className="text-accent" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-white text-sm font-medium truncate">
+                    <p className="text-ink text-sm font-medium truncate">
                       {pdfFile.name}
                     </p>
-                    <p className="text-slate-500 text-xs">
+                    <p className="text-muted text-xs">
                       {(pdfFile.size / 1024).toFixed(0)} KB
                     </p>
                   </div>
                   <button
                     onClick={handleRemovePdf}
                     disabled={isProcessing}
-                    className="text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40"
+                    className="text-muted hover:text-danger transition-colors disabled:opacity-40"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -297,7 +297,7 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="mt-2 flex items-center gap-1.5 text-red-400 text-xs"
+                  className="mt-2 flex items-center gap-1.5 text-danger text-xs"
                 >
                   <AlertCircle size={12} />
                   {pdfError}
@@ -306,7 +306,7 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
             </AnimatePresence>
 
             {pdfFile && (
-              <p className="mt-2 text-xs text-slate-600">
+              <p className="mt-2 text-xs text-muted">
                 The AI will quiz you only on concepts from your notes
               </p>
             )}
@@ -325,7 +325,7 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
           <button
             onClick={handleStart}
             disabled={isProcessing}
-            className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="btn-primary w-full flex items-center justify-center gap-2"
           >
             {isUploading ? (
               <>

@@ -18,7 +18,7 @@ const Waveform = () => (
     {[0.4, 0.7, 1, 0.8, 0.5, 0.9, 0.6, 0.75, 0.45, 0.85].map((h, i) => (
       <motion.div
         key={i}
-        className="w-1 rounded-full bg-gradient-to-t from-violet-600 to-cyan-400"
+        className="w-1 rounded-full bg-accent"
         animate={{
           scaleY: [h, h * 0.4, h * 1.2, h * 0.6, h],
         }}
@@ -35,11 +35,11 @@ const Waveform = () => (
 )
 
 const statusConfig = {
-  [VOICE_STATE.IDLE]: { text: 'Tap to speak', color: 'text-slate-400' },
-  [VOICE_STATE.RECORDING]: { text: 'Listening... tap to stop', color: 'text-red-400' },
-  [VOICE_STATE.TRANSCRIBING]: { text: 'Transcribing...', color: 'text-cyan-400' },
-  [VOICE_STATE.WAITING]: { text: 'AI student is thinking...', color: 'text-violet-400' },
-  [VOICE_STATE.SPEAKING]: { text: 'AI student is speaking...', color: 'text-cyan-400' },
+  [VOICE_STATE.IDLE]: { text: 'Tap to speak', color: 'text-muted' },
+  [VOICE_STATE.RECORDING]: { text: 'Listening... tap to stop', color: 'text-danger' },
+  [VOICE_STATE.TRANSCRIBING]: { text: 'Transcribing...', color: 'text-accent' },
+  [VOICE_STATE.WAITING]: { text: 'AI student is thinking...', color: 'text-accent' },
+  [VOICE_STATE.SPEAKING]: { text: 'AI student is speaking...', color: 'text-accent' },
 }
 
 const VoiceMode = ({
@@ -295,26 +295,26 @@ const {
     <div className="flex flex-col h-full">
 
       {/* ─── MOBILE TOP BAR ─── */}
-      <header className="lg:hidden flex-shrink-0 border-b border-slate-800 bg-[#0D1426]">
+      <header className="lg:hidden flex-shrink-0 border-b border-line bg-surface">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           {/* Left — back + topic */}
           <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={onNavigateBack}
-              className="text-slate-500 hover:text-white transition-colors flex-shrink-0"
+              className="text-muted hover:text-ink transition-colors flex-shrink-0"
             >
               <ArrowLeft size={20} />
             </button>
             <div className="min-w-0">
-              <p className="text-white font-semibold text-sm truncate">
+              <p className="text-ink font-semibold text-sm truncate">
                 {topic || 'Voice Mode'}
               </p>
               <div className="flex items-center gap-2">
-  <p className="text-slate-500 text-xs">
+  <p className="text-muted text-xs">
     {isEnded ? 'Session completed' : 'Voice session'}
   </p>
   {hasNotes && (
-    <span className="flex items-center gap-1 text-cyan-400 text-xs">
+    <span className="flex items-center gap-1 text-accent text-xs">
       <FileText size={10} />
       From notes
     </span>
@@ -328,7 +328,7 @@ const {
             {/* Switch to text */}
             <button
               onClick={onSwitchToText}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent/15 transition-colors"
             >
               <MessageSquare size={16} />
               <span className="hidden sm:inline">Text</span>
@@ -340,7 +340,7 @@ const {
               disabled={isScoreButtonDisabled}
               title={isScoreButtonDisabled ? scoreHint : undefined}
               aria-label={isScoreButtonDisabled ? scoreHint : 'Score'}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-violet-600/20"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <BarChart3 size={16} />
               <span className="hidden sm:inline">
@@ -352,7 +352,7 @@ const {
             {!isEnded && (
               <button
                 onClick={onEndSession}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-surface-2 text-muted hover:text-danger hover:bg-danger-soft transition-colors"
               >
                 <Flag size={16} />
                 <span className="hidden sm:inline">End</span>
@@ -367,11 +367,11 @@ const {
 
         {messages.length === 0 && !isStreaming && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-violet-600/20 flex items-center justify-center mb-4">
-              <GraduationCap size={24} className="text-violet-400" />
+            <div className="w-14 h-14 rounded-lg bg-accent-soft flex items-center justify-center mb-4">
+              <GraduationCap size={24} className="text-accent" />
             </div>
-            <p className="text-white font-semibold mb-2">Voice mode ready</p>
-            <p className="text-slate-400 text-sm max-w-xs">
+            <p className="text-ink font-semibold mb-2">Voice mode ready</p>
+            <p className="text-muted text-sm max-w-xs">
               Tap the mic button below and start explaining. I'll ask questions when you stop.
             </p>
           </div>
@@ -387,21 +387,21 @@ const {
             }`}
           >
             {msg.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                <GraduationCap size={14} className="text-white" />
+              <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+                <GraduationCap size={14} className="text-on-accent" />
               </div>
             )}
             <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+              className={`max-w-[80%] px-4 py-3 rounded-lg text-sm leading-relaxed whitespace-pre-wrap break-words ${
                 msg.role === 'user'
-                  ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white'
-                  : 'bg-slate-800/80 text-slate-200 border border-slate-700/40'
+                  ? 'bg-surface-2 text-ink'
+                  : 'bg-surface-2/80 text-ink border border-line/40'
               }`}
             >
               {msg.content}
             </div>
             {msg.role === 'user' && (
-              <span className="text-slate-500 text-xs pt-2 flex-shrink-0">You</span>
+              <span className="text-muted text-xs pt-2 flex-shrink-0">You</span>
             )}
           </motion.div>
         ))}
@@ -413,13 +413,13 @@ const {
             animate={{ opacity: 1, y: 0 }}
             className="flex flex-col items-center gap-2 py-2"
           >
-            <p className="text-slate-500 text-xs text-center">
+            <p className="text-muted text-xs text-center">
               The AI student didn't reply to your last message.
             </p>
             <button
               onClick={onRetry}
               disabled={!isConnected}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-surface-2 text-ink hover:bg-surface-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw size={14} />
               Retry
@@ -434,12 +434,12 @@ const {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-start gap-3 justify-start"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-              <GraduationCap size={14} className="text-white" />
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+              <GraduationCap size={14} className="text-on-accent" />
             </div>
-            <div className="max-w-[80%] px-4 py-3 rounded-2xl text-sm leading-relaxed bg-slate-800/80 text-slate-200 border border-slate-700/40">
+            <div className="max-w-[80%] px-4 py-3 rounded-lg text-sm leading-relaxed bg-surface-2/80 text-ink border border-line/40">
               {streamingMsg}
-              <span className="inline-block w-1.5 h-4 bg-cyan-400 ml-1 animate-pulse align-middle" />
+              <span className="inline-block w-1.5 h-4 bg-accent ml-1 animate-pulse align-middle" />
             </div>
           </motion.div>
         )}
@@ -448,7 +448,7 @@ const {
       </div>
 
       {/* ─── VOICE CONTROLS ─── */}
-      <div className="flex-shrink-0 border-t border-slate-800 bg-[#0D1426] px-4 py-6">
+      <div className="flex-shrink-0 border-t border-line bg-surface px-4 py-6">
 
         {/* Error */}
         <AnimatePresence>
@@ -457,7 +457,7 @@ const {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-red-400 text-xs text-center mb-4"
+              className="text-danger text-xs text-center mb-4"
             >
               {error || recorderError}
             </motion.p>
@@ -468,7 +468,7 @@ const {
           <div className="flex justify-center mb-2">
             <button
               onClick={() => setShowVoicePicker((v) => !v)}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-muted hover:text-ink transition-colors"
             >
               <Settings2 size={12} />
               Voice settings
@@ -483,7 +483,7 @@ const {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="mb-4 max-h-40 overflow-y-auto bg-[#080D1A] border border-slate-800 rounded-xl p-2"
+              className="mb-4 max-h-40 overflow-y-auto bg-bg border border-line rounded-lg p-2"
             >
               {voices.map((v) => (
                 <button
@@ -494,13 +494,13 @@ const {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs text-left transition-colors ${
                     selectedVoiceName === v.name
-                      ? 'bg-violet-600/20 text-violet-400'
-                      : 'text-slate-400 hover:bg-slate-800'
+                      ? 'bg-accent-soft text-accent'
+                      : 'text-muted hover:bg-surface-2'
                   }`}
                 >
                   <span className="truncate">{v.name.replace(/^Microsoft |^Google /, '')}</span>
                   {selectedVoiceName === v.name && (
-                    <span className="text-violet-400 flex-shrink-0 ml-2">✓</span>
+                    <span className="text-accent flex-shrink-0 ml-2">✓</span>
                   )}
                 </button>
               ))}
@@ -519,11 +519,11 @@ const {
               >
                 {!isPaused && <Waveform />}
                 {isPaused && (
-                  <p className="text-slate-500 text-xs">Paused</p>
+                  <p className="text-muted text-xs">Paused</p>
                 )}
                 <button
                   onClick={togglePause}
-                  className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors underline underline-offset-2"
+                  className="text-xs text-accent hover:text-accent-hover transition-colors underline underline-offset-2"
                 >
                   {isPaused ? 'Resume' : 'Pause'}
                 </button>
@@ -540,17 +540,17 @@ const {
             whileTap={(!micDisabled || isPaused) ? { scale: 0.95 } : {}}
             className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 disabled:cursor-not-allowed ${
               voiceState === VOICE_STATE.RECORDING
-                ? 'bg-red-500 shadow-lg shadow-red-500/40'
+                ? 'bg-danger'
                 : voiceState === VOICE_STATE.SPEAKING
-                ? 'bg-cyan-500/20 border-2 border-cyan-500/40'
+                ? 'bg-accent-soft border-2 border-accent/40'
                 : micDisabled
-                ? 'bg-slate-800 opacity-50'
-                : 'bg-gradient-to-br from-violet-600 to-cyan-500 shadow-lg shadow-violet-500/30'
+                ? 'bg-surface-2 opacity-50'
+                : 'bg-accent'
             }`}
           >
             {voiceState === VOICE_STATE.RECORDING && (
               <motion.div
-                className="absolute inset-0 rounded-full bg-red-500"
+                className="absolute inset-0 rounded-full bg-danger"
                 animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0, 0.5] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               />
@@ -558,13 +558,13 @@ const {
 
             {voiceState === VOICE_STATE.TRANSCRIBING ||
             voiceState === VOICE_STATE.WAITING ? (
-              <Loader2 size={28} className="text-white animate-spin" />
+              <Loader2 size={28} className="text-on-accent animate-spin" />
             ) : voiceState === VOICE_STATE.SPEAKING ? (
-              <Volume2 size={28} className="text-cyan-400" />
+              <Volume2 size={28} className="text-accent" />
             ) : voiceState === VOICE_STATE.RECORDING ? (
-              <MicOff size={28} className="text-white" />
+              <MicOff size={28} className="text-on-accent" />
             ) : (
-              <Mic size={28} className="text-white" />
+              <Mic size={28} className="text-on-accent" />
             )}
           </motion.button>
 

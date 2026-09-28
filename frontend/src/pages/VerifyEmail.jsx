@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Brain, Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import { verifyEmail } from '@/api/users'
+import ThemeToggle from '@/components/layout/ThemeToggle'
 import useAuthStore from '@/store/authStore'
 
 // ─────────────────────────────────────────
@@ -47,6 +48,7 @@ const VerifyEmail = () => {
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4">
+      <ThemeToggle className="fixed top-4 right-4 z-50" />
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <Brain size={26} className="text-accent" />
