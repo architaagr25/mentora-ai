@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { GraduationCap } from 'lucide-react'
+import StudentAvatar from '@/components/StudentAvatar'
 
 const scores = [
   { label: 'Accuracy', value: 9, max: 10 },
@@ -77,9 +77,7 @@ const LiveDemoSection = () => {
                   className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'ai' && (
-                    <div className="w-8 h-8 rounded-full bg-accent-soft border border-accent/30 flex items-center justify-center flex-shrink-0">
-                      <GraduationCap size={14} className="text-accent" />
-                    </div>
+                    <StudentAvatar />
                   )}
                   <div
                     className={`max-w-sm px-4 py-3 rounded-lg text-sm leading-relaxed ${

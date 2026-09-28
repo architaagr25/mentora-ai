@@ -24,6 +24,7 @@ import VoiceMode from '@/components/session/VoiceMode'
 import SessionSummary from '@/components/session/SessionSummary'
 import XpInfo from '@/components/XpInfo'
 import ThemeToggle from '@/components/layout/ThemeToggle'
+import StudentAvatar from '@/components/StudentAvatar'
 
 // ─────────────────────────────────────────
 // HELPERS
@@ -846,9 +847,7 @@ const lastSpokenIdRef = useRef(null)
                     }`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                        <GraduationCap size={14} className="text-on-accent" />
-                      </div>
+                      <StudentAvatar />
                     )}
                     <div className="flex flex-col gap-1 max-w-[85%] sm:max-w-md">
                       <div
@@ -903,9 +902,7 @@ const lastSpokenIdRef = useRef(null)
                     animate={{ opacity: 1, y: 0 }}
                     className="flex items-start gap-3 justify-start"
                   >
-                    <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                      <GraduationCap size={14} className="text-on-accent" />
-                    </div>
+                    <StudentAvatar />
                     {streamingMessage ? (
                       <div className="max-w-[85%] sm:max-w-md px-4 py-3 rounded-lg text-sm leading-relaxed whitespace-pre-wrap break-words bg-surface-2/80 text-ink border border-line/40">
                         {streamingMessage}

@@ -105,13 +105,13 @@ const useBadges = () =>
   })
 
 const StatCard = ({ icon: Icon, color, label, value, info }) => (
-  <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 md:p-5">
-    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center mb-2 md:mb-3 ${color}`}>
+  <div className="bg-surface border border-line rounded-lg p-4 md:p-5">
+    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center mb-2 md:mb-3 ${color}`}>
       <Icon size={16} />
     </div>
-    <p className="text-xl md:text-2xl font-bold text-white mb-1">{value}</p>
+    <p className="text-xl md:text-2xl font-semibold text-ink mb-1">{value}</p>
     <div className="flex items-center gap-1.5">
-      <p className="text-slate-500 text-xs">{label}</p>
+      <p className="text-muted text-xs">{label}</p>
       {info}
     </div>
   </div>
@@ -119,29 +119,29 @@ const StatCard = ({ icon: Icon, color, label, value, info }) => (
 
 const BadgeCard = ({ badge, isEarned }) => (
   <div
-    className={`rounded-2xl p-4 md:p-5 border transition-all ${
+    className={`rounded-lg p-4 md:p-5 border transition-all ${
       isEarned
-        ? 'bg-[#0D1426] border-violet-500/30'
-        : 'bg-[#0D1426]/60 border-slate-800'
+        ? 'bg-surface border-accent'
+        : 'bg-surface/60 border-line'
     }`}
   >
     <div
-      className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${
+      className={`w-10 h-10 rounded-lg flex items-center justify-center mb-3 ${
         isEarned
-          ? 'bg-gradient-to-br from-violet-600 to-cyan-500'
-          : 'bg-slate-800'
+          ? 'bg-accent'
+          : 'bg-surface-2'
       }`}
     >
       {isEarned ? (
-        <Award size={18} className="text-white" />
+        <Award size={18} className="text-ink" />
       ) : (
-        <Lock size={16} className="text-slate-600" />
+        <Lock size={16} className="text-muted" />
       )}
     </div>
-    <p className={`font-semibold text-sm mb-1 ${isEarned ? 'text-white' : 'text-slate-500'}`}>
+    <p className={`font-semibold text-sm mb-1 ${isEarned ? 'text-ink' : 'text-muted'}`}>
       {badge.name}
     </p>
-    <p className={`text-xs leading-relaxed ${isEarned ? 'text-slate-400' : 'text-slate-600'}`}>
+    <p className={`text-xs leading-relaxed ${isEarned ? 'text-muted' : 'text-muted'}`}>
       {badge.description}
     </p>
   </div>
@@ -155,9 +155,9 @@ const BadgesSection = ({ user }) => {
   return (
     <div className="mb-6 md:mb-8">
       <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-lg font-semibold text-white">Badges</h2>
+        <h2 className="text-lg font-semibold text-ink">Badges</h2>
         {!isLoading && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-accent-soft text-accent">
             {earnedCount}/{badges.length}
           </span>
         )}
@@ -165,7 +165,7 @@ const BadgesSection = ({ user }) => {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-10">
-          <Loader2 size={22} className="text-violet-400 animate-spin" />
+          <Loader2 size={22} className="text-accent animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
@@ -246,13 +246,13 @@ const AccountInfoCard = ({ user }) => {
   }
 
   return (
-    <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6 h-full">
+    <div className="bg-surface border border-line rounded-lg p-5 md:p-6 h-full">
       <div className="flex items-center justify-between mb-1">
-        <h2 className="text-lg font-semibold text-white">Account Info</h2>
+        <h2 className="text-lg font-semibold text-ink">Account Info</h2>
         {!isEditing && (
           <button
             onClick={startEditing}
-            className="flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent transition-colors"
           >
             <Pencil size={13} />
             Edit
@@ -263,38 +263,38 @@ const AccountInfoCard = ({ user }) => {
      {!isEditing ? (
         <div className="space-y-4 mt-4">
           {(notice || user?.pendingEmail) && (
-            <div className="px-3.5 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs leading-relaxed">
+            <div className="px-3.5 py-2.5 rounded-lg bg-accent-soft border border-accent/30 text-accent text-xs leading-relaxed">
               {notice ||
                 `Waiting on confirmation at ${user.pendingEmail}. Your email stays the same until that link is opened.`}
             </div>
           )}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-              <User size={16} className="text-orange-400" />
+            <div className="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center flex-shrink-0">
+              <User size={16} className="text-accent" />
             </div>
             <div className="min-w-0">
-              <p className="text-slate-500 text-xs">Name</p>
-              <p className="text-white text-sm font-medium truncate">{user?.name}</p>
+              <p className="text-muted text-xs">Name</p>
+              <p className="text-ink text-sm font-medium truncate">{user?.name}</p>
             </div>
           </div>
-          <hr className="border-slate-800" />
+          <hr className="border-line" />
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
-              <Mail size={16} className="text-cyan-400" />
+            <div className="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center flex-shrink-0">
+              <Mail size={16} className="text-accent" />
             </div>
             <div className="min-w-0">
-              <p className="text-slate-500 text-xs">Email</p>
-              <p className="text-white text-sm font-medium truncate">{user?.email}</p>
+              <p className="text-muted text-xs">Email</p>
+              <p className="text-ink text-sm font-medium truncate">{user?.email}</p>
             </div>
           </div>
-          <hr className="border-slate-800" />
+          <hr className="border-line" />
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-              <Calendar size={16} className="text-violet-400" />
+            <div className="w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center flex-shrink-0">
+              <Calendar size={16} className="text-accent" />
             </div>
             <div className="min-w-0">
-              <p className="text-slate-500 text-xs">Member since</p>
-              <p className="text-white text-sm font-medium">
+              <p className="text-muted text-xs">Member since</p>
+              <p className="text-ink text-sm font-medium">
                 {formatMemberSince(user?.createdAt)}
               </p>
             </div>
@@ -303,42 +303,38 @@ const AccountInfoCard = ({ user }) => {
       ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
           {serverError && (
-            <div className="px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+            <div className="alert alert-danger mb-0 text-xs">
               {serverError}
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Name</label>
+            <label className="block text-xs font-medium text-muted mb-1.5">Name</label>
             <input
               {...register('name')}
               type="text"
-              className={`w-full px-3.5 py-2.5 rounded-xl bg-[#080D1A] border text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
-                errors.name ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'
-              }`}
+              className={`input py-2.5 ${errors.name ? 'input-invalid' : ''}`}
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
+              <p className="mt-1 text-xs text-danger">{errors.name.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-400 mb-1.5">Email</label>
+            <label className="block text-xs font-medium text-muted mb-1.5">Email</label>
             <input
               {...register('email')}
               type="email"
-              className={`w-full px-3.5 py-2.5 rounded-xl bg-[#080D1A] border text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
-                errors.email ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'
-              }`}
+              className={`input py-2.5 ${errors.email ? 'input-invalid' : ''}`}
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-red-400">{errors.email.message}</p>
+              <p className="mt-1 text-xs text-danger">{errors.email.message}</p>
             )}
           </div>
 
           {emailChanged && (
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block text-xs font-medium text-muted mb-1.5">
                 Current password
               </label>
               <div className="relative">
@@ -346,22 +342,20 @@ const AccountInfoCard = ({ user }) => {
                   {...register('currentPassword')}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className={`w-full px-3.5 py-2.5 pr-11 rounded-xl bg-[#080D1A] border text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
-                    errors.currentPassword ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'
-                  }`}
+                  className={`input py-2.5 pr-11 ${errors.currentPassword ? 'input-invalid' : ''}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
                 >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
               {errors.currentPassword ? (
-                <p className="mt-1 text-xs text-red-400">{errors.currentPassword.message}</p>
+                <p className="mt-1 text-xs text-danger">{errors.currentPassword.message}</p>
               ) : (
-                <p className="mt-1.5 text-xs text-slate-500 leading-relaxed">
+                <p className="mt-1.5 text-xs text-muted leading-relaxed">
                   Changing your email needs your password. We will send a link to the new
                   address — your email only changes once you open it.
                 </p>
@@ -373,7 +367,7 @@ const AccountInfoCard = ({ user }) => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+              className="btn-primary flex-1 py-2.5 flex items-center justify-center gap-2 text-sm"
             >
               {isSubmitting ? (
                 <><Loader2 size={15} className="animate-spin" />Saving...</>
@@ -385,7 +379,8 @@ const AccountInfoCard = ({ user }) => {
               type="button"
               onClick={() => setIsEditing(false)}
               disabled={isSubmitting}
-              className="flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 border border-slate-700 hover:border-slate-500 hover:text-white transition-all disabled:opacity-50"
+              aria-label="Cancel editing"
+              className="flex-shrink-0 w-11 h-11 rounded-lg flex items-center justify-center text-muted border border-line hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
             >
               <X size={16} />
             </button>
@@ -436,46 +431,44 @@ const ChangePasswordCard = () => {
   }
 
   return (
-    <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6 h-full">
+    <div className="bg-surface border border-line rounded-lg p-5 md:p-6 h-full">
       <div className="flex items-center gap-2 mb-4">
-        <Lock size={16} className="text-slate-400" />
-        <h2 className="text-lg font-semibold text-white">Change Password</h2>
+        <Lock size={16} className="text-muted" />
+        <h2 className="text-lg font-semibold text-ink">Change Password</h2>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {serverError && (
-          <div className="px-3.5 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
+          <div className="alert alert-danger mb-0 text-xs">
             {serverError}
           </div>
         )}
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+          <label className="block text-xs font-medium text-muted mb-1.5">
             Current Password
           </label>
           <div className="relative">
             <input
               {...register('currentPassword')}
               type={showCurrent ? 'text' : 'password'}
-              className={`w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[#080D1A] border text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
-                errors.currentPassword ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'
-              }`}
+              className={`input py-2.5 pr-10 ${errors.currentPassword ? 'input-invalid' : ''}`}
             />
             <button
               type="button"
               onClick={() => setShowCurrent((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
             >
               {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
           {errors.currentPassword && (
-            <p className="mt-1 text-xs text-red-400">{errors.currentPassword.message}</p>
+            <p className="mt-1 text-xs text-danger">{errors.currentPassword.message}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+          <label className="block text-xs font-medium text-muted mb-1.5">
             New Password
           </label>
           <div className="relative">
@@ -483,43 +476,39 @@ const ChangePasswordCard = () => {
               {...register('newPassword')}
               type={showNew ? 'text' : 'password'}
               placeholder="Min. 8 characters"
-              className={`w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[#080D1A] border text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
-                errors.newPassword ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'
-              }`}
+              className={`input py-2.5 pr-10 ${errors.newPassword ? 'input-invalid' : ''}`}
             />
             <button
               type="button"
               onClick={() => setShowNew((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
             >
               {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
           {errors.newPassword && (
-            <p className="mt-1 text-xs text-red-400">{errors.newPassword.message}</p>
+            <p className="mt-1 text-xs text-danger">{errors.newPassword.message}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+          <label className="block text-xs font-medium text-muted mb-1.5">
             Confirm New Password
           </label>
           <input
             {...register('confirmNewPassword')}
             type={showNew ? 'text' : 'password'}
-            className={`w-full px-3.5 py-2.5 rounded-xl bg-[#080D1A] border text-white text-sm placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
-              errors.confirmNewPassword ? 'border-red-500/60' : 'border-slate-700 hover:border-slate-600'
-            }`}
+            className={`input py-2.5 ${errors.confirmNewPassword ? 'input-invalid' : ''}`}
           />
           {errors.confirmNewPassword && (
-            <p className="mt-1 text-xs text-red-400">{errors.confirmNewPassword.message}</p>
+            <p className="mt-1 text-xs text-danger">{errors.confirmNewPassword.message}</p>
           )}
         </div>
 
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-2.5 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+          className="btn-primary w-full py-2.5 flex items-center justify-center gap-2 text-sm"
         >
           {isSubmitting ? (
             <><Loader2 size={15} className="animate-spin" />Changing password...</>
@@ -541,14 +530,14 @@ const Profile = () => {
   const avgMasteryScore = computeAvgMasteryScore(sessions)
 
   return (
-    <div className="min-h-screen bg-[#080D1A]">
+    <div className="min-h-screen bg-bg">
       <ThemeToggle floating />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
 
         {/* ─── BACK TO DASHBOARD ─── */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-6"
+          className="flex items-center gap-2 text-muted hover:text-ink transition-colors text-sm mb-6"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
@@ -560,45 +549,45 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-4 mb-6 md:mb-8"
         >
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xl md:text-2xl font-bold">
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+            <span className="text-ink text-xl md:text-2xl font-semibold">
               {user?.name?.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl md:text-2xl font-bold text-white truncate">
+            <h1 className="text-xl md:text-2xl font-semibold text-ink truncate">
               {user?.name}
             </h1>
-            <p className="text-slate-400 text-sm truncate">{user?.email}</p>
+            <p className="text-muted text-sm truncate">{user?.email}</p>
           </div>
         </motion.div>
 
         {/* ─── STATS ROW — full width, matches Dashboard's stat grid ─── */}
         <div className="mb-6 md:mb-8">
-          <h2 className="text-lg font-semibold text-white mb-4">Stats</h2>
+          <h2 className="text-lg font-semibold text-ink mb-4">Stats</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <StatCard
               icon={Flame}
-              color="bg-orange-500/20 text-orange-400"
+              color="bg-highlight-soft text-highlight"
               label="Current Streak"
               value={`${user?.streak || 0} days`}
             />
             <StatCard
               icon={Zap}
-              color="bg-yellow-500/20 text-yellow-400"
+              color="bg-highlight-soft text-highlight"
               label="Total XP"
               value={user?.xp || 0}
               info={<XpInfo />}
             />
             <StatCard
               icon={Target}
-              color="bg-cyan-500/20 text-cyan-400"
+              color="bg-accent-soft text-accent"
               label="Total Sessions"
               value={isLoadingStats ? '—' : totalSessions}
             />
             <StatCard
               icon={TrendingUp}
-              color="bg-violet-500/20 text-violet-400"
+              color="bg-accent-soft text-accent"
               label="Avg Mastery Score"
               value={
                 isLoadingStats

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Sparkles, GraduationCap } from 'lucide-react'
+import StudentAvatar from '@/components/StudentAvatar'
 
 const floatingTopics = [
   'Binary Search Trees', 'The TCP Handshake', 'Bayes Theorem',
@@ -169,9 +170,7 @@ const HeroSection = () => {
                     className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {msg.role === 'ai' && (
-                      <div className="w-8 h-8 rounded-full bg-accent-soft border border-accent/30 flex items-center justify-center flex-shrink-0">
-                        <GraduationCap size={14} className="text-accent" />
-                      </div>
+                      <StudentAvatar />
                     )}
                     <div
                       className={`max-w-md px-4 py-3 rounded-lg text-sm leading-relaxed ${

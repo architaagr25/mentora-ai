@@ -8,9 +8,9 @@ import ThemeToggle from '@/components/layout/ThemeToggle'
 import SessionDetailPanel from '@/components/history/SessionDetailPanel'
 
 const getScoreColor = (score) => {
-  if (score >= 8) return 'text-green-400'
-  if (score >= 6) return 'text-yellow-400'
-  return 'text-red-400'
+  if (score >= 8) return 'text-success'
+  if (score >= 6) return 'text-highlight'
+  return 'text-danger'
 }
 
 const formatDate = (dateString) => {
@@ -46,31 +46,31 @@ const SessionRow = ({ session, isActive, onClick }) => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 md:p-5 hover:border-slate-600 transition-all duration-200 cursor-pointer"
+      className="bg-surface border border-line rounded-lg p-4 md:p-5 hover:border-accent transition-all duration-200 cursor-pointer"
       onClick={onClick}
     >
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 md:gap-4">
 
         {/* Avatar + topic name */}
         <div className="flex items-center gap-3 min-w-0 sm:flex-1">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-violet-600/40 to-cyan-500/40 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-base">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-accent-soft flex items-center justify-center flex-shrink-0">
+            <span className="text-ink font-semibold text-base">
               {session.topic.charAt(0).toUpperCase()}
             </span>
           </div>
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <p className="text-white font-medium text-sm md:text-base break-words">
+              <p className="text-ink font-medium text-sm md:text-base break-words">
                 {session.topic}
               </p>
               <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                isActive ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'
+                isActive ? 'bg-success-soft text-success' : 'bg-surface-2 text-muted'
               }`}>
                 {isActive ? 'Active' : 'Completed'}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-slate-500 text-xs flex-wrap">
+            <div className="flex items-center gap-2 text-muted text-xs flex-wrap">
               <span>{formatDate(session.updatedAt)}</span>
               {!isActive && (
                 <span className="flex items-center gap-1">
@@ -92,8 +92,8 @@ const SessionRow = ({ session, isActive, onClick }) => {
                 { label: 'CMP', value: latest.completeness },
               ].map((s) => (
                 <div key={s.label} className="text-center">
-                  <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
-                  <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>{s.value}/10</p>
+                  <p className="text-muted text-xs mb-0.5">{s.label}</p>
+                  <p className={`text-sm font-semibold ${getScoreColor(s.value)}`}>{s.value}/10</p>
                 </div>
               ))}
             </div>
@@ -101,7 +101,7 @@ const SessionRow = ({ session, isActive, onClick }) => {
 
           <button
             onClick={(e) => { e.stopPropagation(); onClick() }}
-            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors sm:ml-auto cursor-pointer"
+            className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-accent-soft text-accent hover:bg-accent/30 transition-colors sm:ml-auto cursor-pointer"
           >
             <span>{isActive ? 'Continue' : 'Review'}</span>
             <ChevronRight size={14} />
@@ -112,18 +112,18 @@ const SessionRow = ({ session, isActive, onClick }) => {
   )
 }
 const EmptyState = ({ icon: Icon, title, desc }) => (
-  <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-10 md:p-14 text-center">
-    <div className="w-14 h-14 rounded-2xl bg-violet-600/20 flex items-center justify-center mx-auto mb-4">
-      <Icon size={24} className="text-violet-400" />
+  <div className="bg-surface border border-line rounded-lg p-10 md:p-14 text-center">
+    <div className="w-14 h-14 rounded-lg bg-accent-soft flex items-center justify-center mx-auto mb-4">
+      <Icon size={24} className="text-accent" />
     </div>
-    <h3 className="text-white font-semibold mb-2">{title}</h3>
-    <p className="text-slate-400 text-sm max-w-sm mx-auto">{desc}</p>
+    <h3 className="text-ink font-semibold mb-2">{title}</h3>
+    <p className="text-muted text-sm max-w-sm mx-auto">{desc}</p>
   </div>
 )
 
 const SectionHeader = ({ title, count, badgeClass }) => (
   <div className="flex items-center gap-2 mb-4">
-    <h2 className="text-lg md:text-xl font-semibold text-white">{title}</h2>
+    <h2 className="text-lg md:text-xl font-semibold text-ink">{title}</h2>
     {count > 0 && (
       <span className={`text-xs px-2 py-0.5 rounded-full ${badgeClass}`}>
         {count}
@@ -184,14 +184,14 @@ const History = () => {
   }
 
  return (
-    <div className="min-h-screen bg-[#080D1A]">
+    <div className="min-h-screen bg-bg">
       <ThemeToggle floating />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
 
         {/* ─── BACK TO DASHBOARD ─── */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-6"
+          className="flex items-center gap-2 text-muted hover:text-ink transition-colors text-sm mb-6"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
@@ -200,27 +200,27 @@ const History = () => {
         {/* ─── PAGE HEADER ─── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 md:mb-10">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-              <HistoryIcon size={20} className="text-white" />
+            <div className="w-11 h-11 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+              <HistoryIcon size={20} className="text-ink" />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-white">Session History</h1>
-              <p className="text-slate-400 text-sm">
+              <h1 className="text-xl md:text-2xl font-semibold text-ink">Session History</h1>
+              <p className="text-muted text-sm">
                 {totalSessions} total session{totalSessions !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="flex-1 sm:flex-initial flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0D1426] border border-slate-800">
-              <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span className="text-slate-300 text-sm">
+            <div className="flex-1 sm:flex-initial flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface border border-line">
+              <div className="w-2 h-2 rounded-full bg-success" />
+              <span className="text-ink text-sm">
                 {activeSessions.length} active
               </span>
             </div>
-            <div className="flex-1 sm:flex-initial flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0D1426] border border-slate-800">
-              <div className="w-2 h-2 rounded-full bg-slate-500" />
-              <span className="text-slate-300 text-sm">
+            <div className="flex-1 sm:flex-initial flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface border border-line">
+              <div className="w-2 h-2 rounded-full bg-muted" />
+              <span className="text-ink text-sm">
                 {completedSessions.length} completed
               </span>
             </div>
@@ -235,12 +235,12 @@ const History = () => {
             <SectionHeader
               title="Active Sessions"
               count={activeSessions.length}
-              badgeClass="bg-green-500/20 text-green-400"
+              badgeClass="bg-success-soft text-success"
             />
 
             {isLoadingActive ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 size={22} className="text-violet-400 animate-spin" />
+                <Loader2 size={22} className="text-accent animate-spin" />
               </div>
             ) : activeSessions.length === 0 ? (
               <EmptyState
@@ -267,12 +267,12 @@ const History = () => {
             <SectionHeader
               title="Completed Sessions"
               count={completedSessions.length}
-              badgeClass="bg-slate-700 text-slate-400"
+              badgeClass="bg-surface-2 text-muted"
             />
 
             {isLoadingCompleted ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 size={22} className="text-violet-400 animate-spin" />
+                <Loader2 size={22} className="text-accent animate-spin" />
               </div>
             ) : completedSessions.length === 0 ? (
               <EmptyState

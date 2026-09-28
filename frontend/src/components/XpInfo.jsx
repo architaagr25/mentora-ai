@@ -126,7 +126,7 @@ const XpInfo = ({ align = 'right', className = '' }) => {
         onClick={openNow}
         onFocus={openNow}
         onBlur={onButtonBlur}
-        className="text-slate-500 hover:text-slate-300 focus:text-slate-300 focus:outline-none transition-colors"
+        className="text-muted hover:text-ink focus:text-ink focus:outline-none transition-colors"
       >
         <Info size={14} />
       </button>
@@ -145,32 +145,32 @@ const XpInfo = ({ align = 'right', className = '' }) => {
               // Hidden until measured, so it never flashes in the wrong spot
               visibility: position ? 'visible' : 'hidden',
             }}
-            className="fixed z-[70] w-72 max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] overflow-y-auto rounded-xl border border-slate-700 bg-[#0D1426] p-4 text-left shadow-2xl"
+            className="fixed z-[70] w-72 max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] overflow-y-auto rounded-lg border border-line bg-surface p-4 text-left shadow-2xl"
           >
-            <p className="text-white text-sm font-semibold mb-2">How you're scored</p>
-            <p className="text-slate-400 text-xs leading-relaxed mb-3">
-              Each score rates your explanation on <span className="text-slate-200">accuracy</span>,{' '}
-              <span className="text-slate-200">clarity</span> and{' '}
-              <span className="text-slate-200">completeness</span> (0–10 each). Your score is the
+            <p className="text-ink text-sm font-semibold mb-2">How you're scored</p>
+            <p className="text-muted text-xs leading-relaxed mb-3">
+              Each score rates your explanation on <span className="text-ink">accuracy</span>,{' '}
+              <span className="text-ink">clarity</span> and{' '}
+              <span className="text-ink">completeness</span> (0–10 each). Your score is the
               average of the three, shown as a percentage.
             </p>
 
-            <p className="text-white text-sm font-semibold mb-2">How XP works</p>
-            <ul className="text-slate-400 text-xs leading-relaxed space-y-1.5 list-disc pl-4">
+            <p className="text-ink text-sm font-semibold mb-2">How XP works</p>
+            <ul className="text-muted text-xs leading-relaxed space-y-1.5 list-disc pl-4">
               <li>
-                A score of <span className="text-slate-200">70% or more</span> earns{' '}
-                <span className="text-slate-200">20 XP + 1 XP per point above 70%</span> — up to 50
+                A score of <span className="text-ink">70% or more</span> earns{' '}
+                <span className="text-ink">20 XP + 1 XP per point above 70%</span> — up to 50
                 XP at 100%.
               </li>
               <li>
                 Each session pays out for its{' '}
-                <span className="text-slate-200">best score only</span>. A new score earns just the
+                <span className="text-ink">best score only</span>. A new score earns just the
                 extra XP over your previous best in that session.
               </li>
               <li>You need at least 2 messages to get a score, and something new to rescore.</li>
             </ul>
 
-            <p className="text-slate-500 text-xs leading-relaxed mt-3 pt-3 border-t border-slate-800">
+            <p className="text-muted text-xs leading-relaxed mt-3 pt-3 border-t border-line">
               Example: 80% → +30 XP. Rescore at 90% → +10 more. Rescore at 75% → +0 (your best is
               still 90%).
             </p>

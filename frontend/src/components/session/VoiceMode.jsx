@@ -4,6 +4,7 @@ import { Mic, MicOff, Loader2, GraduationCap, Volume2, MessageSquare, BarChart3,
 import useVoiceRecorder from '@/hooks/useVoiceRecorder'
 import useSpeech from '@/hooks/useSpeech'
 import api from '@/api'
+import StudentAvatar from '@/components/StudentAvatar'
 
 const VOICE_STATE = {
   IDLE: 'idle',
@@ -387,9 +388,7 @@ const {
             }`}
           >
             {msg.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-                <GraduationCap size={14} className="text-on-accent" />
-              </div>
+              <StudentAvatar />
             )}
             <div
               className={`max-w-[80%] px-4 py-3 rounded-lg text-sm leading-relaxed whitespace-pre-wrap break-words ${
@@ -434,9 +433,7 @@ const {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-start gap-3 justify-start"
           >
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
-              <GraduationCap size={14} className="text-on-accent" />
-            </div>
+            <StudentAvatar />
             <div className="max-w-[80%] px-4 py-3 rounded-lg text-sm leading-relaxed bg-surface-2/80 text-ink border border-line/40">
               {streamingMsg}
               <span className="inline-block w-1.5 h-4 bg-accent ml-1 animate-pulse align-middle" />

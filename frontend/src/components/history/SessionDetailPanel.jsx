@@ -4,25 +4,24 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
   Loader2,
-  AlertCircle,
-  GraduationCap,
-  Clock,
+  AlertCircle,  Clock,
   Calendar,
   BarChart3,
 } from 'lucide-react'
 import api from '@/api'
 import KeyPointsReveal from '@/components/session/KeyPointsReveal'
+import StudentAvatar from '@/components/StudentAvatar'
 
 const getScoreColor = (score) => {
-  if (score >= 8) return 'text-green-400'
-  if (score >= 6) return 'text-yellow-400'
-  return 'text-red-400'
+  if (score >= 8) return 'text-success'
+  if (score >= 6) return 'text-highlight'
+  return 'text-danger'
 }
 
 const getScoreBarColor = (score) => {
-  if (score >= 8) return 'from-green-500 to-cyan-500'
-  if (score >= 6) return 'from-yellow-500 to-orange-500'
-  return 'from-red-500 to-pink-500'
+  if (score >= 8) return 'bg-success'
+  if (score >= 6) return 'bg-highlight'
+  return 'bg-danger'
 }
 
 const formatDateTime = (dateString) => {
@@ -93,16 +92,16 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-full sm:w-[28rem] bg-[#0D1426] border-l border-slate-800 z-50 flex flex-col"
+            className="fixed right-0 top-0 h-full w-full sm:w-[28rem] bg-surface border-l border-line z-50 flex flex-col"
           >
             {/* ─── HEADER ─── */}
-            <div className="flex items-start justify-between px-5 py-4 border-b border-slate-800 flex-shrink-0">
+            <div className="flex items-start justify-between px-5 py-4 border-b border-line flex-shrink-0">
               <div className="min-w-0">
-                <h2 className="text-white font-bold text-lg truncate">
+                <h2 className="text-ink font-semibold text-lg truncate">
                   {session?.topic || (isLoading ? 'Loading...' : 'Session')}
                 </h2>
                 {session && (
-                  <div className="flex items-center gap-3 mt-1.5 text-slate-500 text-xs">
+                  <div className="flex items-center gap-3 mt-1.5 text-muted text-xs">
                     <span className="flex items-center gap-1">
                       <Calendar size={11} />
                       {formatDateTime(session.updatedAt)}
@@ -116,7 +115,7 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
               </div>
               <button
                 onClick={onClose}
-                className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0 ml-3"
+                className="text-muted hover:text-ink transition-colors flex-shrink-0 ml-3"
               >
                 <X size={20} />
               </button>
@@ -126,16 +125,16 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
             <div className="flex-1 overflow-y-auto">
               {isLoading && (
                 <div className="flex items-center justify-center py-20">
-                  <Loader2 size={24} className="text-violet-400 animate-spin" />
+                  <Loader2 size={24} className="text-accent animate-spin" />
                 </div>
               )}
 
               {error && !isLoading && (
                 <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-red-500/15 border border-red-500/25 flex items-center justify-center mb-3">
-                    <AlertCircle size={20} className="text-red-400" />
+                  <div className="w-12 h-12 rounded-lg bg-danger-soft border border-danger/30 flex items-center justify-center mb-3">
+                    <AlertCircle size={20} className="text-danger" />
                   </div>
-                  <p className="text-slate-400 text-sm">{errorMessage}</p>
+                  <p className="text-muted text-sm">{errorMessage}</p>
                 </div>
               )}
 
@@ -145,10 +144,10 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                   {/* ─── SCORES SECTION ─── */}
                   {latestScore ? (
                     <div className="space-y-5">
-                      <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-4 space-y-4">
+                      <div className="bg-bg border border-line rounded-lg p-4 space-y-4">
                         <div className="flex items-center gap-2 mb-1">
-                          <BarChart3 size={14} className="text-violet-400" />
-                          <p className="text-slate-500 text-xs">
+                          <BarChart3 size={14} className="text-accent" />
+                          <p className="text-muted text-xs">
                             {scores.length > 1 ? 'Latest result' : 'Result'}
                           </p>
                         </div>
@@ -159,17 +158,17 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                         ].map((s) => (
                           <div key={s.label}>
                             <div className="flex justify-between text-sm mb-1.5">
-                              <span className="text-slate-300">{s.label}</span>
-                              <span className={`font-bold ${getScoreColor(s.value)}`}>
+                              <span className="text-ink">{s.label}</span>
+                              <span className={`font-semibold ${getScoreColor(s.value)}`}>
                                 {s.value}/10
                               </span>
                             </div>
-                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-2 bg-surface-2 rounded-full overflow-hidden">
                               <motion.div
                                 initial={{ width: 0 }}
                                 animate={{ width: `${(s.value / 10) * 100}%` }}
                                 transition={{ duration: 0.6 }}
-                                className={`h-full rounded-full bg-gradient-to-r ${getScoreBarColor(s.value)}`}
+                                className={`h-full rounded-full ${getScoreBarColor(s.value)}`}
                               />
                             </div>
                           </div>
@@ -178,8 +177,8 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
 
                       {latestScore.feedback && (
                         <div>
-                          <p className="text-white font-semibold text-sm mb-2">Feedback</p>
-                          <p className="text-slate-400 text-sm leading-relaxed bg-[#080D1A] border border-slate-800 rounded-xl p-4">
+                          <p className="text-ink font-semibold text-sm mb-2">Feedback</p>
+                          <p className="text-muted text-sm leading-relaxed bg-bg border border-line rounded-lg p-4">
                             {latestScore.feedback}
                           </p>
                         </div>
@@ -187,12 +186,12 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
 
                       {latestScore.gaps && latestScore.gaps.length > 0 && (
                         <div>
-                          <p className="text-white font-semibold text-sm mb-3">Gaps found</p>
+                          <p className="text-ink font-semibold text-sm mb-3">Gaps found</p>
                           <div className="space-y-2.5">
                             {latestScore.gaps.map((gap, i) => (
                               <div key={i} className="flex items-start gap-2">
-                                <div className="w-2 h-2 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
-                                <span className="text-slate-400 text-sm">{gap}</span>
+                                <div className="w-2 h-2 rounded-full bg-highlight mt-1.5 flex-shrink-0" />
+                                <span className="text-muted text-sm">{gap}</span>
                               </div>
                             ))}
                           </div>
@@ -210,7 +209,7 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                       {/* All attempts — only shown if more than one */}
                       {scores.length > 1 && (
                         <div>
-                          <p className="text-white font-semibold text-sm mb-3">
+                          <p className="text-ink font-semibold text-sm mb-3">
                             All attempts ({scores.length})
                           </p>
                           <div className="space-y-2">
@@ -222,23 +221,23 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                               return (
                                 <div
                                   key={i}
-                                  className={`rounded-xl px-4 py-3 border ${
+                                  className={`rounded-lg px-4 py-3 border ${
                                     isLatest
-                                      ? 'bg-violet-600/10 border-violet-500/30'
-                                      : 'bg-[#080D1A] border-slate-800'
+                                      ? 'bg-accent/10 border-accent/30'
+                                      : 'bg-bg border-line'
                                   }`}
                                 >
                                   <div className="flex items-center justify-between mb-2">
-                                    <span className="text-slate-500 text-xs">
+                                    <span className="text-muted text-xs">
                                       {formatDateTime(s.scoredAt)}
                                     </span>
                                     <div className="flex items-center gap-2">
                                       {isLatest && (
-                                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400 font-medium">
+                                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-accent-soft text-accent font-medium">
                                           latest
                                         </span>
                                       )}
-                                      <span className={`text-sm font-bold ${getScoreColor(avg)}`}>
+                                      <span className={`text-sm font-semibold ${getScoreColor(avg)}`}>
                                         {avg}/10 avg
                                       </span>
                                     </div>
@@ -250,8 +249,8 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                                       { label: 'CMP', value: s.completeness },
                                     ].map((sc) => (
                                       <div key={sc.label}>
-                                        <p className="text-slate-600 text-xs mb-0.5">{sc.label}</p>
-                                        <p className={`text-sm font-bold ${getScoreColor(sc.value)}`}>
+                                        <p className="text-muted text-xs mb-0.5">{sc.label}</p>
+                                        <p className={`text-sm font-semibold ${getScoreColor(sc.value)}`}>
                                           {sc.value}/10
                                         </p>
                                       </div>
@@ -265,8 +264,8 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                       )}
                     </div>
                   ) : (
-                    <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-5 text-center">
-                      <p className="text-slate-500 text-sm">
+                    <div className="bg-bg border border-line rounded-lg p-5 text-center">
+                      <p className="text-muted text-sm">
                         This session was completed without ever being scored.
                       </p>
                     </div>
@@ -274,16 +273,16 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
 
                   {/* ─── TRANSCRIPT SECTION ─── */}
                   <div>
-                    <p className="text-white font-semibold text-sm mb-3">
+                    <p className="text-ink font-semibold text-sm mb-3">
                       Transcript {session.messages?.length > 0 && `(${session.messages.length})`}
                     </p>
 
                     {(!session.messages || session.messages.length === 0) ? (
-                      <div className="bg-[#080D1A] border border-slate-800 rounded-xl p-5 text-center">
-                        <p className="text-slate-500 text-sm">No messages in this session.</p>
+                      <div className="bg-bg border border-line rounded-lg p-5 text-center">
+                        <p className="text-muted text-sm">No messages in this session.</p>
                       </div>
                     ) : (
-                      <div className="space-y-3 bg-[#080D1A] border border-slate-800 rounded-xl p-4">
+                      <div className="space-y-3 bg-bg border border-line rounded-lg p-4">
                         {session.messages.map((msg, i) => (
                           <div
                             key={msg._id || i}
@@ -292,21 +291,19 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                             }`}
                           >
                             {msg.role === 'assistant' && (
-                              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                                <GraduationCap size={12} className="text-white" />
-                              </div>
+                              <StudentAvatar size="sm" />
                             )}
                             <div
-                              className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                              className={`max-w-[80%] px-3.5 py-2.5 rounded-lg text-sm leading-relaxed whitespace-pre-wrap break-words ${
                                 msg.role === 'user'
-                                  ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white'
-                                  : 'bg-slate-800/80 text-slate-200 border border-slate-700/40'
+                                  ? 'bg-surface-2 text-ink'
+                                  : 'bg-surface-2/80 text-ink border border-line/40'
                               }`}
                             >
                               {msg.content}
                             </div>
                             {msg.role === 'user' && (
-                              <span className="text-slate-500 text-xs pt-1.5 flex-shrink-0">You</span>
+                              <span className="text-muted text-xs pt-1.5 flex-shrink-0">You</span>
                             )}
                           </div>
                         ))}
