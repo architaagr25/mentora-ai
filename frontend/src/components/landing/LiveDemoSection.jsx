@@ -3,9 +3,9 @@ import { motion, useInView } from 'framer-motion'
 import { GraduationCap } from 'lucide-react'
 
 const scores = [
-  { label: 'Accuracy', value: 9, max: 10, color: 'from-cyan-500 to-violet-600' },
-  { label: 'Clarity', value: 8, max: 10, color: 'from-cyan-500 to-violet-600' },
-  { label: 'Completeness', value: 7, max: 10, color: 'from-cyan-500 to-violet-500' },
+  { label: 'Accuracy', value: 9, max: 10 },
+  { label: 'Clarity', value: 8, max: 10 },
+  { label: 'Completeness', value: 7, max: 10 },
 ]
 
 const gaps = [
@@ -25,13 +25,13 @@ const LiveDemoSection = () => {
   const isInView = useInView(ref, { once: true, margin: '-100px' })
 
   return (
-    <section id="demo" ref={ref} className="py-24 bg-[#080D1A]">
+    <section id="demo" ref={ref} className="py-24 bg-bg">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
           <motion.p
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
-            className="text-cyan-400 text-xs font-semibold tracking-widest uppercase mb-4"
+            className="text-accent text-xs font-semibold tracking-widest uppercase mb-4"
           >
             PREVIEW
           </motion.p>
@@ -39,7 +39,7 @@ const LiveDemoSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-bold text-white mb-4"
+            className="text-4xl md:text-5xl font-semibold text-ink mb-4"
           >
             What a session actually looks like
           </motion.h2>
@@ -47,7 +47,7 @@ const LiveDemoSection = () => {
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.2 }}
-            className="text-slate-400 text-lg max-w-xl mx-auto"
+            className="text-muted text-lg max-w-xl mx-auto"
           >
             A sample session on TCP handshake. The AI student keeps asking until your explanation has no holes left in it.
           </motion.p>
@@ -59,13 +59,13 @@ const LiveDemoSection = () => {
             initial={{ opacity: 0, x: -30 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="lg:col-span-3 bg-[#0D1426] border border-slate-800 rounded-2xl overflow-hidden"
+            className="lg:col-span-3 bg-surface border border-line rounded-lg overflow-hidden"
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-800">
-              <span className="text-slate-400 text-sm">
-                Topic · <span className="text-white font-medium">TCP Handshake</span>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+              <span className="text-muted text-sm">
+                Topic · <span className="text-ink font-medium">TCP Handshake</span>
               </span>
-              <span className="text-slate-500 text-sm">Sample session</span>
+              <span className="text-muted text-sm">Sample session</span>
             </div>
             <div className="p-6 space-y-4">
               {demoMessages.map((msg, i) => (
@@ -77,21 +77,21 @@ const LiveDemoSection = () => {
                   className={`flex items-start gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'ai' && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                      <GraduationCap size={14} className="text-white" />
+                    <div className="w-8 h-8 rounded-full bg-accent-soft border border-accent/30 flex items-center justify-center flex-shrink-0">
+                      <GraduationCap size={14} className="text-accent" />
                     </div>
                   )}
                   <div
-                    className={`max-w-sm px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                    className={`max-w-sm px-4 py-3 rounded-lg text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white'
-                        : 'bg-slate-800/80 text-slate-200 border border-slate-700/40'
+                        ? 'bg-surface-2 text-ink'
+                        : 'bg-bg text-ink border border-line'
                     }`}
                   >
                     {msg.text}
                   </div>
                   {msg.role === 'user' && (
-                    <span className="text-slate-500 text-xs pt-2 flex-shrink-0">You</span>
+                    <span className="text-muted text-xs pt-2 flex-shrink-0">You</span>
                   )}
                 </motion.div>
               ))}
@@ -106,22 +106,22 @@ const LiveDemoSection = () => {
             className="lg:col-span-2 flex flex-col gap-4"
           >
             {/* Session scores */}
-            <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-6">
-              <p className="text-white font-bold mb-1">Session scores</p>
-              <p className="text-slate-500 text-xs mb-5">Calculated at session end</p>
+            <div className="bg-surface border border-line rounded-lg p-6">
+              <p className="text-ink font-semibold mb-1">Session scores</p>
+              <p className="text-muted text-xs mb-5">Calculated at session end</p>
               <div className="space-y-4">
                 {scores.map((s, i) => (
                   <div key={i}>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-slate-300">{s.label}</span>
-                      <span className="text-white font-medium">{s.value}/{s.max}</span>
+                      <span className="text-ink">{s.label}</span>
+                      <span className="text-ink font-medium">{s.value}/{s.max}</span>
                     </div>
-                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="h-2 bg-surface-2 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={isInView ? { width: `${(s.value / s.max) * 100}%` } : {}}
                         transition={{ duration: 0.8, delay: 0.6 + i * 0.1 }}
-                        className={`h-full rounded-full bg-gradient-to-r ${s.color}`}
+                        className="h-full rounded-full bg-accent"
                       />
                     </div>
                   </div>
@@ -130,13 +130,13 @@ const LiveDemoSection = () => {
             </div>
 
             {/* Detected gaps */}
-            <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-6">
-              <p className="text-white font-bold mb-4">Gaps found</p>
+            <div className="bg-surface border border-line rounded-lg p-6">
+              <p className="text-ink font-semibold mb-4">Gaps found</p>
               <div className="space-y-3">
                 {gaps.map((gap, i) => (
                   <div key={i} className="flex items-start gap-2">
-                    <div className="w-2 h-2 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
-                    <span className="text-slate-400 text-sm">{gap}</span>
+                    <div className="w-2 h-2 rounded-full bg-highlight mt-1.5 flex-shrink-0" />
+                    <span className="text-muted text-sm">{gap}</span>
                   </div>
                 ))}
               </div>

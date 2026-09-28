@@ -14,7 +14,7 @@ import CTASection from '@/components/landing/CTASection'
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-[#080D1A]">
+    <div className="min-h-screen bg-bg">
       <Navbar />
 
       <HeroSection />

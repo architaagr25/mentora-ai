@@ -40,13 +40,13 @@ const FeaturesSection = () => {
   const isInView = useInView(ref, { once: true, margin: '-100px' })
 
   return (
-    <section id="features" ref={ref} className="py-24 bg-[#060B17]">
+    <section id="features" ref={ref} className="py-24 bg-surface-2">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
           <motion.p
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
-            className="text-cyan-400 text-xs font-semibold tracking-widest uppercase mb-4"
+            className="text-accent text-xs font-semibold tracking-widest uppercase mb-4"
           >
             FEATURES
           </motion.p>
@@ -54,7 +54,7 @@ const FeaturesSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-bold text-white mb-4"
+            className="text-4xl md:text-5xl font-semibold text-ink mb-4"
           >
             Built around one idea
           </motion.h2>
@@ -62,7 +62,7 @@ const FeaturesSection = () => {
             initial={{ opacity: 0 }}
             animate={isInView ? { opacity: 1 } : {}}
             transition={{ delay: 0.2 }}
-            className="text-slate-400 text-lg max-w-xl mx-auto"
+            className="text-muted text-lg max-w-xl mx-auto"
           >
             Six features that make the gap between 'I think I know this' and 'I actually know this' impossible to ignore.
           </motion.p>
@@ -75,13 +75,13 @@ const FeaturesSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="bg-[#0D1426] border border-slate-800 rounded-2xl p-7 hover:border-cyan-500/30 hover:bg-[#0D1426]/80 transition-all duration-300 group cursor-default"
+              className="bg-surface border border-line rounded-lg p-7 hover:border-accent transition-colors duration-200 cursor-default group"
             >
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center mb-5 group-hover:bg-cyan-500/20 transition-colors duration-300">
-                <feature.icon size={20} className="text-cyan-400" />
+              <div className="w-10 h-10 rounded-lg bg-accent-soft border border-accent/20 flex items-center justify-center mb-5">
+                <feature.icon size={20} className="text-accent" />
               </div>
-              <h3 className="text-white font-bold text-lg mb-2">{feature.title}</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">{feature.desc}</p>
+              <h3 className="text-ink font-semibold text-lg mb-2">{feature.title}</h3>
+              <p className="text-muted text-sm leading-relaxed">{feature.desc}</p>
             </motion.div>
           ))}
         </div>
