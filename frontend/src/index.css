@@ -164,4 +164,45 @@
   .card {
     @apply bg-surface border border-line rounded-lg p-6;
   }
+
+  /* Form field. Every auth page had this same set of a dozen utilities
+     pasted inline, which is how they drifted apart in the first place. */
+  .input {
+    @apply w-full px-4 py-3 rounded-lg bg-bg border border-line text-ink
+           placeholder:text-muted transition-colors
+           hover:border-muted focus:outline-none focus:ring-2
+           focus:ring-accent focus:border-accent
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Applied on top of .input when the field failed validation. The ring
+     follows too, so the colour does not change on focus and hide the error. */
+  .input-invalid {
+    @apply border-danger hover:border-danger focus:border-danger focus:ring-danger;
+  }
+
+  .field-label {
+    @apply block text-sm font-medium text-ink mb-2;
+  }
+
+  .field-error {
+    @apply mt-1.5 text-xs text-danger;
+  }
+
+  /* Inline banners at the top of a form. */
+  .alert {
+    @apply mb-6 px-4 py-3 rounded-lg border text-sm;
+  }
+
+  .alert-danger {
+    @apply bg-danger-soft border-danger/30 text-danger;
+  }
+
+  .alert-info {
+    @apply bg-accent-soft border-accent/30 text-accent;
+  }
+
+  .alert-success {
+    @apply bg-success-soft border-success/30 text-success;
+  }
 }

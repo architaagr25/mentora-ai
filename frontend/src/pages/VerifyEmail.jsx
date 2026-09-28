@@ -46,35 +46,35 @@ const VerifyEmail = () => {
   }, [token])
 
   return (
-    <div className="min-h-screen bg-[#080D1A] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-bg flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
-          <Brain size={26} className="text-violet-400" />
-          <span className="text-xl font-bold text-white">Mentora AI</span>
+          <Brain size={26} className="text-accent" />
+          <span className="text-xl font-semibold text-ink">Mentora AI</span>
         </div>
 
-        <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-6 md:p-8 text-center">
+        <div className="bg-surface border border-line rounded-lg p-6 md:p-8 text-center">
           {status === 'working' && (
             <>
-              <Loader2 size={30} className="text-violet-400 animate-spin mx-auto mb-4" />
-              <h1 className="text-lg font-semibold text-white mb-1.5">
+              <Loader2 size={30} className="text-accent animate-spin mx-auto mb-4" />
+              <h1 className="text-lg font-semibold text-ink mb-1.5">
                 Confirming your email
               </h1>
-              <p className="text-slate-400 text-sm">This will only take a moment.</p>
+              <p className="text-muted text-sm">This will only take a moment.</p>
             </>
           )}
 
           {status === 'done' && (
             <>
-              <CheckCircle2 size={30} className="text-emerald-400 mx-auto mb-4" />
-              <h1 className="text-lg font-semibold text-white mb-1.5">You're all set</h1>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <CheckCircle2 size={30} className="text-success mx-auto mb-4" />
+              <h1 className="text-lg font-semibold text-ink mb-1.5">You're all set</h1>
+              <p className="text-muted text-sm leading-relaxed">
                 Your email is confirmed. Pick a concept you think you understand, and go
                 explain it.
               </p>
               <Link
                 to={user ? '/dashboard' : '/login'}
-                className="inline-block mt-6 px-5 py-2.5 rounded-xl font-semibold text-white text-sm bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all"
+                className="btn-primary inline-block mt-6 text-sm"
               >
                 {user ? 'Go to dashboard' : 'Log in'}
               </Link>
@@ -83,14 +83,14 @@ const VerifyEmail = () => {
 
           {status === 'failed' && (
             <>
-              <XCircle size={30} className="text-red-400 mx-auto mb-4" />
-              <h1 className="text-lg font-semibold text-white mb-1.5">
+              <XCircle size={30} className="text-danger mx-auto mb-4" />
+              <h1 className="text-lg font-semibold text-ink mb-1.5">
                 That link didn't work
               </h1>
-              <p className="text-slate-400 text-sm leading-relaxed">{error}</p>
+              <p className="text-muted text-sm leading-relaxed">{error}</p>
               <Link
                 to={user ? '/dashboard' : '/login'}
-                className="inline-block mt-6 px-5 py-2.5 rounded-xl font-semibold text-sm text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-all"
+                className="btn-secondary inline-block mt-6 text-sm"
               >
                 {user ? 'Go to dashboard' : 'Log in'}
               </Link>

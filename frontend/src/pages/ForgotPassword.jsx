@@ -43,22 +43,21 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#080D1A] flex items-center justify-center px-4">
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-bg flex items-center justify-center px-4">
 
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center">
-              <Brain size={20} className="text-white" />
+            <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
+              <Brain size={20} className="text-on-accent" />
             </div>
-            <span className="text-white font-semibold text-xl">
-              Mentora <span className="text-cyan-400">AI</span>
+            <span className="text-ink font-semibold text-xl">
+              Mentora <span className="text-accent">AI</span>
             </span>
           </Link>
-          <h1 className="text-2xl font-bold text-white mb-2">Reset your password</h1>
-          <p className="text-slate-400 text-sm">
+          <h1 className="text-2xl font-semibold text-ink mb-2">Reset your password</h1>
+          <p className="text-muted text-sm">
             {isSubmitted
               ? "We've sent instructions to your inbox"
               : "Enter your email and we'll send you a reset link"}
@@ -66,18 +65,18 @@ const ForgotPassword = () => {
         </div>
 
         {/* Form card */}
-        <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-8">
+        <div className="bg-surface border border-line rounded-lg p-8">
           {isSubmitted ? (
             <div className="text-center">
-              <div className="w-14 h-14 rounded-2xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center mx-auto mb-5">
-                <Mail size={24} className="text-cyan-400" />
+              <div className="w-14 h-14 rounded-lg bg-accent-soft border border-accent/30 flex items-center justify-center mx-auto mb-5">
+                <Mail size={24} className="text-accent" />
               </div>
-              <p className="text-slate-300 text-sm leading-relaxed mb-6">
+              <p className="text-ink text-sm leading-relaxed mb-6">
                 If an account exists with that email, a password reset link is on its way. The link will expire in 1 hour.
               </p>
               <Link
                 to="/login"
-                className="inline-flex items-center gap-2 text-cyan-400 hover:text-cyan-300 transition-colors text-sm"
+                className="inline-flex items-center gap-2 text-accent hover:text-accent-hover transition-colors text-sm"
               >
                 <ArrowLeft size={14} />
                 Back to sign in
@@ -86,14 +85,14 @@ const ForgotPassword = () => {
           ) : (
             <>
               {serverError && (
-                <div className="mb-6 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+                <div className="alert alert-danger">
                   {serverError}
                 </div>
               )}
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="field-label">
                     Email
                   </label>
                   <input
@@ -101,21 +100,17 @@ const ForgotPassword = () => {
                     type="email"
                     placeholder="you@example.com"
                     autoComplete="email"
-                    className={`w-full px-4 py-3 rounded-xl bg-[#080D1A] border text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-500 transition-all ${
-                      errors.email
-                        ? 'border-red-500/60'
-                        : 'border-slate-700 hover:border-slate-600'
-                    }`}
+                    className={`input ${errors.email ? 'input-invalid' : ''}`}
                   />
                   {errors.email && (
-                    <p className="mt-1.5 text-xs text-red-400">{errors.email.message}</p>
+                    <p className="field-error">{errors.email.message}</p>
                   )}
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all duration-200 hover:shadow-lg hover:shadow-violet-500/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="btn-primary w-full flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? (
                     <>
@@ -128,9 +123,9 @@ const ForgotPassword = () => {
                 </button>
               </form>
 
-              <p className="text-center text-slate-500 text-sm mt-6">
+              <p className="text-center text-muted text-sm mt-6">
                 Remembered your password?{' '}
-                <Link to="/login" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+                <Link to="/login" className="text-accent hover:text-accent-hover transition-colors">
                   Sign in
                 </Link>
               </p>
