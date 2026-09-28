@@ -542,19 +542,17 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-[#080D1A]">
+      <ThemeToggle floating />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
 
         {/* ─── BACK TO DASHBOARD ─── */}
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </button>
-          <ThemeToggle />
-        </div>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm mb-6"
+        >
+          <ArrowLeft size={16} />
+          Back to Dashboard
+        </button>
 
         {/* ─── HEADER ─── */}
         <motion.div

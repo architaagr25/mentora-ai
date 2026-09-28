@@ -26,7 +26,7 @@ const LiveDemoSection = () => {
 
   return (
     <section id="demo" ref={ref} className="py-24 bg-bg">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-16">
           <motion.p
             initial={{ opacity: 0 }}
@@ -39,7 +39,7 @@ const LiveDemoSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-semibold text-ink mb-4"
+            className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink mb-4"
           >
             What a session actually looks like
           </motion.h2>
@@ -106,7 +106,7 @@ const LiveDemoSection = () => {
             className="lg:col-span-2 flex flex-col gap-4"
           >
             {/* Session scores */}
-            <div className="bg-surface border border-line rounded-lg p-6">
+            <div className="bg-surface border border-line rounded-lg p-4 sm:p-6">
               <p className="text-ink font-semibold mb-1">Session scores</p>
               <p className="text-muted text-xs mb-5">Calculated at session end</p>
               <div className="space-y-4">
@@ -130,7 +130,7 @@ const LiveDemoSection = () => {
             </div>
 
             {/* Detected gaps */}
-            <div className="bg-surface border border-line rounded-lg p-6">
+            <div className="bg-surface border border-line rounded-lg p-4 sm:p-6">
               <p className="text-ink font-semibold mb-4">Gaps found</p>
               <div className="space-y-3">
                 {gaps.map((gap, i) => (

@@ -443,6 +443,7 @@ const handleSessionClick = (session, isActive) => {
 
   return (
     <div className="min-h-screen bg-bg flex">
+      <ThemeToggle floating />
 
       {/* ─── DESKTOP SIDEBAR ─── */}
       <aside
@@ -520,15 +521,12 @@ const handleSessionClick = (session, isActive) => {
       </div>
     </div>
     <hr className="border-line mb-3" />
-    <div className="flex items-center justify-between">
-      <button
-        onClick={logout}
-        className="text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
-      >
-        Sign out
-      </button>
-      <ThemeToggle />
-    </div>
+    <button
+      onClick={logout}
+      className="w-full text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
+    >
+      Sign out
+    </button>
   </div>
 )}
 
@@ -612,15 +610,12 @@ const handleSessionClick = (session, isActive) => {
     </div>
   </div>
   <hr className="border-line mb-3" />
-  <div className="flex items-center justify-between">
-    <button
-      onClick={logout}
-      className="text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
-    >
-      Sign out
-    </button>
-    <ThemeToggle />
-  </div>
+  <button
+    onClick={logout}
+    className="w-full text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
+  >
+    Sign out
+  </button>
 </div>
             </motion.aside>
           </>
@@ -628,7 +623,7 @@ const handleSessionClick = (session, isActive) => {
       </AnimatePresence>
 
       {/* ─── MAIN CONTENT ─── */}
-      <main className={`${mainMargin} flex-1 p-4 md:p-6 lg:p-8 transition-all duration-300`}>
+      <main className={`${mainMargin} flex-1 min-w-0 p-4 md:p-6 lg:p-8 lg:pt-16 transition-all duration-300`}>
 
         {/* ─── MOBILE TOP BAR ───
             Sticky, full-width bar: slides away while scrolling down and
@@ -653,14 +648,13 @@ const handleSessionClick = (session, isActive) => {
               Mentora <span className="text-accent">AI</span>
             </span>
           </div>
-          <div className="flex items-center gap-1">
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-highlight-soft border border-highlight/30">
-              <Flame size={12} className="text-highlight" />
-              <span className="text-highlight text-xs font-semibold">
-                {user?.streak || 0}
-              </span>
-            </div>
-            <ThemeToggle />
+          {/* Right padding leaves room for the floating theme toggle, which
+              is pinned to this corner on every page. */}
+          <div className="flex items-center gap-1.5 px-2 py-1 mr-12 rounded-full bg-highlight-soft border border-highlight/30">
+            <Flame size={12} className="text-highlight" />
+            <span className="text-highlight text-xs font-semibold">
+              {user?.streak || 0}
+            </span>
           </div>
         </div>
 

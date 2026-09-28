@@ -427,19 +427,17 @@ const lastSpokenIdRef = useRef(null)
 
   return (
     <div className="h-screen bg-bg flex overflow-hidden">
+      <ThemeToggle floating />
 
       {/* ─── LEFT INFO PANEL (desktop only) ─── */}
       <aside className="hidden lg:flex w-72 flex-shrink-0 border-r border-line bg-surface flex-col p-6 h-screen overflow-y-auto">
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => navigate(backTo)}
-            className="flex items-center gap-2 text-ink hover:text-accent transition-colors text-sm w-fit"
-          >
-            <ArrowLeft size={16} />
-            Back to Dashboard
-          </button>
-          <ThemeToggle />
-        </div>
+        <button
+          onClick={() => navigate(backTo)}
+          className="flex items-center gap-2 text-ink hover:text-accent transition-colors text-sm mb-8 w-fit"
+        >
+          <ArrowLeft size={16} />
+          Back to Dashboard
+        </button>
 
         <div className="w-12 h-12 rounded-lg bg-accent flex items-center justify-center mb-4">
           <GraduationCap size={22} className="text-on-accent" />
@@ -641,12 +639,12 @@ const lastSpokenIdRef = useRef(null)
       </aside>
 
       {/* ─── MAIN CHAT COLUMN ─── */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
 
         {/* ─── TOP BAR (mobile + tablet) ─── */}
         {!voiceMode && (
         <header className="lg:hidden flex-shrink-0 border-b border-line bg-surface">
-          <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <div className="px-4 py-3 pr-14 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={() => navigate(backTo)}
@@ -695,8 +693,6 @@ const lastSpokenIdRef = useRef(null)
               >
                 {voiceMode ? <MessageSquare size={16} /> : <Mic size={16} />}
               </button>
-
-              <ThemeToggle />
 
               <button
                 onClick={() => setShowScorePanel(true)}

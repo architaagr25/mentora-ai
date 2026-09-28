@@ -29,7 +29,7 @@ const HowItWorksSection = () => {
 
   return (
     <section id="how-it-works" ref={ref} className="py-24 bg-bg">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Header */}
         <div className="text-center mb-16">
           <motion.p
@@ -43,7 +43,7 @@ const HowItWorksSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-semibold text-ink mb-4"
+            className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink mb-4"
           >
             Three steps.{' '}
             <span className="text-accent">One uncomfortable truth.</span>

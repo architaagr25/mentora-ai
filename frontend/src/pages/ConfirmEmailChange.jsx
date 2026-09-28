@@ -51,7 +51,7 @@ const ConfirmEmailChange = () => {
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4">
-      <ThemeToggle className="fixed top-4 right-4 z-50" />
+      <ThemeToggle floating />
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <Brain size={26} className="text-accent" />

@@ -26,7 +26,7 @@ const DashboardSection = () => {
 
   return (
     <section ref={ref} className="py-24 bg-bg">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-16">
           <motion.p
             initial={{ opacity: 0 }}
@@ -39,7 +39,7 @@ const DashboardSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-semibold text-ink mb-4"
+            className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink mb-4"
           >
             A dashboard that actually
             <br />shows what you know
@@ -58,12 +58,12 @@ const DashboardSection = () => {
           initial={{ opacity: 0, y: 40 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="bg-surface border border-line rounded-lg p-6"
+          className="bg-surface border border-line rounded-lg p-4 sm:p-6"
         >
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Chart */}
-            <div className="lg:col-span-2 bg-bg rounded-lg p-5 border border-line">
-              <div className="flex items-center justify-between mb-2">
+            <div className="lg:col-span-2 bg-bg rounded-lg p-4 sm:p-5 border border-line">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <div>
                   <p className="text-muted text-sm">Weekly clarity</p>
                   <p className="text-accent text-2xl font-semibold">

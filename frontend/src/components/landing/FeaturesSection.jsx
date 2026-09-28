@@ -41,7 +41,7 @@ const FeaturesSection = () => {
 
   return (
     <section id="features" ref={ref} className="py-24 bg-surface-2">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-16">
           <motion.p
             initial={{ opacity: 0 }}
@@ -54,7 +54,7 @@ const FeaturesSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-semibold text-ink mb-4"
+            className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink mb-4"
           >
             Built around one idea
           </motion.h2>
@@ -75,7 +75,7 @@ const FeaturesSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="bg-surface border border-line rounded-lg p-7 hover:border-accent transition-colors duration-200 cursor-default group"
+              className="bg-surface border border-line rounded-lg p-5 sm:p-7 hover:border-accent transition-colors duration-200 cursor-default group"
             >
               <div className="w-10 h-10 rounded-lg bg-accent-soft border border-accent/20 flex items-center justify-center mb-5">
                 <feature.icon size={20} className="text-accent" />

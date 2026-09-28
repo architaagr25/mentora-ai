@@ -25,7 +25,7 @@ const EverythingIncludedSection = () => {
 
   return (
     <section ref={ref} className="py-24 bg-bg">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-12">
           <motion.p
             initial={{ opacity: 0 }}
@@ -38,7 +38,7 @@ const EverythingIncludedSection = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ delay: 0.1 }}
-            className="text-4xl md:text-5xl font-semibold text-ink"
+            className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink"
           >
             Everything included
           </motion.h2>
@@ -48,7 +48,7 @@ const EverythingIncludedSection = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-surface border border-line rounded-lg p-10 text-center"
+          className="bg-surface border border-line rounded-lg p-6 sm:p-10 text-center"
         >
           <p className="text-muted max-w-md mx-auto mb-8 leading-relaxed">
             Every feature available to every learner from day one. No paywalls, no tiers.

@@ -15,16 +15,16 @@ const FeynmanSection = () => {
 
   return (
     <section ref={ref} className="py-24 bg-surface-2">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           {/* Left - Concentric circle diagram */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="bg-surface border border-line rounded-lg p-8 flex items-center justify-center aspect-square max-w-md mx-auto w-full"
+            className="bg-surface border border-line rounded-lg p-5 sm:p-8 flex items-center justify-center aspect-square max-w-md mx-auto w-full"
           >
-            <div className="relative w-64 h-64">
+            <div className="relative w-full max-w-64 aspect-square">
               <svg viewBox="0 0 260 260" className="w-full h-full">
                 {/* Concentric circles */}
                 <circle cx="130" cy="130" r="120" fill="none" stroke="rgb(var(--line))" strokeWidth="1" />
@@ -56,7 +56,7 @@ const FeynmanSection = () => {
             <p className="text-accent text-xs font-semibold tracking-widest uppercase mb-4">
               THE FEYNMAN TECHNIQUE
             </p>
-            <h2 className="text-4xl md:text-5xl font-semibold text-ink mb-6">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-ink mb-6">
               Why teaching beats studying
             </h2>
             <p className="text-muted mb-8 leading-relaxed">

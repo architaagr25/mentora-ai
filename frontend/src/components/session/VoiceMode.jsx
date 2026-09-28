@@ -296,7 +296,7 @@ const {
 
       {/* ─── MOBILE TOP BAR ─── */}
       <header className="lg:hidden flex-shrink-0 border-b border-line bg-surface">
-        <div className="px-4 py-3 flex items-center justify-between gap-3">
+        <div className="px-4 py-3 pr-14 flex items-center justify-between gap-3">
           {/* Left — back + topic */}
           <div className="flex items-center gap-3 min-w-0">
             <button

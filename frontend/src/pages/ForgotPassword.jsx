@@ -45,7 +45,7 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-4">
-      <ThemeToggle className="fixed top-4 right-4 z-50" />
+      <ThemeToggle floating />
 
       <div className="relative w-full max-w-md">
         {/* Logo */}

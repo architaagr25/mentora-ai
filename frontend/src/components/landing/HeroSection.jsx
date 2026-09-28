@@ -47,7 +47,7 @@ const HeroSection = () => {
           were the loudest thing on the page and said nothing; the headline and
           the live chat preview carry it on their own. */}
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
         {/* Top badge */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -99,7 +99,7 @@ const HeroSection = () => {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-5xl md:text-7xl font-semibold text-ink leading-tight mb-6"
+          className="text-4xl sm:text-5xl md:text-7xl font-semibold text-ink leading-tight mb-6"
         >
           If You Can't Teach It,{' '}
           <br />
@@ -143,7 +143,7 @@ const HeroSection = () => {
         >
           {/* Window chrome */}
           <div className="bg-surface border border-line rounded-t-lg text-left">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-line">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 sm:py-4 border-b border-line">
               <div className="flex items-center gap-2">
                 {/* Neutral dots. Red/amber/green here would spend three
                     semantic colours on decoration that means nothing. */}
@@ -158,7 +158,7 @@ const HeroSection = () => {
             </div>
 
             {/* Chat messages */}
-            <div className="p-6 space-y-4 min-h-[200px]">
+            <div className="p-4 sm:p-6 space-y-4 min-h-[200px]">
               <AnimatePresence>
                 {chatMessages.slice(0, visibleMessages).map((msg, i) => (
                   <motion.div

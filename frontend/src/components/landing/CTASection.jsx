@@ -12,7 +12,7 @@ const CTASection = () => {
     // which sits only a shade off surface-2 and would have read as one flat
     // block instead of a panel.
     <section ref={ref} className="py-24 bg-bg">
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -20,7 +20,7 @@ const CTASection = () => {
           className="relative rounded-lg overflow-hidden border border-accent/30 bg-accent-soft p-10 md:p-16 text-center"
         >
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-6xl font-semibold mb-4">
+            <h2 className="text-3xl sm:text-4xl md:text-6xl font-semibold mb-4">
               <span className="text-ink">Stop Consuming. </span>
               <br />
               <span className="text-accent">Start Teaching.</span>
