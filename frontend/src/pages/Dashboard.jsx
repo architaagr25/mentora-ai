@@ -70,15 +70,15 @@ const getAverageScore = (scores) => {
 }
 
 const getScoreColor = (score) => {
-  if (score >= 8) return 'text-green-400'
-  if (score >= 6) return 'text-yellow-400'
-  return 'text-red-400'
+  if (score >= 8) return 'text-success'
+  if (score >= 6) return 'text-highlight'
+  return 'text-danger'
 }
 
 const getScoreBarColor = (score) => {
-  if (score >= 8) return 'from-green-500 to-cyan-500'
-  if (score >= 6) return 'from-yellow-500 to-orange-500'
-  return 'from-red-500 to-pink-500'
+  if (score >= 8) return 'bg-success'
+  if (score >= 6) return 'bg-highlight'
+  return 'bg-danger'
 }
 
 const formatDate = (dateString) => {
@@ -441,31 +441,31 @@ const handleSessionClick = (session, isActive) => {
   const mainMargin = sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'
 
   return (
-    <div className="min-h-screen bg-[#080D1A] flex">
+    <div className="min-h-screen bg-bg flex">
 
       {/* ─── DESKTOP SIDEBAR ─── */}
       <aside
-        className={`hidden lg:flex ${sidebarWidth} bg-[#0D1426] border-r border-slate-800 flex-col fixed left-0 top-0 h-full z-20 transition-all duration-300`}
+        className={`hidden lg:flex ${sidebarWidth} bg-surface border-r border-line flex-col fixed left-0 top-0 h-full z-20 transition-all duration-300`}
       >
        {/* Logo + collapse/expand button */}
-<div className="px-3 py-5 border-b border-slate-800 flex flex-col items-center gap-3 overflow-hidden">
+<div className="px-3 py-5 border-b border-line flex flex-col items-center gap-3 overflow-hidden">
   <div className="w-full flex items-center justify-center gap-2">
-    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-      <Brain size={16} className="text-white" />
+    <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
+      <Brain size={16} className="text-ink" />
     </div>
     <span
-      className={`text-white font-semibold text-lg whitespace-nowrap transition-all duration-300 overflow-hidden ${
+      className={`text-ink font-semibold text-lg whitespace-nowrap transition-all duration-300 overflow-hidden ${
         sidebarCollapsed ? 'max-w-0 opacity-0' : 'max-w-[140px] opacity-100'
       }`}
     >
-      Mentora <span className="text-cyan-400">AI</span>
+      Mentora <span className="text-accent">AI</span>
     </span>
   </div>
 
   <button
     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
     title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-    className="text-slate-500 hover:text-slate-300 transition-colors p-1 rounded-lg hover:bg-slate-800"
+    className="text-muted hover:text-ink transition-colors p-1 rounded-lg hover:bg-surface-2"
   >
     {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
   </button>
@@ -477,7 +477,7 @@ const handleSessionClick = (session, isActive) => {
               key={item.label}
   onClick={() => handleNavClick(item.target)}
               title={sidebarCollapsed ? item.label : undefined}
-              className={`w-full flex items-center gap-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200 text-sm font-medium ${
+              className={`w-full flex items-center gap-3 rounded-lg text-muted hover:text-ink hover:bg-surface-2/60 transition-all duration-200 text-sm font-medium ${
                 sidebarCollapsed
                   ? 'justify-center px-2 py-2.5'
                   : 'px-3 py-2.5'
@@ -504,22 +504,22 @@ const handleSessionClick = (session, isActive) => {
  
   {/* User profile at bottom */}
 {!sidebarCollapsed && (
-  <div className="px-4 py-4 border-t border-slate-800">
+  <div className="px-4 py-4 border-t border-line">
     <div className="flex items-center gap-3 mb-3">
-      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-        <span className="text-white text-sm font-bold">
+      <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+        <span className="text-ink text-sm font-semibold">
           {user?.name?.charAt(0).toUpperCase()}
         </span>
       </div>
       <div className="min-w-0">
-        <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-        <p className="text-slate-500 text-xs truncate">{user?.email}</p>
+        <p className="text-ink text-sm font-medium truncate">{user?.name}</p>
+        <p className="text-muted text-xs truncate">{user?.email}</p>
       </div>
     </div>
-    <hr className="border-slate-800 mb-3" />
+    <hr className="border-line mb-3" />
     <button
       onClick={logout}
-      className="w-full text-red-400 hover:text-red-300 text-sm font-semibold transition-colors text-left px-1"
+      className="w-full text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
     >
       Sign out
     </button>
@@ -528,13 +528,13 @@ const handleSessionClick = (session, isActive) => {
 
         {/* Collapsed user avatar */}
         {sidebarCollapsed && (
-          <div className="px-2 py-4 border-t border-slate-800 flex flex-col items-center gap-2">
+          <div className="px-2 py-4 border-t border-line flex flex-col items-center gap-2">
             <div
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center cursor-pointer"
+              className="w-8 h-8 rounded-full bg-accent flex items-center justify-center cursor-pointer"
               title={user?.name}
               onClick={logout}
             >
-              <span className="text-white text-xs font-bold">
+              <span className="text-ink text-xs font-semibold">
                 {user?.name?.charAt(0).toUpperCase()}
               </span>
             </div>
@@ -558,21 +558,21 @@ const handleSessionClick = (session, isActive) => {
               animate={{ x: 0 }}
               exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 h-full w-64 bg-[#0D1426] border-r border-slate-800 flex flex-col z-40"
+              className="lg:hidden fixed left-0 top-0 h-full w-64 bg-surface border-r border-line flex flex-col z-40"
             >
               {/* Mobile sidebar header */}
-              <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
+              <div className="px-6 py-5 border-b border-line flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center">
-                    <Brain size={16} className="text-white" />
+                  <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+                    <Brain size={16} className="text-ink" />
                   </div>
-                  <span className="text-white font-semibold text-lg">
-                    Mentora <span className="text-cyan-400">AI</span>
+                  <span className="text-ink font-semibold text-lg">
+                    Mentora <span className="text-accent">AI</span>
                   </span>
                 </div>
                 <button
                   onClick={() => setShowMobileSidebar(false)}
-                  className="text-slate-500 hover:text-slate-300 transition-colors"
+                  className="text-muted hover:text-ink transition-colors"
                 >
                   <X size={18} />
                 </button>
@@ -584,7 +584,7 @@ const handleSessionClick = (session, isActive) => {
                   <button
                     key={item.label}
                     onClick={() => handleNavClick(item.target)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all duration-200 text-sm font-medium"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted hover:text-ink hover:bg-surface-2/60 transition-all duration-200 text-sm font-medium"
                   >
                     <item.icon size={18} />
                     {item.label}
@@ -593,22 +593,22 @@ const handleSessionClick = (session, isActive) => {
               </nav>
 
               {/* Mobile profile */}
-<div className="px-4 py-4 border-t border-slate-800">
+<div className="px-4 py-4 border-t border-line">
   <div className="flex items-center gap-3 mb-3">
-    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center flex-shrink-0">
-      <span className="text-white text-sm font-bold">
+    <div className="w-9 h-9 rounded-full bg-accent flex items-center justify-center flex-shrink-0">
+      <span className="text-ink text-sm font-semibold">
         {user?.name?.charAt(0).toUpperCase()}
       </span>
     </div>
     <div className="min-w-0">
-      <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-      <p className="text-slate-500 text-xs truncate">{user?.email}</p>
+      <p className="text-ink text-sm font-medium truncate">{user?.name}</p>
+      <p className="text-muted text-xs truncate">{user?.email}</p>
     </div>
   </div>
-  <hr className="border-slate-800 mb-3" />
+  <hr className="border-line mb-3" />
   <button
     onClick={logout}
-    className="w-full text-red-400 hover:text-red-300 text-sm font-semibold transition-colors text-left px-1"
+    className="w-full text-danger hover:text-danger text-sm font-semibold transition-colors text-left px-1"
   >
     Sign out
   </button>
@@ -626,27 +626,27 @@ const handleSessionClick = (session, isActive) => {
             back in as soon as the user scrolls up. The negative margins
             cancel <main>'s padding so it spans the screen edge to edge. */}
         <div
-          className={`lg:hidden sticky top-0 z-30 -mx-4 -mt-4 md:-mx-6 md:-mt-6 px-4 md:px-6 py-3 mb-6 flex items-center justify-between bg-[#080D1A]/90 backdrop-blur-md border-b border-slate-800/60 transition-transform duration-300 ${
+          className={`lg:hidden sticky top-0 z-30 -mx-4 -mt-4 md:-mx-6 md:-mt-6 px-4 md:px-6 py-3 mb-6 flex items-center justify-between bg-bg/90 backdrop-blur-md border-b border-line transition-transform duration-300 ${
             showTopBar || showMobileSidebar ? 'translate-y-0' : '-translate-y-full'
           }`}
         >
           <button
             onClick={() => setShowMobileSidebar(true)}
-            className="p-2 rounded-xl bg-[#0D1426] border border-slate-800 text-slate-400 hover:text-white transition-colors"
+            className="p-2 rounded-lg bg-surface border border-line text-muted hover:text-ink transition-colors"
           >
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center">
-              <Brain size={14} className="text-white" />
+            <div className="w-7 h-7 rounded-lg bg-accent flex items-center justify-center">
+              <Brain size={14} className="text-ink" />
             </div>
-            <span className="text-white font-semibold">
-              Mentora <span className="text-cyan-400">AI</span>
+            <span className="text-ink font-semibold">
+              Mentora <span className="text-accent">AI</span>
             </span>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-orange-500/10 border border-orange-500/20">
-            <Flame size={12} className="text-orange-400" />
-            <span className="text-orange-400 text-xs font-semibold">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-highlight-soft border border-highlight/30">
+            <Flame size={12} className="text-highlight" />
+            <span className="text-highlight text-xs font-semibold">
               {user?.streak || 0}
             </span>
           </div>
@@ -658,10 +658,10 @@ const handleSessionClick = (session, isActive) => {
         {/* ─── HEADER ─── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-white mb-1">
+            <h1 className="text-xl md:text-2xl font-semibold text-ink mb-1">
               Good {greeting}, {user?.name?.split(' ')[0]} 👋
             </h1>
-            <p className="text-slate-400 text-sm">
+            <p className="text-muted text-sm">
               {focusAreas.length > 0
                 ? `You have ${focusAreas.length} concept${focusAreas.length > 1 ? 's' : ''} to review today`
                 : 'Ready to start teaching?'}
@@ -669,15 +669,15 @@ const handleSessionClick = (session, isActive) => {
           </div>
 
           <div className="hidden sm:flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20">
-              <Flame size={14} className="text-orange-400" />
-              <span className="text-orange-400 text-sm font-semibold">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-highlight-soft border border-highlight/30">
+              <Flame size={14} className="text-highlight" />
+              <span className="text-highlight text-sm font-semibold">
                 {user?.streak || 0} day streak
               </span>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/20">
-              <Zap size={14} className="text-yellow-400" />
-              <span className="text-yellow-400 text-sm font-semibold">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-highlight-soft border border-highlight/30">
+              <Zap size={14} className="text-highlight" />
+              <span className="text-highlight text-sm font-semibold">
                 {user?.xp || 0} XP
               </span>
               <XpInfo className="ml-0.5" />
@@ -690,31 +690,25 @@ const handleSessionClick = (session, isActive) => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative rounded-2xl overflow-hidden p-6 md:p-8 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-            style={{
-              background: 'linear-gradient(135deg, #1a0533 0%, #0a1628 40%, #0d2040 70%, #0a1628 100%)',
-              border: '1px solid rgba(124, 58, 237, 0.3)',
-            }}
+            className="relative rounded-lg overflow-hidden border border-accent/30 bg-accent-soft p-6 md:p-8 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
           >
-            <div className="absolute top-0 left-1/4 w-64 h-64 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 text-violet-300 text-xs font-medium mb-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/30 bg-surface text-accent text-xs font-medium mb-3">
                 <Brain size={12} />
                 READY WHEN YOU ARE
               </div>
-              <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+              <h2 className="text-xl md:text-2xl font-semibold text-ink mb-2">
                 Ready to teach something today?
               </h2>
-              <p className="text-slate-400 text-sm max-w-md">
+              <p className="text-muted text-sm max-w-md">
                 Pick a concept and start explaining. The AI will challenge your depth of understanding in real-time.
               </p>
             </div>
 
             <button
               onClick={() => setShowNewSessionModal(true)}
-              className="relative z-10 flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all hover:shadow-lg hover:shadow-violet-500/25 flex-shrink-0 text-sm md:text-base"
+              className="btn-primary relative z-10 flex items-center gap-2 flex-shrink-0 text-sm md:text-base"
             >
               Start New Session
               <ChevronRight size={18} />
@@ -725,23 +719,23 @@ const handleSessionClick = (session, isActive) => {
         {/* ─── STATS ROW ─── */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           {[
-            { icon: BookOpen, color: 'bg-blue-500/20 text-blue-400', label: 'Sessions This Week', value: sessionsThisWeek },
-            { icon: TrendingUp, color: 'bg-violet-500/20 text-violet-400', label: 'Avg Mastery Score', value: avgMasteryScore !== null ? `${avgMasteryScore}%` : '—' },
-            { icon: Target, color: 'bg-cyan-500/20 text-cyan-400', label: 'Total Sessions', value: totalSessions },
-            { icon: Flame, color: 'bg-orange-500/20 text-orange-400', label: 'Current Streak', value: `${user?.streak || 0} days` },
+            { icon: BookOpen, color: 'bg-accent-soft text-accent', label: 'Sessions This Week', value: sessionsThisWeek },
+            { icon: TrendingUp, color: 'bg-accent-soft text-accent', label: 'Avg Mastery Score', value: avgMasteryScore !== null ? `${avgMasteryScore}%` : '—' },
+            { icon: Target, color: 'bg-accent-soft text-accent', label: 'Total Sessions', value: totalSessions },
+            { icon: Flame, color: 'bg-highlight-soft text-highlight', label: 'Current Streak', value: `${user?.streak || 0} days` },
           ].map((stat, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 md:p-5"
+              className="bg-surface border border-line rounded-lg p-4 md:p-5"
             >
-              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center mb-2 md:mb-3 ${stat.color}`}>
+              <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center mb-2 md:mb-3 ${stat.color}`}>
                 <stat.icon size={16} />
               </div>
-              <p className="text-xl md:text-2xl font-bold text-white mb-1">{stat.value}</p>
-              <p className="text-slate-500 text-xs">{stat.label}</p>
+              <p className="text-xl md:text-2xl font-semibold text-ink mb-1">{stat.value}</p>
+              <p className="text-muted text-xs">{stat.label}</p>
             </motion.div>
           ))}
         </div>
@@ -752,10 +746,10 @@ const handleSessionClick = (session, isActive) => {
           {/* Recent sessions */}
           <div ref={historyRef} className="lg:col-span-2">
            <div className="flex items-center justify-between mb-4 gap-2">
-  <h2 className="text-lg font-semibold text-white truncate">Recent Sessions</h2>
+  <h2 className="text-lg font-semibold text-ink truncate">Recent Sessions</h2>
   <button
     onClick={() => navigate('/history')}
-    className="flex-shrink-0 text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors flex items-center gap-1"
+    className="flex-shrink-0 text-accent text-sm font-medium hover:text-accent transition-colors flex items-center gap-1"
   >
     View all
     <ChevronRight size={14} />
@@ -764,18 +758,18 @@ const handleSessionClick = (session, isActive) => {
 
             {isLoadingSessions ? (
               <div className="flex items-center justify-center py-16">
-                <Loader2 size={24} className="text-violet-400 animate-spin" />
+                <Loader2 size={24} className="text-accent animate-spin" />
               </div>
             ) : sessions.length === 0 ? (
-              <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-10 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-violet-600/20 flex items-center justify-center mx-auto mb-4">
-                  <BookOpen size={24} className="text-violet-400" />
+              <div className="bg-surface border border-line rounded-lg p-10 text-center">
+                <div className="w-14 h-14 rounded-lg bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen size={24} className="text-accent" />
                 </div>
-                <h3 className="text-white font-semibold mb-2">No sessions yet</h3>
-                <p className="text-slate-400 text-sm mb-4">Start your first teaching session</p>
+                <h3 className="text-ink font-semibold mb-2">No sessions yet</h3>
+                <p className="text-muted text-sm mb-4">Start your first teaching session</p>
                 <button
                   onClick={() => setShowNewSessionModal(true)}
-                  className="px-5 py-2 rounded-xl font-semibold text-white bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 transition-all text-sm"
+                  className="btn-primary px-5 py-2 text-sm"
                 >
                   Start now
                 </button>
@@ -795,26 +789,26 @@ const handleSessionClick = (session, isActive) => {
   animate={{ opacity: 1, x: 0 }}
   transition={{ delay: i * 0.05 }}
   onClick={() => handleSessionClick(session, isActive)}
-  className="bg-[#0D1426] border border-slate-800 rounded-2xl p-4 hover:border-slate-600 transition-all duration-200 overflow-hidden cursor-pointer"
+  className="bg-surface border border-line rounded-lg p-4 hover:border-accent transition-all duration-200 overflow-hidden cursor-pointer"
 >
   <div className="flex items-center justify-between gap-3">
 
     {/* Avatar + topic + timestamp + score (left side, always) */}
     <div className="flex items-center gap-3 min-w-0 flex-1">
-      <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-violet-600/40 to-cyan-500/40 flex items-center justify-center flex-shrink-0">
-        <span className="text-white font-bold text-sm">
+      <div className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-accent-soft flex items-center justify-center flex-shrink-0">
+        <span className="text-ink font-semibold text-sm">
           {session.topic.charAt(0).toUpperCase()}
         </span>
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-white font-medium text-sm truncate max-w-[120px] sm:max-w-[200px]">
+        <p className="text-ink font-medium text-sm truncate max-w-[120px] sm:max-w-[200px]">
           {session.topic}
         </p>
         <div className="flex items-center gap-2">
-          <p className="text-slate-500 text-xs">{formatDate(session.updatedAt)}</p>
+          <p className="text-muted text-xs">{formatDate(session.updatedAt)}</p>
           {latest && (
-            <p className={`text-xs font-bold sm:hidden ${getScoreColor(getAverageScore(session.scores))}`}>
+            <p className={`text-xs font-semibold sm:hidden ${getScoreColor(getAverageScore(session.scores))}`}>
               {getAverageScore(session.scores)}/10
             </p>
           )}
@@ -824,7 +818,7 @@ const handleSessionClick = (session, isActive) => {
 
     {/* Right side — badge, full scores (desktop), actions */}
     <div className="flex items-center gap-2 flex-shrink-0">
-      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
+      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${isActive ? 'bg-success-soft text-success' : 'bg-surface-2 text-muted'}`}>
         {isActive ? 'Active' : 'Completed'}
       </span>
 
@@ -836,8 +830,8 @@ const handleSessionClick = (session, isActive) => {
             { label: 'CMP', value: latest.completeness },
           ].map((s) => (
             <div key={s.label} className="text-center">
-              <p className="text-slate-600 text-xs mb-0.5">{s.label}</p>
-              <p className={`text-sm font-bold ${getScoreColor(s.value)}`}>
+              <p className="text-muted text-xs mb-0.5">{s.label}</p>
+              <p className={`text-sm font-semibold ${getScoreColor(s.value)}`}>
                 {s.value}/10
               </p>
             </div>
@@ -849,7 +843,7 @@ const handleSessionClick = (session, isActive) => {
         <button
           onClick={(e) => { e.stopPropagation(); setConfirmCompleteId(session._id) }}
           title="Mark as completed"
-          className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+          className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-success-soft text-success hover:bg-success/15 transition-colors"
         >
           <CheckCircle size={14} />
           <span className="hidden lg:inline">Mark as Complete</span>
@@ -857,7 +851,7 @@ const handleSessionClick = (session, isActive) => {
       )}
       <button
         onClick={(e) => { e.stopPropagation(); handleSessionClick(session, isActive) }}
-        className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+        className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
       >
         <span className="hidden sm:inline">{isActive ? 'Continue' : 'Review'}</span>
         <ChevronRight size={14} />
@@ -873,9 +867,9 @@ const handleSessionClick = (session, isActive) => {
 
           {/* Activity heatmap */}
           <div>
-            <h2 className="text-lg font-semibold text-white mb-4">This Week</h2>
-            <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5">
-              <p className="text-slate-500 text-xs mb-4">Sessions per day</p>
+            <h2 className="text-lg font-semibold text-ink mb-4">This Week</h2>
+            <div className="bg-surface border border-line rounded-lg p-5">
+              <p className="text-muted text-xs mb-4">Sessions per day</p>
               <div className="flex items-end justify-between gap-1 md:gap-2">
                 {weekActivity.map((day) => (
                   <div key={day.day} className="flex flex-col items-center gap-2 flex-1">
@@ -894,9 +888,9 @@ const handleSessionClick = (session, isActive) => {
                       />
                     </div>
                     {day.count > 0 && (
-                      <span className="text-violet-400 text-xs font-bold">{day.count}</span>
+                      <span className="text-accent text-xs font-semibold">{day.count}</span>
                     )}
-                    <span className="text-slate-600 text-xs">{day.day}</span>
+                    <span className="text-muted text-xs">{day.day}</span>
                   </div>
                 ))}
               </div>
@@ -908,17 +902,17 @@ const handleSessionClick = (session, isActive) => {
         {topicsToRevisit.length > 0 && (
           <div className="mb-6 md:mb-8">
             <div className="flex items-center justify-between mb-4 gap-2">
-              <h2 className="text-lg font-semibold text-white truncate">Topics to Revisit</h2>
+              <h2 className="text-lg font-semibold text-ink truncate">Topics to Revisit</h2>
               <button
                 onClick={() => navigate('/concepts')}
-                className="flex-shrink-0 text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors flex items-center gap-1"
+                className="flex-shrink-0 text-accent text-sm font-medium hover:text-accent transition-colors flex items-center gap-1"
               >
                 All gaps
                 <ChevronRight size={14} />
               </button>
             </div>
-            <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6">
-              <p className="text-slate-500 text-sm mb-5">
+            <div className="bg-surface border border-line rounded-lg p-5 md:p-6">
+              <p className="text-muted text-sm mb-5">
                 Open gaps, waiting longest first — practise one to close it
               </p>
               <div className="space-y-4">
@@ -931,18 +925,18 @@ const handleSessionClick = (session, isActive) => {
                     className="flex items-start gap-3 md:gap-4"
                   >
                     <div className="min-w-0 flex-1">
-                      <p className="text-slate-200 text-sm font-medium truncate">
+                      <p className="text-ink text-sm font-medium truncate">
                         {entry.topic}
-                        <span className="text-slate-500 font-normal">
+                        <span className="text-muted font-normal">
                           {' '}· {entry.count} open · {formatOpenFor(entry.oldest)}
                         </span>
                       </p>
-                      <p className="text-slate-400 text-xs mt-0.5 line-clamp-2">{entry.oldest.text}</p>
+                      <p className="text-muted text-xs mt-0.5 line-clamp-2">{entry.oldest.text}</p>
                     </div>
                     <button
                       onClick={() => handlePractiseGap(entry.oldest)}
                       disabled={startingGapId !== null}
-                      className="flex-shrink-0 flex items-center gap-1 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-shrink-0 flex items-center gap-1 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-accent/20 text-accent hover:bg-accent/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {startingGapId === entry.oldest._id ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -960,19 +954,19 @@ const handleSessionClick = (session, isActive) => {
 
         {/* ─── FOCUS AREAS ─── */}
         <div ref={conceptsRef}>
-          <h2 className="text-lg font-semibold text-white mb-4">Focus Areas</h2>
+          <h2 className="text-lg font-semibold text-ink mb-4">Focus Areas</h2>
 
           {focusAreas.length === 0 ? (
-            <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-8 text-center">
-              <p className="text-slate-400 text-sm">
+            <div className="bg-surface border border-line rounded-lg p-8 text-center">
+              <p className="text-muted text-sm">
                 {sessions.length === 0
                   ? 'Complete sessions and request scores to see your focus areas'
                   : '🎉 All your topics are looking strong! Keep teaching to maintain your scores.'}
               </p>
             </div>
           ) : (
-            <div className="bg-[#0D1426] border border-slate-800 rounded-2xl p-5 md:p-6">
-              <p className="text-slate-500 text-sm mb-5">
+            <div className="bg-surface border border-line rounded-lg p-5 md:p-6">
+              <p className="text-muted text-sm mb-5">
                 Concepts that need more teaching sessions
               </p>
               <div className="space-y-4">
@@ -984,23 +978,23 @@ const handleSessionClick = (session, isActive) => {
                     transition={{ delay: i * 0.08 }}
                     className="flex items-center gap-3 md:gap-4"
                   >
-                    <p className="text-slate-300 text-sm w-28 md:w-40 truncate flex-shrink-0">
+                    <p className="text-ink text-sm w-28 md:w-40 truncate flex-shrink-0">
                       {area.topic}
                     </p>
-                    <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="flex-1 h-2 bg-surface-2 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${area.avgCompleteness}%` }}
                         transition={{ duration: 0.8, delay: i * 0.1 }}
-                        className={`h-full rounded-full bg-gradient-to-r ${getScoreBarColor(area.avgCompleteness / 10)}`}
+                        className={`h-full rounded-full ${getScoreBarColor(area.avgCompleteness / 10)}`}
                       />
                     </div>
-                    <span className="text-slate-400 text-sm w-10 text-right flex-shrink-0">
+                    <span className="text-muted text-sm w-10 text-right flex-shrink-0">
                       {area.avgCompleteness}%
                     </span>
                     <button
                       onClick={() => handlePracticeClick(area.topic)}
-                      className="flex-shrink-0 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 transition-colors"
+                      className="flex-shrink-0 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
                     >
                       Practice
                     </button>
@@ -1043,23 +1037,23 @@ const handleSessionClick = (session, isActive) => {
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="fixed inset-0 z-50 flex items-center justify-center px-4"
             >
-              <div className="bg-[#0D1426] border border-slate-700 rounded-2xl p-6 md:p-8 w-full max-w-sm shadow-2xl">
+              <div className="bg-surface border border-line rounded-lg p-6 md:p-8 w-full max-w-sm shadow-2xl">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-green-500/15 border border-green-500/25 flex items-center justify-center flex-shrink-0">
-                      <CheckCircle size={20} className="text-green-400" />
+                    <div className="w-10 h-10 rounded-lg bg-success-soft border border-success/30 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle size={20} className="text-success" />
                     </div>
-                    <h2 className="text-lg font-bold text-white">Complete session?</h2>
+                    <h2 className="text-lg font-semibold text-ink">Complete session?</h2>
                   </div>
                   <button
                     onClick={() => !isCompleting && setConfirmCompleteId(null)}
-                    className="text-slate-500 hover:text-slate-300 transition-colors"
+                    className="text-muted hover:text-ink transition-colors"
                   >
                     <X size={18} />
                   </button>
                 </div>
 
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                <p className="text-muted text-sm leading-relaxed mb-6">
                   Are you sure you want to complete this session? You won't be able to resume it later.
                 </p>
 
@@ -1067,14 +1061,14 @@ const handleSessionClick = (session, isActive) => {
                   <button
                     onClick={() => setConfirmCompleteId(null)}
                     disabled={isCompleting}
-                    className="flex-1 py-2.5 rounded-xl font-semibold text-slate-300 border border-slate-700 hover:border-slate-500 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="btn-secondary flex-1 py-2.5 text-sm"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={() => handleMarkComplete(confirmCompleteId)}
                     disabled={isCompleting}
-                    className="flex-1 py-2.5 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                    className="btn-primary flex-1 py-2.5 flex items-center justify-center gap-2 text-sm"
                   >
                     {isCompleting ? (
                       <><Loader2 size={15} className="animate-spin" />Completing...</>
