@@ -289,7 +289,7 @@ const Concepts = () => {
         {/* ─── PAGE HEADER ─── */}
         <div className="flex items-center gap-3 mb-6 md:mb-8">
           <div className="w-11 h-11 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-            <Network size={20} className="text-ink" />
+            <Network size={20} className="text-on-accent" />
           </div>
           <div>
             <h1 className="text-xl md:text-2xl font-semibold text-ink">Concepts</h1>

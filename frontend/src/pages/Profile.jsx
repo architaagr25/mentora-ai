@@ -550,7 +550,7 @@ const Profile = () => {
           className="flex items-center gap-4 mb-6 md:mb-8"
         >
           <div className="w-14 h-14 md:w-16 md:h-16 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-            <span className="text-ink text-xl md:text-2xl font-semibold">
+            <span className="text-on-accent text-xl md:text-2xl font-semibold">
               {user?.name?.charAt(0).toUpperCase()}
             </span>
           </div>

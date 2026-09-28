@@ -223,7 +223,7 @@ const SessionDetailPanel = ({ sessionId, onClose }) => {
                                   key={i}
                                   className={`rounded-lg px-4 py-3 border ${
                                     isLatest
-                                      ? 'bg-accent/10 border-accent/30'
+                                      ? 'bg-accent-soft border-accent/30'
                                       : 'bg-bg border-line'
                                   }`}
                                 >

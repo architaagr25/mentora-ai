@@ -201,7 +201,7 @@ const History = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 md:mb-10">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
-              <HistoryIcon size={20} className="text-ink" />
+              <HistoryIcon size={20} className="text-on-accent" />
             </div>
             <div>
               <h1 className="text-xl md:text-2xl font-semibold text-ink">Session History</h1>

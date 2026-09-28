@@ -604,7 +604,7 @@ const lastSpokenIdRef = useRef(null)
             onClick={() => toggleVoiceMode((v) => !v)}
             className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               voiceMode
-                ? 'bg-accent-soft text-accent hover:bg-accent/15'
+                ? 'bg-accent-soft text-accent hover:bg-accent hover:text-on-accent'
                 : 'bg-surface-2 text-muted hover:text-ink hover:bg-surface-2'
             }`}
           >
@@ -619,7 +619,7 @@ const lastSpokenIdRef = useRef(null)
             onClick={() => setShowScorePanel(true)}
             disabled={isScoreButtonDisabled}
             title={isScoreButtonDisabled ? scoreHint : undefined}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-soft text-accent hover:bg-accent/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <BarChart3 size={16} />
             {latestScore ? 'View Score' : 'Get Score'}
@@ -700,7 +700,7 @@ const lastSpokenIdRef = useRef(null)
                 disabled={isScoreButtonDisabled}
                 title={isScoreButtonDisabled ? scoreHint : undefined}
                 aria-label={isScoreButtonDisabled ? scoreHint : 'Score'}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs md:text-sm font-medium bg-accent-soft text-accent hover:bg-accent/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs md:text-sm font-medium bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <BarChart3 size={16} />
                 <span className="hidden sm:inline">

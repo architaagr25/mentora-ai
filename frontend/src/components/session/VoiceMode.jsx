@@ -329,7 +329,7 @@ const {
             {/* Switch to text */}
             <button
               onClick={onSwitchToText}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent/15 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors"
             >
               <MessageSquare size={16} />
               <span className="hidden sm:inline">Text</span>
@@ -341,7 +341,7 @@ const {
               disabled={isScoreButtonDisabled}
               title={isScoreButtonDisabled ? scoreHint : undefined}
               aria-label={isScoreButtonDisabled ? scoreHint : 'Score'}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent/15 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <BarChart3 size={16} />
               <span className="hidden sm:inline">

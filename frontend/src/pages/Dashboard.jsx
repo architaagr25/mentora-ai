@@ -768,7 +768,7 @@ const handleSessionClick = (session, isActive) => {
               </div>
             ) : sessions.length === 0 ? (
               <div className="bg-surface border border-line rounded-lg p-10 text-center">
-                <div className="w-14 h-14 rounded-lg bg-accent/20 flex items-center justify-center mx-auto mb-4">
+                <div className="w-14 h-14 rounded-lg bg-accent-soft flex items-center justify-center mx-auto mb-4">
                   <BookOpen size={24} className="text-accent" />
                 </div>
                 <h3 className="text-ink font-semibold mb-2">No sessions yet</h3>
@@ -857,7 +857,7 @@ const handleSessionClick = (session, isActive) => {
       )}
       <button
         onClick={(e) => { e.stopPropagation(); handleSessionClick(session, isActive) }}
-        className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+        className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors"
       >
         <span className="hidden sm:inline">{isActive ? 'Continue' : 'Review'}</span>
         <ChevronRight size={14} />
@@ -882,14 +882,18 @@ const handleSessionClick = (session, isActive) => {
                     <div className="w-full flex flex-col items-center">
                       <div
                         className="w-6 md:w-8 rounded-full transition-all duration-500"
+                        // Raw rgba literals here were the last violet left in
+                        // the app, and no class-name or hex grep could see
+                        // them. Reading the token means the bar follows the
+                        // theme like everything else.
                         style={{
                           height: `${Math.max(day.intensity * 80, 8)}px`,
                           background: day.count > 0
-                            ? `rgba(139, 92, 246, ${0.3 + day.intensity * 0.7})`
-                            : 'rgba(30, 41, 59, 1)',
+                            ? `rgb(var(--accent) / ${0.35 + day.intensity * 0.65})`
+                            : 'rgb(var(--line))',
                           border: day.count > 0
-                            ? '1px solid rgba(139, 92, 246, 0.4)'
-                            : '1px solid rgba(30, 41, 59, 1)',
+                            ? '1px solid rgb(var(--accent) / 0.5)'
+                            : '1px solid rgb(var(--line))',
                         }}
                       />
                     </div>
@@ -942,7 +946,7 @@ const handleSessionClick = (session, isActive) => {
                     <button
                       onClick={() => handlePractiseGap(entry.oldest)}
                       disabled={startingGapId !== null}
-                      className="flex-shrink-0 flex items-center gap-1 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-accent/20 text-accent hover:bg-accent/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-shrink-0 flex items-center gap-1 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {startingGapId === entry.oldest._id ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -1000,7 +1004,7 @@ const handleSessionClick = (session, isActive) => {
                     </span>
                     <button
                       onClick={() => handlePracticeClick(area.topic)}
-                      className="flex-shrink-0 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+                      className="flex-shrink-0 px-2 md:px-3 py-1 rounded-lg text-xs font-medium bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors"
                     >
                       Practice
                     </button>
