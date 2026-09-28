@@ -24,6 +24,12 @@ const apply = (theme) => {
   if (next === 'dark') root().dataset.theme = 'dark'
   else delete root().dataset.theme
 
+  // Keep the mobile browser chrome in step. Without this the address bar
+  // stays the light colour after switching to dark, which looks like a bug
+  // in the page rather than a missing meta tag.
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute('content', next === 'dark' ? '#16150F' : '#FAF8F3')
+
   return next
 }
 

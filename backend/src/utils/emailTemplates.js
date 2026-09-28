@@ -30,32 +30,36 @@ export const escapeHtml = (value) =>
     .replace(/'/g, '&#39;')
 
 const SPAM_NOTICE = `
-  <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
+  <p style="color: #63676E; font-size: 12px; line-height: 1.6; margin: 24px 0 0; text-align: center;">
     Don't see this in your inbox? Check your spam or junk folder.
   </p>
 `
 const EMAIL_WRAPPER_STYLE = `
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #080D1A;
+  background-color: #FAF8F3;
   padding: 40px 20px;
 `
 
 const CARD_STYLE = `
   max-width: 480px;
   margin: 0 auto;
-  background-color: #0D1426;
-  border-radius: 16px;
+  background-color: #FFFFFF;
+  border-radius: 8px;
   padding: 40px 32px;
-  border: 1px solid #1e293b;
+  border: 1px solid #E6E1D6;
 `
 
+// A flat colour, not a gradient. Outlook drops CSS gradients altogether,
+// which left this button with no background at all there — white label on a
+// white card, effectively invisible. The label stays white because it now
+// sits on a solid accent fill.
 const BUTTON_STYLE = `
   display: inline-block;
   padding: 14px 28px;
-  background: linear-gradient(135deg, #7C3AED, #06B6D4);
-  color: #ffffff;
+  background-color: #9C4A2F;
+  color: #FFFFFF;
   text-decoration: none;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 600;
   font-size: 14px;
 `
@@ -64,15 +68,15 @@ export const resetPasswordTemplate = (resetUrl) => ({
   html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
-    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+    <p style="color: #9C4A2F; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
       Mentora AI
     </p>
 
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+    <h1 style="color: #1F2328; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">
       Reset your password
     </h1>
 
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+    <p style="color: #63676E; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
       We received a request to reset your Mentora AI password. Click the button below to choose a new one. This link expires in 1 hour.
     </p>
 
@@ -80,14 +84,14 @@ export const resetPasswordTemplate = (resetUrl) => ({
       Reset Password
     </a>
 
-    <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
+    <p style="color: #63676E; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
       If the button doesn't work, copy and paste this link into your browser:<br />
-      <a href="${resetUrl}" style="color: #22D3EE; word-break: break-all;">${resetUrl}</a>
+      <a href="${resetUrl}" style="color: #9C4A2F; word-break: break-all;">${resetUrl}</a>
     </p>
 
-   <hr style="border: none; border-top: 1px solid #1e293b; margin: 28px 0;" />
+   <hr style="border: none; border-top: 1px solid #E6E1D6; margin: 28px 0;" />
 
-    <p style="color: #475569; font-size: 12px; line-height: 1.6; margin: 0;">
+    <p style="color: #63676E; font-size: 12px; line-height: 1.6; margin: 0;">
       If you didn't request a password reset, you can safely ignore this email — your password will not be changed.
     </p>
     ${SPAM_NOTICE}
@@ -109,21 +113,21 @@ export const passwordChangedTemplate = () => ({
   html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
-    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+    <p style="color: #9C4A2F; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
       Mentora AI
     </p>
 
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+    <h1 style="color: #1F2328; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">
       Your password was changed
     </h1>
 
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+    <p style="color: #63676E; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
       This is a confirmation that your Mentora AI account password was just changed. You've been signed out of all devices as a precaution — you'll need to log in again with your new password.
     </p>
 
-   <hr style="border: none; border-top: 1px solid #1e293b; margin: 0 0 28px;" />
+   <hr style="border: none; border-top: 1px solid #E6E1D6; margin: 0 0 28px;" />
 
-    <p style="color: #f87171; font-size: 13px; line-height: 1.6; margin: 0;">
+    <p style="color: #9E1B43; font-size: 13px; line-height: 1.6; margin: 0;">
       If you didn't make this change, your account may be compromised — reset your password immediately using the "Forgot password?" link on the login page.
     </p>
     ${SPAM_NOTICE}
@@ -149,15 +153,15 @@ export const welcomeTemplate = (name) => {
     html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
-    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+    <p style="color: #9C4A2F; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
       Mentora AI
     </p>
 
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+    <h1 style="color: #1F2328; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">
       Welcome, ${safeName} 👋
     </h1>
 
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+    <p style="color: #63676E; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
       Your Mentora AI account is ready. Pick any concept you think you understand, and start explaining it — the AI will ask exactly the questions that expose where your understanding breaks down.
     </p>
 
@@ -189,15 +193,15 @@ export const emailChangeConfirmTemplate = (confirmUrl) => ({
   html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
-    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+    <p style="color: #9C4A2F; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
       Mentora AI
     </p>
 
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+    <h1 style="color: #1F2328; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">
       Confirm your new email address
     </h1>
 
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+    <p style="color: #63676E; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
       Someone asked to move a Mentora AI account to this address. Click below to confirm it — until you do, the account keeps its old email. This link expires in 1 hour.
     </p>
 
@@ -205,14 +209,14 @@ export const emailChangeConfirmTemplate = (confirmUrl) => ({
       Confirm This Address
     </a>
 
-    <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
+    <p style="color: #63676E; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
       If the button doesn't work, copy and paste this link into your browser:<br />
-      <a href="${confirmUrl}" style="color: #22D3EE; word-break: break-all;">${confirmUrl}</a>
+      <a href="${confirmUrl}" style="color: #9C4A2F; word-break: break-all;">${confirmUrl}</a>
     </p>
 
-   <hr style="border: none; border-top: 1px solid #1e293b; margin: 28px 0;" />
+   <hr style="border: none; border-top: 1px solid #E6E1D6; margin: 28px 0;" />
 
-    <p style="color: #475569; font-size: 12px; line-height: 1.6; margin: 0;">
+    <p style="color: #63676E; font-size: 12px; line-height: 1.6; margin: 0;">
       If you weren't expecting this, you can ignore this email — nothing will change, and this address will not be added to any account.
     </p>
     ${SPAM_NOTICE}
@@ -242,21 +246,21 @@ export const emailChangeNoticeTemplate = (newEmail) => {
     html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
-    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+    <p style="color: #9C4A2F; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
       Mentora AI
     </p>
 
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+    <h1 style="color: #1F2328; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">
       Someone asked to change your email
     </h1>
 
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
-      A request was made to move your Mentora AI account to <strong style="color: #ffffff;">${safeEmail}</strong>. Your account still uses this address, and will keep doing so unless that request is confirmed from the new inbox within the hour.
+    <p style="color: #63676E; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+      A request was made to move your Mentora AI account to <strong style="color: #1F2328;">${safeEmail}</strong>. Your account still uses this address, and will keep doing so unless that request is confirmed from the new inbox within the hour.
     </p>
 
-   <hr style="border: none; border-top: 1px solid #1e293b; margin: 0 0 28px;" />
+   <hr style="border: none; border-top: 1px solid #E6E1D6; margin: 0 0 28px;" />
 
-    <p style="color: #f87171; font-size: 13px; line-height: 1.6; margin: 0;">
+    <p style="color: #9E1B43; font-size: 13px; line-height: 1.6; margin: 0;">
       If this wasn't you, change your password now using the "Forgot password?" link on the login page — that cancels the pending change and signs out every other device.
     </p>
     ${SPAM_NOTICE}
@@ -286,15 +290,15 @@ export const verifyEmailTemplate = (name, verifyUrl) => {
     html: `
 <div style="${EMAIL_WRAPPER_STYLE}">
   <div style="${CARD_STYLE}">
-    <p style="color: #22D3EE; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
+    <p style="color: #9C4A2F; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 24px;">
       Mentora AI
     </p>
 
-    <h1 style="color: #ffffff; font-size: 20px; margin: 0 0 16px;">
+    <h1 style="color: #1F2328; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; margin: 0 0 16px;">
       Confirm your email, ${safeName}
     </h1>
 
-    <p style="color: #94a3b8; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
+    <p style="color: #63676E; font-size: 14px; line-height: 1.6; margin: 0 0 28px;">
       One click and your Mentora AI account is ready to use. Confirming also means we can actually reach you if you ever need to reset your password. This link expires in 24 hours.
     </p>
 
@@ -302,14 +306,14 @@ export const verifyEmailTemplate = (name, verifyUrl) => {
       Confirm My Email
     </a>
 
-    <p style="color: #64748b; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
+    <p style="color: #63676E; font-size: 12px; line-height: 1.6; margin: 28px 0 0;">
       If the button doesn't work, copy and paste this link into your browser:<br />
-      <a href="${verifyUrl}" style="color: #22D3EE; word-break: break-all;">${verifyUrl}</a>
+      <a href="${verifyUrl}" style="color: #9C4A2F; word-break: break-all;">${verifyUrl}</a>
     </p>
 
-   <hr style="border: none; border-top: 1px solid #1e293b; margin: 28px 0;" />
+   <hr style="border: none; border-top: 1px solid #E6E1D6; margin: 28px 0;" />
 
-    <p style="color: #475569; font-size: 12px; line-height: 1.6; margin: 0;">
+    <p style="color: #63676E; font-size: 12px; line-height: 1.6; margin: 0;">
       If you didn't sign up for Mentora AI, you can ignore this email — the account cannot be used until this address is confirmed.
     </p>
     ${SPAM_NOTICE}
