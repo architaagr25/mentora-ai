@@ -161,6 +161,11 @@ const sessionSchema = new mongoose.Schema(
 )
 
 // Virtual: returns the most recent score snapshot
+// The shape every list query uses: one user's sessions, optionally filtered
+// by status, newest first. Without this the sort runs in memory, which is
+// fine at twenty sessions and not at two thousand.
+sessionSchema.index({ userId: 1, status: 1, updatedAt: -1 })
+
 sessionSchema.virtual('latestScore').get(function () {
   if (this.scores.length === 0) return null
   return this.scores[this.scores.length - 1]

@@ -49,7 +49,10 @@ router.post('/:id/notes', uploadPdf.single('pdf'), async (req, res, next) => {
       throw new AppError('No PDF file provided', 400)
     }
  
-    const session = await Session.findById(req.params.id)
+    // Same reasoning as the list endpoint: the client never reads the raw
+    // notes text, and it can be tens of thousands of characters. The AI path
+    // reads it server-side from the document, so nothing downstream loses it.
+    const session = await Session.findById(req.params.id).select('-notes.rawText')
     if (!session) throw new AppError('Session not found', 404)
  
     // Make sure this session belongs to the logged-in user
@@ -204,7 +207,12 @@ router.get('/', async (req, res, next) => {
 
     const sessions = await Session.find(query)
       .sort({ updatedAt: -1 })
-      .select('-messages')
+      // -messages was already excluded; notes.rawText matters just as much.
+      // It holds the full extracted text of an uploaded PDF (up to ~75,000
+      // characters) and is only cleared when a session ends, so every active
+      // session was shipping its entire notes file to a list view that never
+      // reads it.
+      .select('-messages -notes.rawText')
       .limit(100)
 
     res.status(200).json({
