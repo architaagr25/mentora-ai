@@ -3,7 +3,7 @@
 > Learn by teaching. Mentora AI is a study platform where you explain concepts to a confused AI student — exposing your real knowledge gaps before your exam does.
 
 ![Tech Stack](https://img.shields.io/badge/Stack-MERN-green)
-![AI](https://img.shields.io/badge/AI-Gemini%203.5%20Flash-purple)
+![AI](https://img.shields.io/badge/AI-Gemini%203.5%20Flash%20Lite-9C4A2F)
 
 ## What is Mentora AI?
 
@@ -11,14 +11,18 @@ Most students study by re-reading notes — the least effective method known to 
 
 ## Features
 
-- **Live AI Conversation** — Real-time confused student persona powered by Gemini
+- **Live AI Conversation** — Real-time confused student persona powered by Gemini, streamed word by word over Socket.io
+- **Choose Who You're Teaching** — Explain to a curious child, a fellow student, or an interviewer. The audience changes the AI's vocabulary and the kind of questions it asks, not what it is allowed to know
 - **Explanation Scoring** — Scored on completeness, accuracy, and clarity with evidence from your words
 - **Concept Gap Map** — Every specific gap the AI has ever flagged in your explanations, grouped by topic — builds up whether or not you upload notes
+- **Gaps That Close Themselves** — Tick a gap off by hand, or let it resolve on its own: re-explain the topic without repeating the mistake and it closes, and a targeted practice session scoring 8+ closes the gap it was aimed at
+- **Targeted Practice** — Start a session pointed at one specific gap rather than a whole topic
 - **Session History** — Review any past session's full transcript and scores, side by side
 - **Smart Practice** — Jump back into an active session on a topic, or start fresh if your last attempt on it is complete
 - **Voice Mode** — Explain out loud; your speech is transcribed by AI, and the AI's replies are read back to you
 - **Notes Upload** — Upload PDFs and Mentora extracts every concept into a study plan
 - **Streak Tracking, XP & Badges** — Daily streaks, XP for strong scores, and unlockable badges for milestones
+- **Light & Dark Theme** — Switchable from any page; follows your system setting until you choose for yourself, and is applied before first paint so the page never flashes the wrong colours
 - **Profile Management** — Edit your name/email and change your password from your account page
 - **Password Reset via Email** — Forgot your password? Reset it via a secure, time-limited emailed link
 - **Email Verification** — New accounts confirm their address before starting a session, so a typo at signup can never lock someone out of their own password reset
@@ -34,6 +38,8 @@ Most students study by re-reading notes — the least effective method known to 
 - TanStack Query (server state)
 - Socket.io Client (real-time)
 - Framer Motion (animations)
+- Recharts (progress charts)
+- CSS custom properties for the light/dark theme — no `dark:` variants; every colour is a semantic token (`bg`, `surface`, `ink`, `accent`) redefined under `[data-theme="dark"]`
 
 ### Backend
 - Node.js 20 + Express
@@ -134,11 +140,14 @@ Without a working Brevo key the app still runs, but new accounts cannot verify t
 7. Open http://localhost:5173
 
 ## Project Structure
+
+```
 mentora-ai/
 ├── frontend/          # React + Vite frontend
 ├── backend/           # Node.js + Express backend
 ├── .github/           # GitHub Actions CI/CD
 └── README.md
+```
 
 ## Contributing
 
