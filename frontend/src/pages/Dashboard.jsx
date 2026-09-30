@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import {
   Brain,
   Plus,
@@ -170,6 +171,98 @@ const computeWeekActivity = (sessions) => {
   }))
 }
 
+// How far back the trend looks.
+const TREND_DAYS = 30
+
+// Every score the user has been given, bucketed by the day it was taken.
+// Each snapshot carries its own scoredAt, so a session scored three times
+// contributes three points rather than one — which is the whole point of a
+// trend. Snapshots saved before that field existed fall back to the
+// session's updatedAt.
+//
+// Days with no score are left out rather than drawn as zero: a gap in the
+// line means "taught nothing that day", not "scored nothing".
+const computeScoreTrend = (sessions, days) => {
+  let cutoff = null
+  if (days !== null) {
+    cutoff = new Date()
+    cutoff.setHours(0, 0, 0, 0)
+    cutoff.setDate(cutoff.getDate() - (days - 1))
+  }
+
+  const buckets = new Map()
+  sessions.forEach((session) => {
+    ;(session.scores || []).forEach((score) => {
+      if (
+        score.accuracy == null ||
+        score.clarity == null ||
+        score.completeness == null
+      ) {
+        return
+      }
+      const at = new Date(score.scoredAt ?? session.updatedAt)
+      if (Number.isNaN(at.getTime())) return
+      if (cutoff && at < cutoff) return
+
+      const key = `${at.getFullYear()}-${at.getMonth()}-${at.getDate()}`
+      if (!buckets.has(key)) {
+        buckets.set(key, { at, accuracy: 0, clarity: 0, completeness: 0, count: 0 })
+      }
+      const bucket = buckets.get(key)
+      bucket.accuracy += score.accuracy
+      bucket.clarity += score.clarity
+      bucket.completeness += score.completeness
+      bucket.count += 1
+      if (at < bucket.at) bucket.at = at
+    })
+  })
+
+  // Scores are out of 10; the chart reads as a percentage so it lines up
+  // with the Avg Mastery Score card directly above it.
+  const pct = (total, count) => Math.round((total / count) * 10)
+
+  return [...buckets.values()]
+    .sort((a, b) => a.at - b.at)
+    .map((b) => {
+      const accuracy = pct(b.accuracy, b.count)
+      const clarity = pct(b.clarity, b.count)
+      const completeness = pct(b.completeness, b.count)
+      return {
+        day: b.at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+        accuracy,
+        clarity,
+        completeness,
+        mastery: Math.round((accuracy + clarity + completeness) / 3),
+        count: b.count,
+      }
+    })
+}
+
+// First scored day against the most recent, in percentage points. Two days
+// is the minimum for the word "trend" to mean anything.
+const computeTrendDelta = (trend) =>
+  trend.length < 2 ? null : trend[trend.length - 1].mastery - trend[0].mastery
+
+// Recharts' own tooltip would show only the plotted series. The three
+// dimensions behind the average are the interesting part, and they are
+// already on the data point.
+const TrendTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null
+  const d = payload[0].payload
+  return (
+    <div className="bg-surface border border-line rounded-lg px-3 py-2 shadow-sm">
+      <p className="text-ink text-xs font-semibold mb-1">{d.day}</p>
+      <p className="text-ink text-xs mb-1">Mastery {d.mastery}%</p>
+      <p className="text-muted text-xs">Accuracy {d.accuracy}%</p>
+      <p className="text-muted text-xs">Clarity {d.clarity}%</p>
+      <p className="text-muted text-xs">Completeness {d.completeness}%</p>
+      <p className="text-muted text-xs mt-1">
+        {d.count} {d.count === 1 ? 'score' : 'scores'} that day
+      </p>
+    </div>
+  )
+}
+
 // ─────────────────────────────────────────
 // DASHBOARD
 // ─────────────────────────────────────────
@@ -313,6 +406,11 @@ const Dashboard = () => {
   const focusAreas = computeFocusAreas(sessions)
   const topicsToRevisit = computeTopicsToRevisit(openGaps)
   const weekActivity = computeWeekActivity(sessions)
+  const scoreTrend = computeScoreTrend(sessions, TREND_DAYS)
+  const trendDelta = computeTrendDelta(scoreTrend)
+  // Someone who scored two months ago and stopped has an empty trend but is
+  // not a beginner, and shouldn't be told to start.
+  const hasEverScored = sessions.some((session) => session.scores?.length > 0)
   const totalSessions = sessions.length
   const sessionsThisWeek = weekActivity.reduce((sum, d) => sum + d.count, 0)
 const avgMasteryScore = (() => {
@@ -744,6 +842,87 @@ const handleSessionClick = (session, isActive) => {
               <p className="text-muted text-xs">{stat.label}</p>
             </motion.div>
           ))}
+        </div>
+
+        {/* ─── SCORE TREND ─── */}
+        <div className="mb-6 md:mb-8">
+          <h2 className="text-lg font-semibold text-ink mb-4">Score Trend</h2>
+          <div className="bg-surface border border-line rounded-lg p-4 md:p-5">
+            {scoreTrend.length < 2 ? (
+              <p className="text-muted text-sm text-center py-8">
+                {scoreTrend.length === 1
+                  ? 'One scored day so far — score a session on another day to see the trend.'
+                  : hasEverScored
+                    ? `No scores in the last ${TREND_DAYS} days. Teach something to pick the trend back up.`
+                    : 'Score a session to start building your trend.'}
+              </p>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-4">
+                  <div className="min-w-0">
+                    <p className="text-muted text-xs mb-0.5">
+                      Mastery · last {TREND_DAYS} days
+                    </p>
+                    <p className="text-accent text-2xl font-semibold">
+                      {scoreTrend[scoreTrend.length - 1].mastery}%
+                      {trendDelta !== null && trendDelta !== 0 && (
+                        <span
+                          className={`ml-2 text-sm font-medium ${
+                            trendDelta > 0 ? 'text-success' : 'text-danger'
+                          }`}
+                        >
+                          {trendDelta > 0 ? '↑' : '↓'} {Math.abs(trendDelta)} pts
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <p className="text-muted text-xs">
+                    {scoreTrend.length} scored {scoreTrend.length === 1 ? 'day' : 'days'}
+                  </p>
+                </div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <AreaChart data={scoreTrend} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                    <defs>
+                      <linearGradient id="masteryGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="rgb(var(--accent))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="rgb(var(--accent))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fill: 'rgb(var(--muted))', fontSize: 12 }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval="preserveStartEnd"
+                      minTickGap={24}
+                      tickMargin={10}
+                    />
+                    {/* Fixed 0–100 so a run of good days doesn't get
+                        rescaled into looking like a run of bad ones. The
+                        ticks are what tell the reader the empty band above
+                        the line is headroom rather than missing data. */}
+                    <YAxis
+                      domain={[0, 100]}
+                      ticks={[0, 50, 100]}
+                      tickFormatter={(v) => `${v}%`}
+                      tick={{ fill: 'rgb(var(--muted))', fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                      width={38}
+                    />
+                    <Tooltip content={<TrendTooltip />} />
+                    <Area
+                      type="monotone"
+                      dataKey="mastery"
+                      stroke="rgb(var(--accent))"
+                      strokeWidth={2}
+                      fill="url(#masteryGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ─── RECENT SESSIONS + ACTIVITY ─── */}
