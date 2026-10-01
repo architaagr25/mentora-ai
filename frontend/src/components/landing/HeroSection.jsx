@@ -155,7 +155,7 @@ const HeroSection = () => {
                   Session in progress · Binary Search Trees
                 </span>
               </div>
-              <span className="text-success text-sm font-medium">Clarity score · 84%</span>
+              <span className="text-success text-sm font-medium">Clarity · 8.4/10</span>
             </div>
 
             {/* Chat messages */}

@@ -1001,7 +1001,7 @@ const handleSessionClick = (session, isActive) => {
                   </p>
                 </div>
                 <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={scoreTrend} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+                  <AreaChart data={scoreTrend} margin={{ top: 4, right: 28, bottom: 0, left: 4 }}>
                     <defs>
                       <linearGradient id="masteryGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="rgb(var(--accent))" stopOpacity={0.3} />
