@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Flame, BookOpen, TrendingUp, Target } from 'lucide-react'
+import { Flame, BookOpen, TrendingUp, Target, Clock } from 'lucide-react'
 
 // This panel is a preview of the real dashboard, so it shows what the real
 // dashboard shows. One point per day you were scored — not one per day on
@@ -51,6 +51,28 @@ const focusAreas = [
   { topic: 'B-Trees', completeness: 74 },
 ]
 
+// Open gaps, longest-waiting first — the real panel's ordering.
+const openGaps = [
+  {
+    topic: 'DNA Replication',
+    count: 3,
+    openFor: 'open 9 days',
+    text: 'Did not explain why the lagging strand is synthesised in fragments',
+  },
+  {
+    topic: "Bayes' Theorem",
+    count: 2,
+    openFor: 'open 4 days',
+    text: 'Vague on what the prior actually represents',
+  },
+  {
+    topic: 'Eigenvectors',
+    count: 1,
+    openFor: 'open 2 days',
+    text: 'Skipped why the eigenvalue scales rather than rotates',
+  },
+]
+
 const DashboardSection = () => {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-100px' })
@@ -84,7 +106,7 @@ const DashboardSection = () => {
             transition={{ delay: 0.2 }}
             className="text-muted max-w-xl mx-auto"
           >
-            Mastery scores, weak areas, streaks, and a live knowledge graph — all in one calm interface.
+            Mastery scores, open gaps, weak areas and streaks — all in one calm interface.
           </motion.p>
         </div>
 
@@ -215,7 +237,7 @@ const DashboardSection = () => {
             </div>
           </div>
 
-          {/* Concept mastery + knowledge graph */}
+          {/* Focus areas + topics to revisit */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
             <div className="lg:col-span-2 bg-bg border border-line rounded-lg p-5">
               <div className="flex items-center gap-2 mb-5">
@@ -245,47 +267,35 @@ const DashboardSection = () => {
               </div>
             </div>
 
-            {/* Knowledge graph */}
+            {/* The one panel here that leads somewhere: on the real
+                dashboard each row starts a practice session aimed at that
+                gap. */}
             <div className="bg-bg border border-line rounded-lg p-5">
-              <p className="text-ink font-semibold text-sm mb-4">Knowledge graph</p>
-              <svg viewBox="0 0 200 160" className="w-full">
-                {[
-                  [100, 80, 100, 20],
-                  [100, 80, 160, 60],
-                  [100, 80, 140, 130],
-                  [100, 80, 60, 130],
-                  [100, 80, 40, 60],
-                ].map(([x1, y1, x2, y2], i) => (
-                  <line
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-6 h-6 rounded-md bg-accent-soft flex items-center justify-center">
+                  <Clock size={12} className="text-accent" />
+                </div>
+                <span className="text-ink font-semibold text-sm">Topics to revisit</span>
+              </div>
+              <p className="text-muted text-xs mb-5">Open gaps, waiting longest first</p>
+              <div className="space-y-4">
+                {openGaps.map((gap, i) => (
+                  <motion.div
                     key={i}
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke="rgb(var(--line))"
-                    strokeWidth="1.5"
-                  />
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={isInView ? { opacity: 1, x: 0 } : {}}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                  >
+                    <p className="text-ink text-sm font-medium truncate">
+                      {gap.topic}
+                      <span className="text-muted font-normal">
+                        {' '}· {gap.count} open · {gap.openFor}
+                      </span>
+                    </p>
+                    <p className="text-muted text-xs mt-0.5 line-clamp-2">{gap.text}</p>
+                  </motion.div>
                 ))}
-                {[
-                  [100, 20],
-                  [160, 60],
-                  [140, 130],
-                  [60, 130],
-                  [40, 60],
-                ].map(([cx, cy], i) => (
-                  <circle
-                    key={i}
-                    cx={cx}
-                    cy={cy}
-                    r="8"
-                    fill="rgb(var(--surface-2))"
-                    stroke="rgb(var(--accent))"
-                    strokeWidth="1.5"
-                  />
-                ))}
-                <circle cx="100" cy="80" r="14" fill="rgb(var(--accent))" opacity="0.35" />
-                <circle cx="100" cy="80" r="10" fill="rgb(var(--accent))" />
-              </svg>
+              </div>
             </div>
           </div>
         </motion.div>

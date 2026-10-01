@@ -16,7 +16,7 @@ const features = [
   {
     icon: Network,
     title: 'Knowledge Gap Analysis',
-    desc: 'After each session your concept map gets updated. Over time you can see which topics you keep avoiding and which ones you have genuinely nailed.',
+    desc: 'After each session every gap the AI found is added to your list, grouped by topic. Over time you can see which topics you keep avoiding and which ones you have genuinely nailed.',
   },
   {
     icon: Mic,

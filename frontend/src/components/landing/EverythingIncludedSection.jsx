@@ -10,7 +10,6 @@ const items = [
   'Live misconception injection',
   'Session mastery report',
   'Concept gap analysis',
-  'Knowledge graph visualisation',
   'Voice teaching mode',
   'PDF notes upload',
   'Concept extraction from notes',
