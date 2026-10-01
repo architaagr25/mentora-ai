@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
+import { Check } from 'lucide-react'
 import StudentAvatar from '@/components/StudentAvatar'
 
 const scores = [
@@ -9,9 +10,13 @@ const scores = [
 ]
 
 const gaps = [
-  'Did not explain why sequence numbers are needed',
-  'Skipped what happens if the final ACK is lost',
-  'Vague on why the handshake needs three steps not two',
+  { text: 'Did not explain why sequence numbers are needed', status: 'open' },
+  { text: 'Skipped what happens if the final ACK is lost', status: 'open' },
+  {
+    text: 'Vague on why the handshake needs three steps not two',
+    status: 'resolved',
+    label: 'fixed in practice · Sep 29',
+  },
 ]
 
 const demoMessages = [
@@ -129,14 +134,34 @@ const LiveDemoSection = () => {
 
             {/* Detected gaps */}
             <div className="bg-surface border border-line rounded-lg p-4 sm:p-6">
-              <p className="text-ink font-semibold mb-4">Gaps found</p>
+              <p className="text-ink font-semibold mb-1">Gaps found</p>
+              <p className="text-muted text-xs mb-4">
+                They close when you fix them — by hand, on a better rescore, or
+                by passing a practice session aimed at one.
+              </p>
               <div className="space-y-3">
-                {gaps.map((gap, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <div className="w-2 h-2 rounded-full bg-highlight mt-1.5 flex-shrink-0" />
-                    <span className="text-muted text-sm">{gap}</span>
-                  </div>
-                ))}
+                {gaps.map((gap, i) => {
+                  const resolved = gap.status === 'resolved'
+                  return (
+                    <div key={i} className="flex items-start gap-2">
+                      {resolved ? (
+                        <Check size={12} className="text-success mt-1 flex-shrink-0" />
+                      ) : (
+                        <div className="w-2 h-2 rounded-full bg-highlight mt-1.5 flex-shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <span
+                          className={`text-sm ${resolved ? 'text-muted line-through' : 'text-muted'}`}
+                        >
+                          {gap.text}
+                        </span>
+                        {resolved && (
+                          <span className="block text-success text-xs mt-0.5">{gap.label}</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </motion.div>

@@ -4,7 +4,7 @@ import { CheckCircle2 } from 'lucide-react'
 
 const benefits = [
   { title: 'Exposes false understanding', desc: 'Surface-level recall collapses the moment you have to explain it out loud.' },
-  { title: 'Strengthens memory retention', desc: 'Active recall + generation effect — proven to outperform re-reading by 2–3×.' },
+  { title: 'Strengthens memory retention', desc: 'Active recall and the generation effect — both consistently beat re-reading in retrieval-practice studies.' },
   { title: 'Improves long-term recall', desc: 'Spaced teaching prompts move concepts from working memory to durable knowledge.' },
   { title: 'Builds deeper comprehension', desc: 'You stop memorizing patterns and start understanding causal structure.' },
 ]

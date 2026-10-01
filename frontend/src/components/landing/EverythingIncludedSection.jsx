@@ -5,11 +5,13 @@ import { CheckCircle2 } from 'lucide-react'
 
 // Only features that are actually planned in the project roadmap
 const items = [
-  'Unlimited teaching sessions',
+  'No paywalls or session limits',
   'Adaptive AI student persona',
+  'Teach a child, a peer or an interviewer',
   'Live misconception injection',
   'Session mastery report',
   'Concept gap analysis',
+  'Gaps that resolve when you fix them',
   'Voice teaching mode',
   'PDF notes upload',
   'Concept extraction from notes',

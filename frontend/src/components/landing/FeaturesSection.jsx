@@ -1,12 +1,17 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { Bot, AlertTriangle, Network, Mic, TrendingUp, History } from 'lucide-react'
+import { Bot, Users, AlertTriangle, Network, Mic, TrendingUp, History } from 'lucide-react'
 
 const features = [
   {
     icon: Bot,
     title: 'Adaptive AI Student',
     desc: 'Plays the role of a confused student who genuinely does not get it. Asks follow-ups. Pushes back. Does not let you hand-wave through the hard parts.',
+  },
+  {
+    icon: Users,
+    title: 'Pick Your Student',
+    desc: 'Explain to a curious child, a fellow student, or an interviewer. Each one asks different questions — the child wants an everyday example, the interviewer presses you for precision.',
   },
   {
     icon: AlertTriangle,
@@ -64,7 +69,7 @@ const FeaturesSection = () => {
             transition={{ delay: 0.2 }}
             className="text-muted text-lg max-w-xl mx-auto"
           >
-            Six features that make the gap between 'I think I know this' and 'I actually know this' impossible to ignore.
+            Seven features that make the gap between 'I think I know this' and 'I actually know this' impossible to ignore.
           </motion.p>
         </div>
 
@@ -75,7 +80,9 @@ const FeaturesSection = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.5, delay: i * 0.08 }}
-              className="bg-surface border border-line rounded-lg p-5 sm:p-7 hover:border-accent transition-colors duration-200 cursor-default group"
+              className={`bg-surface border border-line rounded-lg p-5 sm:p-7 hover:border-accent transition-colors duration-200 cursor-default group ${
+                i === features.length - 1 && features.length % 3 === 1 ? 'md:col-start-2' : ''
+              }`}
             >
               <div className="w-10 h-10 rounded-lg bg-accent-soft border border-accent/20 flex items-center justify-center mb-5">
                 <feature.icon size={20} className="text-accent" />
