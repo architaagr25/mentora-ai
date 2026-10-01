@@ -171,8 +171,93 @@ const computeWeekActivity = (sessions) => {
   }))
 }
 
-// How far back the trend looks.
-const TREND_DAYS = 30
+// The ranges the trend and activity charts share. 30 days is the default
+// rather than 7: on a week's worth of data most people have scored on one
+// day, and the panel would open on an empty state.
+const RANGES = [
+  { key: '7D', days: 7, label: 'last 7 days' },
+  { key: '30D', days: 30, label: 'last 30 days' },
+  { key: 'All', days: null, label: 'all time' },
+]
+const DEFAULT_RANGE = '30D'
+
+// Past this many bars the daily view stops being readable, so the activity
+// chart switches to one bar per week.
+const MAX_DAILY_BARS = 45
+const DAY_MS = 86400000
+
+// Sessions per bucket over an arbitrary range. Daily while that stays
+// legible, weekly once it doesn't, so "All" still fits across the panel
+// after a year of use.
+const computeActivity = (sessions, days) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  let start
+  if (days !== null) {
+    start = new Date(today)
+    start.setDate(start.getDate() - (days - 1))
+  } else {
+    // All time: from the first session, or today if there are none yet.
+    let earliest = null
+    sessions.forEach((session) => {
+      const d = new Date(session.createdAt)
+      if (Number.isNaN(d.getTime())) return
+      if (!earliest || d < earliest) earliest = d
+    })
+    start = earliest ? new Date(earliest) : new Date(today)
+    start.setHours(0, 0, 0, 0)
+  }
+
+  const spanDays = Math.round((today - start) / DAY_MS) + 1
+  const weekly = spanDays > MAX_DAILY_BARS
+  if (weekly) {
+    // Start the first bucket on a Monday so every bar is a whole week.
+    const weekday = start.getDay()
+    start.setDate(start.getDate() - (weekday === 0 ? 6 : weekday - 1))
+  }
+  const step = weekly ? 7 : 1
+
+  const buckets = []
+  for (let at = new Date(start); at <= today; at.setDate(at.getDate() + step)) {
+    const from = new Date(at)
+    const to = new Date(at)
+    to.setDate(to.getDate() + step)
+    buckets.push({ from, to, count: 0 })
+  }
+
+  sessions.forEach((session) => {
+    const at = new Date(session.createdAt)
+    if (Number.isNaN(at.getTime())) return
+    const index = Math.floor((at - start) / (DAY_MS * step))
+    if (index >= 0 && index < buckets.length) buckets[index].count += 1
+  })
+
+  const maxCount = Math.max(...buckets.map((b) => b.count), 1)
+  // With 30 bars every label would collide, so only about seven get one.
+  const labelEvery = Math.ceil(buckets.length / 7)
+
+  return buckets.map((bucket, i) => {
+    const date = (d) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+    const named = buckets.length <= 7 && !weekly
+    const showLabel = named || i % labelEvery === 0 || i === buckets.length - 1
+    const last = new Date(bucket.to.getTime() - DAY_MS)
+    return {
+      key: bucket.from.toISOString(),
+      label: !showLabel
+        ? ''
+        : named
+          ? bucket.from.toLocaleDateString(undefined, { weekday: 'short' })
+          : date(bucket.from),
+      title: `${weekly ? `${date(bucket.from)} – ${date(last)}` : date(bucket.from)}: ${
+        bucket.count
+      } ${bucket.count === 1 ? 'session' : 'sessions'}`,
+      count: bucket.count,
+      intensity: bucket.count / maxCount,
+      weekly,
+    }
+  })
+}
 
 // Every score the user has been given, bucketed by the day it was taken.
 // Each snapshot carries its own scoredAt, so a session scored three times
@@ -280,6 +365,10 @@ const Dashboard = () => {
   const [showNewSessionModal, setShowNewSessionModal] = useState(false)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // One range drives both the score trend and the activity bars, so the two
+  // panels are always talking about the same stretch of time.
+  const [rangeKey, setRangeKey] = useState(DEFAULT_RANGE)
+  const [hoveredBucketKey, setHoveredBucketKey] = useState(null)
   const [topic, setTopic] = useState('')
  
   const [confirmCompleteId, setConfirmCompleteId] = useState(null)
@@ -406,7 +495,12 @@ const Dashboard = () => {
   const focusAreas = computeFocusAreas(sessions)
   const topicsToRevisit = computeTopicsToRevisit(openGaps)
   const weekActivity = computeWeekActivity(sessions)
-  const scoreTrend = computeScoreTrend(sessions, TREND_DAYS)
+  const range = RANGES.find((r) => r.key === rangeKey) ?? RANGES[1]
+  const activity = computeActivity(sessions, range.days)
+  // Changing the range replaces every bucket, so a key held from the old
+  // range simply finds nothing.
+  const hoveredBucket = activity.find((b) => b.key === hoveredBucketKey) ?? null
+  const scoreTrend = computeScoreTrend(sessions, range.days)
   const trendDelta = computeTrendDelta(scoreTrend)
   // Someone who scored two months ago and stopped has an empty trend but is
   // not a beginner, and shouldn't be told to start.
@@ -844,16 +938,42 @@ const handleSessionClick = (session, isActive) => {
           ))}
         </div>
 
-        {/* ─── SCORE TREND ─── */}
-        <div className="mb-6 md:mb-8">
-          <h2 className="text-lg font-semibold text-ink mb-4">Score Trend</h2>
+        {/* ─── SCORE TREND + ACTIVITY ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 md:mb-8">
+        <div className="lg:col-span-2 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 className="text-lg font-semibold text-ink">Score Trend</h2>
+            <div className="flex gap-1" role="group" aria-label="Date range">
+              {RANGES.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setRangeKey(key)
+                    // A day can belong to two ranges, so a key held from the
+                    // old one can land on a real bucket in the new one and
+                    // caption a bar nobody is pointing at.
+                    setHoveredBucketKey(null)
+                  }}
+                  aria-pressed={key === rangeKey}
+                  aria-label={label}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    key === rangeKey
+                      ? 'bg-accent text-on-accent'
+                      : 'text-muted hover:text-ink hover:bg-surface-2'
+                  }`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="bg-surface border border-line rounded-lg p-4 md:p-5">
             {scoreTrend.length < 2 ? (
               <p className="text-muted text-sm text-center py-8">
                 {scoreTrend.length === 1
                   ? 'One scored day so far — score a session on another day to see the trend.'
                   : hasEverScored
-                    ? `No scores in the last ${TREND_DAYS} days. Teach something to pick the trend back up.`
+                    ? `No scores ${range.days === null ? 'yet' : `in the ${range.label}`}. Teach something to pick the trend back up.`
                     : 'Score a session to start building your trend.'}
               </p>
             ) : (
@@ -861,7 +981,7 @@ const handleSessionClick = (session, isActive) => {
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-4">
                   <div className="min-w-0">
                     <p className="text-muted text-xs mb-0.5">
-                      Mastery · last {TREND_DAYS} days
+                      Mastery · {range.label}
                     </p>
                     <p className="text-accent text-2xl font-semibold">
                       {scoreTrend[scoreTrend.length - 1].mastery}%
@@ -925,11 +1045,88 @@ const handleSessionClick = (session, isActive) => {
           </div>
         </div>
 
-        {/* ─── RECENT SESSIONS + ACTIVITY ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 md:mb-8">
+        <div className="min-w-0 flex flex-col">
+          <h2 className="text-lg font-semibold text-ink mb-4">Activity</h2>
+          <div className="bg-surface border border-line rounded-lg p-5 flex-1 flex flex-col">
+            <p className="text-muted text-xs mb-4">
+              Sessions per {activity[0]?.weekly ? 'week' : 'day'} · {range.label}
+            </p>
+            <div className="flex-1 flex flex-col justify-center">
+            {/* Each column is a full-height hover target. At thirty days the
+                bars themselves are a few pixels wide, which is nothing to
+                aim at — the column around them is. */}
+            <div
+              className="flex items-end justify-between gap-px sm:gap-1"
+              onMouseLeave={() => setHoveredBucketKey(null)}
+            >
+              {activity.map((bucket) => {
+                const isHovered = bucket.key === hoveredBucketKey
+                return (
+                  <div
+                    key={bucket.key}
+                    title={bucket.title}
+                    onMouseEnter={() => setHoveredBucketKey(bucket.key)}
+                    className="flex flex-col items-center gap-2 flex-1 min-w-0 cursor-default"
+                  >
+                    <div className="h-20 w-full flex items-end justify-center">
+                      <div
+                        className="w-full max-w-8 rounded-full transition-all duration-300"
+                        // Raw rgba literals here were the last violet left in
+                        // the app, and no class-name or hex grep could see
+                        // them. Reading the token means the bar follows the
+                        // theme like everything else.
+                        style={{
+                          height: `${Math.max(bucket.intensity * 80, 8)}px`,
+                          background: bucket.count > 0
+                            ? `rgb(var(--accent) / ${
+                                isHovered ? 1 : 0.35 + bucket.intensity * 0.65
+                              })`
+                            : `rgb(var(--${isHovered ? 'muted' : 'line'}))`,
+                          border: bucket.count > 0
+                            ? '1px solid rgb(var(--accent) / 0.5)'
+                            : '1px solid rgb(var(--line))',
+                        }}
+                      />
+                    </div>
+                    {/* Past a handful of bars the per-bar counts stop being
+                        readable and start being noise; the caption below
+                        carries the number on hover. */}
+                    {activity.length <= 7 && bucket.count > 0 && (
+                      <span className="text-accent text-xs font-semibold">{bucket.count}</span>
+                    )}
+                    {activity.length <= 7 && (
+                      <span className="text-muted text-xs">{bucket.label}</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {/* Doubles as the tooltip. A native title tooltip is slow to
+                appear and easy to miss, and at thirty bars there is nowhere
+                to put a label per bar. Fixed height so nothing shifts when
+                the pointer arrives. */}
+            <div className="mt-3 h-5 flex items-center justify-between gap-2">
+              {hoveredBucket ? (
+                <span className="text-ink text-xs truncate">{hoveredBucket.title}</span>
+              ) : activity.length > 7 ? (
+                <>
+                  <span className="text-muted text-xs">{activity[0].label}</span>
+                  <span className="text-muted text-xs">
+                    {activity[activity.length - 1].label}
+                  </span>
+                </>
+              ) : null}
+            </div>
+            </div>
+          </div>
+        </div>
+        </div>
+
+        {/* ─── RECENT SESSIONS ─── */}
+        <div className="mb-6 md:mb-8">
 
           {/* Recent sessions */}
-          <div ref={historyRef} className="lg:col-span-2">
+          <div ref={historyRef} className="min-w-0">
            <div className="flex items-center justify-between mb-4 gap-2">
   <h2 className="text-lg font-semibold text-ink truncate">Recent Sessions</h2>
   <button
@@ -1050,41 +1247,6 @@ const handleSessionClick = (session, isActive) => {
             )}
           </div>
 
-          {/* Activity heatmap */}
-          <div>
-            <h2 className="text-lg font-semibold text-ink mb-4">This Week</h2>
-            <div className="bg-surface border border-line rounded-lg p-5">
-              <p className="text-muted text-xs mb-4">Sessions per day</p>
-              <div className="flex items-end justify-between gap-1 md:gap-2">
-                {weekActivity.map((day) => (
-                  <div key={day.day} className="flex flex-col items-center gap-2 flex-1">
-                    <div className="w-full flex flex-col items-center">
-                      <div
-                        className="w-6 md:w-8 rounded-full transition-all duration-500"
-                        // Raw rgba literals here were the last violet left in
-                        // the app, and no class-name or hex grep could see
-                        // them. Reading the token means the bar follows the
-                        // theme like everything else.
-                        style={{
-                          height: `${Math.max(day.intensity * 80, 8)}px`,
-                          background: day.count > 0
-                            ? `rgb(var(--accent) / ${0.35 + day.intensity * 0.65})`
-                            : 'rgb(var(--line))',
-                          border: day.count > 0
-                            ? '1px solid rgb(var(--accent) / 0.5)'
-                            : '1px solid rgb(var(--line))',
-                        }}
-                      />
-                    </div>
-                    {day.count > 0 && (
-                      <span className="text-accent text-xs font-semibold">{day.count}</span>
-                    )}
-                    <span className="text-muted text-xs">{day.day}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* ─── TOPICS TO REVISIT ─── */}
