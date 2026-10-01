@@ -22,10 +22,18 @@ const FeynmanSection = () => {
             initial={{ opacity: 0, x: -30 }}
             animate={isInView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.6 }}
-            className="bg-surface border border-line rounded-lg p-5 sm:p-8 flex items-center justify-center aspect-square max-w-md mx-auto w-full"
+            className="bg-surface border border-line rounded-lg p-5 sm:p-8 max-w-md mx-auto w-full"
           >
-            <div className="relative w-full max-w-64 aspect-square">
-              <svg viewBox="0 0 260 260" className="w-full h-full">
+            <p className="text-accent text-xs font-semibold tracking-widest uppercase mb-2">
+              THE LOOP
+            </p>
+            <h3 className="text-ink font-semibold mb-1">Four steps, then round again</h3>
+            <p className="text-muted text-sm">
+              One pass is one teaching session. The gaps you find on the way
+              are what you simplify before the next one.
+            </p>
+            <div className="relative w-full aspect-square">
+              <svg viewBox="-52 -52 364 364" className="w-full h-full">
                 {/* Concentric circles */}
                 <circle cx="130" cy="130" r="120" fill="none" stroke="rgb(var(--line))" strokeWidth="1" />
                 <circle cx="130" cy="130" r="85" fill="none" stroke="rgb(var(--line))" strokeWidth="1" />
@@ -38,11 +46,12 @@ const FeynmanSection = () => {
                 <circle cx="245" cy="130" r="10" fill="rgb(var(--surface))" stroke="rgb(var(--accent))" strokeWidth="1.5" />
                 <circle cx="130" cy="245" r="10" fill="rgb(var(--surface))" stroke="rgb(var(--accent))" strokeWidth="1.5" />
                 <circle cx="15" cy="130" r="10" fill="rgb(var(--surface))" stroke="rgb(var(--accent))" strokeWidth="1.5" />
-                {/* Labels */}
-                <text x="130" y="8" textAnchor="middle" fill="rgb(var(--muted))" fontSize="10">Pick a topic</text>
-                <text x="252" y="133" textAnchor="start" fill="rgb(var(--muted))" fontSize="10">Teach it</text>
-                <text x="130" y="262" textAnchor="middle" fill="rgb(var(--muted))" fontSize="10">Find gaps</text>
-                <text x="3" y="133" textAnchor="start" fill="rgb(var(--muted))" fontSize="10">Simplify</text>
+                {/* Labels sit outside their node, anchored away from the
+                    centre so none of them runs back over the diagram. */}
+                <text x="130" y="-7" textAnchor="middle" fill="rgb(var(--muted))" fontSize="12">Pick a topic</text>
+                <text x="263" y="134" textAnchor="start" fill="rgb(var(--muted))" fontSize="12">Teach it</text>
+                <text x="130" y="275" textAnchor="middle" fill="rgb(var(--muted))" fontSize="12">Find gaps</text>
+                <text x="-3" y="134" textAnchor="end" fill="rgb(var(--muted))" fontSize="12">Simplify</text>
               </svg>
             </div>
           </motion.div>
