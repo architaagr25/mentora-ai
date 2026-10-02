@@ -1,21 +1,22 @@
 // frontend/src/App.jsx
 import { Routes, Route } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Award } from 'lucide-react'
 import Landing from '@/pages/Landing'
-import Login from '@/pages/Login'
-import Register from '@/pages/Register'
-import ForgotPassword from '@/pages/ForgotPassword'
-import ResetPassword from '@/pages/ResetPassword'
-import ConfirmEmailChange from '@/pages/ConfirmEmailChange'
-import VerifyEmail from '@/pages/VerifyEmail'
-import Dashboard from '@/pages/Dashboard'
-import Session from '@/pages/Session'
-import History from '@/pages/History'
-import Concepts from '@/pages/Concepts'
-import Profile from '@/pages/Profile'
+const Login = lazy(() => import('@/pages/Login'))
+const Register = lazy(() => import('@/pages/Register'))
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
+const ConfirmEmailChange = lazy(() => import('@/pages/ConfirmEmailChange'))
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'))
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const Session = lazy(() => import('@/pages/Session'))
+const History = lazy(() => import('@/pages/History'))
+const Concepts = lazy(() => import('@/pages/Concepts'))
+const Profile = lazy(() => import('@/pages/Profile'))
 import ProtectedRoute from '@/components/ProtectedRoute'
+import RouteFallback from '@/components/RouteFallback'
 import useAuth from '@/hooks/useAuth'
 import useSessionStore from '@/store/sessionStore'
 
@@ -31,6 +32,7 @@ function App() {
 
   return (
     <>
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<Landing />} />
@@ -92,6 +94,7 @@ function App() {
           }
         />
       </Routes>
+      </Suspense>
 
       {/* ─── BADGE UNLOCK MODAL — rendered globally ─── */}
       {/* Lives here (outside any single page) rather than inside
