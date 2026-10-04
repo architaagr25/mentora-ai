@@ -94,18 +94,21 @@ const ForgotPassword = () => {
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div>
-                  <label className="field-label">
+                  <label className="field-label" htmlFor="forgot-email">
                     Email
                   </label>
                   <input
                     {...register('email')}
+                    id="forgot-email"
                     type="email"
+                    aria-invalid={errors.email ? 'true' : 'false'}
+                    aria-describedby={errors.email ? 'forgot-email-error' : undefined}
                     placeholder="you@example.com"
                     autoComplete="email"
                     className={`input ${errors.email ? 'input-invalid' : ''}`}
                   />
                   {errors.email && (
-                    <p className="field-error">{errors.email.message}</p>
+                    <p className="field-error" id="forgot-email-error">{errors.email.message}</p>
                   )}
                 </div>
 

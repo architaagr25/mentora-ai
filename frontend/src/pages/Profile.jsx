@@ -309,44 +309,60 @@ const AccountInfoCard = ({ user }) => {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5">Name</label>
+            <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="profile-name">
+              Name
+            </label>
             <input
               {...register('name')}
+              id="profile-name"
               type="text"
+              aria-invalid={errors.name ? 'true' : 'false'}
+              aria-describedby={errors.name ? 'profile-name-error' : undefined}
               className={`input py-2.5 ${errors.name ? 'input-invalid' : ''}`}
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-danger">{errors.name.message}</p>
+              <p className="mt-1 text-xs text-danger" id="profile-name-error">{errors.name.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5">Email</label>
+            <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="profile-email">
+              Email
+            </label>
             <input
               {...register('email')}
+              id="profile-email"
               type="email"
+              aria-invalid={errors.email ? 'true' : 'false'}
+              aria-describedby={errors.email ? 'profile-email-error' : undefined}
               className={`input py-2.5 ${errors.email ? 'input-invalid' : ''}`}
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-danger">{errors.email.message}</p>
+              <p className="mt-1 text-xs text-danger" id="profile-email-error">{errors.email.message}</p>
             )}
           </div>
 
           {emailChanged && (
             <div>
-              <label className="block text-xs font-medium text-muted mb-1.5">
+              <label
+                className="block text-xs font-medium text-muted mb-1.5"
+                htmlFor="profile-email-password"
+              >
                 Current password
               </label>
               <div className="relative">
                 <input
                   {...register('currentPassword')}
+                  id="profile-email-password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
+                  aria-invalid={errors.currentPassword ? 'true' : 'false'}
                   className={`input py-2.5 pr-11 ${errors.currentPassword ? 'input-invalid' : ''}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
                 >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -445,63 +461,74 @@ const ChangePasswordCard = () => {
         )}
 
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">
+          <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="profile-current-password">
             Current Password
           </label>
           <div className="relative">
             <input
               {...register('currentPassword')}
+              id="profile-current-password"
               type={showCurrent ? 'text' : 'password'}
+              aria-invalid={errors.currentPassword ? 'true' : 'false'}
+              aria-describedby={errors.currentPassword ? 'profile-current-password-error' : undefined}
               className={`input py-2.5 pr-10 ${errors.currentPassword ? 'input-invalid' : ''}`}
             />
             <button
               type="button"
               onClick={() => setShowCurrent((v) => !v)}
+              aria-label={showCurrent ? 'Hide password' : 'Show password'}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
             >
               {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
           {errors.currentPassword && (
-            <p className="mt-1 text-xs text-danger">{errors.currentPassword.message}</p>
+            <p className="mt-1 text-xs text-danger" id="profile-current-password-error">{errors.currentPassword.message}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">
+          <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="profile-new-password">
             New Password
           </label>
           <div className="relative">
             <input
               {...register('newPassword')}
+              id="profile-new-password"
               type={showNew ? 'text' : 'password'}
+              aria-invalid={errors.newPassword ? 'true' : 'false'}
+              aria-describedby={errors.newPassword ? 'profile-new-password-error' : undefined}
               placeholder="Min. 8 characters"
               className={`input py-2.5 pr-10 ${errors.newPassword ? 'input-invalid' : ''}`}
             />
             <button
               type="button"
               onClick={() => setShowNew((v) => !v)}
+              aria-label={showNew ? 'Hide password' : 'Show password'}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
             >
               {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
           {errors.newPassword && (
-            <p className="mt-1 text-xs text-danger">{errors.newPassword.message}</p>
+            <p className="mt-1 text-xs text-danger" id="profile-new-password-error">{errors.newPassword.message}</p>
           )}
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">
+          <label className="block text-xs font-medium text-muted mb-1.5" htmlFor="profile-confirm-password">
             Confirm New Password
           </label>
           <input
             {...register('confirmNewPassword')}
+            id="profile-confirm-password"
             type={showNew ? 'text' : 'password'}
+            aria-invalid={errors.confirmNewPassword ? 'true' : 'false'}
+            aria-describedby={errors.confirmNewPassword ? 'profile-confirm-password-error' : undefined}
             className={`input py-2.5 ${errors.confirmNewPassword ? 'input-invalid' : ''}`}
           />
           {errors.confirmNewPassword && (
-            <p className="mt-1 text-xs text-danger">{errors.confirmNewPassword.message}</p>
+            <p className="mt-1 text-xs text-danger" id="profile-confirm-password-error">{errors.confirmNewPassword.message}</p>
           )}
         </div>
 

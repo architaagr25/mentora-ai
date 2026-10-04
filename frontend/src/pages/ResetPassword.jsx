@@ -104,13 +104,16 @@ const ResetPassword = () => {
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div>
-                  <label className="field-label">
+                  <label className="field-label" htmlFor="reset-new-password">
                     New Password
                   </label>
                   <div className="relative">
                     <input
                       {...register('newPassword')}
+                      id="reset-new-password"
                       type={showPassword ? 'text' : 'password'}
+                      aria-invalid={errors.newPassword ? 'true' : 'false'}
+                      aria-describedby={errors.newPassword ? 'reset-new-password-error' : undefined}
                       placeholder="Min. 8 characters"
                       autoComplete="new-password"
                       className={`input pr-12 ${errors.newPassword ? 'input-invalid' : ''}`}
@@ -125,22 +128,25 @@ const ResetPassword = () => {
                     </button>
                   </div>
                   {errors.newPassword && (
-                    <p className="field-error">{errors.newPassword.message}</p>
+                    <p className="field-error" id="reset-new-password-error">{errors.newPassword.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="field-label">
+                  <label className="field-label" htmlFor="reset-confirm-password">
                     Confirm New Password
                   </label>
                   <input
                     {...register('confirmPassword')}
+                    id="reset-confirm-password"
                     type={showPassword ? 'text' : 'password'}
+                    aria-invalid={errors.confirmPassword ? 'true' : 'false'}
+                    aria-describedby={errors.confirmPassword ? 'reset-confirm-password-error' : undefined}
                     autoComplete="new-password"
                     className={`input ${errors.confirmPassword ? 'input-invalid' : ''}`}
                   />
                   {errors.confirmPassword && (
-                    <p className="field-error">{errors.confirmPassword.message}</p>
+                    <p className="field-error" id="reset-confirm-password-error">{errors.confirmPassword.message}</p>
                   )}
                 </div>
 

@@ -99,45 +99,54 @@ const Register = () => {
 
             {/* Name field */}
             <div>
-              <label className="field-label">
+              <label className="field-label" htmlFor="register-name">
                 Full name
               </label>
               <input
                 {...register('name')}
+                id="register-name"
                 type="text"
+                aria-invalid={errors.name ? 'true' : 'false'}
+                aria-describedby={errors.name ? 'register-name-error' : undefined}
                 placeholder="Your name"
                 className={`input ${errors.name ? 'input-invalid' : ''}`}
               />
               {errors.name && (
-                <p className="field-error">{errors.name.message}</p>
+                <p className="field-error" id="register-name-error">{errors.name.message}</p>
               )}
             </div>
 
             {/* Email field */}
             <div>
-              <label className="field-label">
+              <label className="field-label" htmlFor="register-email">
                 Email
               </label>
               <input
                 {...register('email')}
+                id="register-email"
                 type="email"
+                aria-invalid={errors.email ? 'true' : 'false'}
+                aria-describedby={errors.email ? 'register-email-error' : undefined}
                 placeholder="you@example.com"
                 className={`input ${errors.email ? 'input-invalid' : ''}`}
               />
               {errors.email && (
-                <p className="field-error">{errors.email.message}</p>
+                <p className="field-error" id="register-email-error">{errors.email.message}</p>
               )}
             </div>
 
             {/* Password field */}
             <div>
-              <label className="field-label">
+              <label className="field-label" htmlFor="register-password">
                 Password
               </label>
               <div className="relative">
                 <input
                   {...register('password')}
+                  id="register-password"
                   type={showPassword ? 'text' : 'password'}
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'register-password-error' : undefined}
                   placeholder="Min. 8 characters"
                   className={`input pr-12 ${errors.password ? 'input-invalid' : ''}`}
                 />
@@ -152,7 +161,7 @@ const Register = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="field-error">{errors.password.message}</p>
+                <p className="field-error" id="register-password-error">{errors.password.message}</p>
               )}
             </div>
 

@@ -94,24 +94,27 @@ const Login = () => {
 
             {/* Email field */}
             <div>
-              <label className="field-label">
+              <label className="field-label" htmlFor="login-email">
                 Email
               </label>
               <input
                 {...register('email')}
+                id="login-email"
                 type="email"
                 placeholder="you@example.com"
+                aria-invalid={errors.email ? 'true' : 'false'}
+                aria-describedby={errors.email ? 'login-email-error' : undefined}
                 className={`input ${errors.email ? 'input-invalid' : ''}`}
               />
               {errors.email && (
-                <p className="field-error">{errors.email.message}</p>
+                <p className="field-error" id="login-email-error">{errors.email.message}</p>
               )}
             </div>
 
            {/* Password field */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="field-label mb-0">
+                <label className="field-label mb-0" htmlFor="login-password">
                   Password
                 </label>
                 <Link
@@ -124,8 +127,11 @@ const Login = () => {
               <div className="relative">
                 <input
                   {...register('password')}
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Your password"
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'login-password-error' : undefined}
                   className={`input pr-12 ${errors.password ? 'input-invalid' : ''}`}
                 />
                 <button
@@ -138,7 +144,7 @@ const Login = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="field-error">{errors.password.message}</p>
+                <p className="field-error" id="login-password-error">{errors.password.message}</p>
               )}
             </div>
 

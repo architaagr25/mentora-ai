@@ -181,10 +181,11 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
           )}
           {/* Topic input */}
           <div className="mb-5">
-            <label className="block text-sm font-medium text-ink mb-2">
+            <label className="block text-sm font-medium text-ink mb-2" htmlFor="new-session-topic">
               What do you want to teach?
             </label>
             <input
+              id="new-session-topic"
               type="text"
               value={topic}
               onChange={(e) => {
@@ -213,11 +214,15 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
 
           {/* Who the AI student acts like */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-ink mb-2">
+            <p className="block text-sm font-medium text-ink mb-2" id="new-session-audience-label">
               Teach it to{' '}
               <span className="text-muted font-normal">(changes how it asks)</span>
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            </p>
+            <div
+              role="group"
+              aria-labelledby="new-session-audience-label"
+              className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+            >
               {AUDIENCES.map((option) => {
                 const isSelected = audience === option.value
                 return (
@@ -247,10 +252,10 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
           </div>
           {/* PDF upload */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-ink mb-2">
+            <p className="block text-sm font-medium text-ink mb-2">
               Upload notes{' '}
               <span className="text-muted font-normal">(optional)</span>
-            </label>
+            </p>
 
             {!pdfFile ? (
               // Drop zone — shown when no file selected
@@ -316,6 +321,7 @@ const NewSessionModal = ({ onClose, initialTopic = '', restartNotice = null }) =
           <input
             ref={fileInputRef}
             type="file"
+            aria-label="Upload notes as a PDF"
             accept=".pdf,application/pdf"
             onChange={handleFileSelect}
             className="hidden"
