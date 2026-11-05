@@ -12,7 +12,11 @@ import {
 } from '../middleware/rateLimiter.js'
 import { registerSchema, loginSchema } from '../validators/authValidator.js'
 import { AppError } from '../middleware/errorHandler.js'
-import { generateAccessToken, generateRefreshToken } from '../utils/generateTokens.js'
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  pruneRefreshTokens,
+} from '../utils/generateTokens.js'
 import crypto from 'crypto'
 import { z } from 'zod'
 import { sendEmail } from '../services/emailService.js'
@@ -40,6 +44,17 @@ const COOKIE_OPTIONS = {
   secure: true,               // required when sameSite is 'none'
   sameSite: 'none',           // required for cross-domain cookies (Vercel <-> Render)
   maxAge: 7 * 24 * 60 * 60 * 1000,
+}
+
+// Deleting a cookie means re-sending it with matching attributes and an
+// expiry in the past. maxAge must not be among them: clearCookie spreads
+// whatever it is given over its own past-dated expiry, so passing the full
+// options above set an empty cookie that lived another seven days instead
+// of removing it.
+const COOKIE_CLEAR_OPTIONS = {
+  httpOnly: COOKIE_OPTIONS.httpOnly,
+  secure: COOKIE_OPTIONS.secure,
+  sameSite: COOKIE_OPTIONS.sameSite,
 }
 
 // ─────────────────────────────────────────
@@ -80,7 +95,7 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     const refreshToken = generateRefreshToken(user._id)
 
     // Step 5: Store refresh token in DB
-    user.refreshTokens.push(refreshToken)
+    user.refreshTokens = pruneRefreshTokens([...user.refreshTokens, refreshToken])
     await user.save()
 
     // Step 6: Send refresh token as httpOnly cookie
@@ -157,9 +172,10 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     const refreshToken = generateRefreshToken(user._id)
 
     // Step 5: Store refresh token
-    // A user can be logged in on multiple devices
-    // So we push rather than replace
-    user.refreshTokens.push(refreshToken)
+    // A user can be logged in on multiple devices, so this appends rather
+    // than replaces — but only up to MAX_REFRESH_TOKENS, and tokens that
+    // have already expired are dropped on the way past.
+    user.refreshTokens = pruneRefreshTokens([...user.refreshTokens, refreshToken])
     await user.save()
 
     // Step 6: Set cookie and respond
@@ -204,9 +220,11 @@ router.post('/refresh-token', refreshLimiter, async (req, res, next) => {
     })
 
     if (!user) {
-      // Token was valid JWT but not in DB — possible token theft
-      // Clear the cookie just in case
-      res.clearCookie('refreshToken')
+      // Token was valid JWT but not in DB — possible token theft.
+      // COOKIE_OPTIONS matters here: a browser only deletes a cookie when
+      // the attributes match the ones it was set with, so clearing it bare
+      // did nothing and the dead token kept being sent on every request.
+      res.clearCookie('refreshToken', COOKIE_CLEAR_OPTIONS)
       throw new AppError('Refresh token is no longer valid. Please log in again.', 401)
     }
 
@@ -243,7 +261,7 @@ router.post('/logout', async (req, res, next) => {
     }
 
     // Clear the cookie regardless of whether we found a token
-    res.clearCookie('refreshToken', COOKIE_OPTIONS)
+    res.clearCookie('refreshToken', COOKIE_CLEAR_OPTIONS)
 
     res.status(200).json({
       status: 'success',
